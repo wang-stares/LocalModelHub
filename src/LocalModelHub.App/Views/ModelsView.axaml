@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LocalModelHub.App.ViewModels"
+             xmlns:views="using:LocalModelHub.App.Views"
+             x:Class="LocalModelHub.App.Views.ModelsView"
+             x:DataType="vm:ModelsViewModel">
+  <Grid RowDefinitions="Auto,*">
+    <Border Classes="card" Padding="12" CornerRadius="16" Margin="30,0,30,14">
+      <Grid ColumnDefinitions="Auto,*">
+        <Border Classes="segmentHost">
+          <ListBox Classes="segments"
+                   ItemsSource="{Binding Tabs}"
+                   SelectedIndex="{Binding TabIndex, Mode=TwoWay}">
+            <ListBox.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal"/>
+              </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+          </ListBox>
+        </Border>
+        <TextBlock Grid.Column="1"
+                   Text="{Binding TabHint}"
+                   Classes="caption"
+                   VerticalAlignment="Center"
+                   Margin="14,0,4,0"
+                   TextWrapping="Wrap"/>
+      </Grid>
+    </Border>
+
+    <Panel Grid.Row="1" IsVisible="{Binding IsInstalledTab}">
+      <views:LibraryView DataContext="{Binding Library}"/>
+    </Panel>
+    <Panel Grid.Row="1" IsVisible="{Binding IsRecommendTab}">
+      <views:RecommendView DataContext="{Binding Recommend}"/>
+    </Panel>
+  </Grid>
+</UserControl>

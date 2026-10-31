@@ -1,0 +1,4726 @@
+{
+  "version": 6,
+  "updatedAt": "2026-10-30",
+  "models": [
+    {
+      "id": "qwen3-0.6b",
+      "name": "Qwen3-0.6B",
+      "displayName": "Qwen3-0.6B 轻量版",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen3",
+      "parametersB": 0.6,
+      "activeParametersB": 0.6,
+      "contextLength": 32768,
+      "releaseYear": 2025,
+      "license": "Apache-2.0",
+      "description": "0.6B 超轻量模型，几乎任何电脑都能运行，适合文本分类、简单问答和本地脚本调用。",
+      "tags": [
+        "轻量",
+        "中文",
+        "快速"
+      ],
+      "capabilities": [
+        "对话",
+        "轻量"
+      ],
+      "hfRepo": "Qwen/Qwen3-0.6B-GGUF",
+      "quants": [
+        {
+          "label": "Q8_0",
+          "totalBytes": 639446688,
+          "files": [
+            {
+              "path": "Qwen3-0.6B-Q8_0.gguf",
+              "bytes": 639446688
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-0.6B-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen2.5-1.5b",
+      "name": "Qwen2.5-1.5B-Instruct",
+      "displayName": "Qwen2.5-1.5B 助手",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen2.5",
+      "parametersB": 1.5,
+      "activeParametersB": 1.5,
+      "contextLength": 32768,
+      "releaseYear": 2024,
+      "license": "Apache-2.0",
+      "description": "小体积中文对话模型，支持多轮对话与结构化输出，低配笔记本也能流畅运行。",
+      "tags": [
+        "轻量",
+        "中文",
+        "对话"
+      ],
+      "capabilities": [
+        "对话",
+        "轻量"
+      ],
+      "hfRepo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 1117320736,
+          "files": [
+            {
+              "path": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+              "bytes": 1117320736
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 1285494304,
+          "files": [
+            {
+              "path": "qwen2.5-1.5b-instruct-q5_k_m.gguf",
+              "bytes": 1285494304
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 1894532128,
+          "files": [
+            {
+              "path": "qwen2.5-1.5b-instruct-q8_0.gguf",
+              "bytes": 1894532128
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen3-4b",
+      "name": "Qwen3-4B",
+      "displayName": "Qwen3-4B",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen3",
+      "parametersB": 4.0,
+      "activeParametersB": 4.0,
+      "contextLength": 32768,
+      "releaseYear": 2025,
+      "license": "Apache-2.0",
+      "description": "4B 通用模型，中文理解与写作能力均衡，支持思考/非思考双模式，适合日常办公。",
+      "tags": [
+        "中文",
+        "通用",
+        "思考模式"
+      ],
+      "capabilities": [
+        "对话",
+        "推理"
+      ],
+      "hfRepo": "Qwen/Qwen3-4B-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 2497280256,
+          "files": [
+            {
+              "path": "Qwen3-4B-Q4_K_M.gguf",
+              "bytes": 2497280256
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-4B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 2889513184,
+          "files": [
+            {
+              "path": "Qwen3-4B-Q5_K_M.gguf",
+              "bytes": 2889513184
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-4B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 4280404704,
+          "files": [
+            {
+              "path": "Qwen3-4B-Q8_0.gguf",
+              "bytes": 4280404704
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-4B-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen3-8b",
+      "name": "Qwen3-8B",
+      "displayName": "Qwen3-8B",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen3",
+      "parametersB": 8.2,
+      "activeParametersB": 8.2,
+      "contextLength": 32768,
+      "releaseYear": 2025,
+      "license": "Apache-2.0",
+      "description": "8B 全能选手，中文写作、代码、推理表现均衡，是主流显卡的推荐首选。",
+      "tags": [
+        "中文",
+        "通用",
+        "代码",
+        "思考模式"
+      ],
+      "capabilities": [
+        "编程",
+        "对话",
+        "推理"
+      ],
+      "hfRepo": "Qwen/Qwen3-8B-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 5027783488,
+          "files": [
+            {
+              "path": "Qwen3-8B-Q4_K_M.gguf",
+              "bytes": 5027783488
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-8B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 5851112224,
+          "files": [
+            {
+              "path": "Qwen3-8B-Q5_K_M.gguf",
+              "bytes": 5851112224
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-8B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 8709518112,
+          "files": [
+            {
+              "path": "Qwen3-8B-Q8_0.gguf",
+              "bytes": 8709518112
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-8B-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen3-14b",
+      "name": "Qwen3-14B",
+      "displayName": "Qwen3-14B",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen3",
+      "parametersB": 14.8,
+      "activeParametersB": 14.8,
+      "contextLength": 32768,
+      "releaseYear": 2025,
+      "license": "Apache-2.0",
+      "description": "14B 高质量模型，复杂推理与长文写作能力明显提升，建议 12GB 以上显存。",
+      "tags": [
+        "中文",
+        "高质量",
+        "复杂推理"
+      ],
+      "capabilities": [
+        "对话",
+        "推理"
+      ],
+      "hfRepo": "Qwen/Qwen3-14B-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 9001752960,
+          "files": [
+            {
+              "path": "Qwen3-14B-Q4_K_M.gguf",
+              "bytes": 9001752960
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-14B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 10514569568,
+          "files": [
+            {
+              "path": "Qwen3-14B-Q5_K_M.gguf",
+              "bytes": 10514569568
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-14B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 15698533728,
+          "files": [
+            {
+              "path": "Qwen3-14B-Q8_0.gguf",
+              "bytes": 15698533728
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-14B-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen3-30b-a3b",
+      "name": "Qwen3-30B-A3B",
+      "displayName": "Qwen3-30B-A3B（MoE）",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen3",
+      "parametersB": 30.5,
+      "activeParametersB": 3.3,
+      "contextLength": 32768,
+      "releaseYear": 2025,
+      "license": "Apache-2.0",
+      "description": "30B 稀疏 MoE 架构，每次仅激活 3.3B 参数，速度接近 4B 模型、质量接近 30B，但需要约 20GB 内存/显存。",
+      "tags": [
+        "MoE",
+        "中文",
+        "高质量"
+      ],
+      "capabilities": [
+        "对话",
+        "推理",
+        "工具调用"
+      ],
+      "hfRepo": "Qwen/Qwen3-30B-A3B-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 18556685824,
+          "files": [
+            {
+              "path": "Qwen3-30B-A3B-Q4_K_M.gguf",
+              "bytes": 18556685824
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-30B-A3B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 21725580800,
+          "files": [
+            {
+              "path": "Qwen3-30B-A3B-Q5_K_M.gguf",
+              "bytes": 21725580800
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-30B-A3B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 32483931648,
+          "files": [
+            {
+              "path": "Qwen3-30B-A3B-Q8_0.gguf",
+              "bytes": 32483931648
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-30B-A3B-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "deepseek-r1-distill-qwen-1.5b",
+      "name": "DeepSeek-R1-Distill-Qwen-1.5B",
+      "displayName": "DeepSeek-R1 蒸馏 1.5B",
+      "developer": "深度求索 · DeepSeek",
+      "country": "CN",
+      "family": "DeepSeek-R1",
+      "parametersB": 1.5,
+      "activeParametersB": 1.5,
+      "contextLength": 32768,
+      "releaseYear": 2025,
+      "license": "MIT",
+      "description": "R1 推理能力蒸馏到 1.5B，适合数学题、逻辑推理的轻量本地体验。",
+      "tags": [
+        "推理",
+        "数学",
+        "轻量"
+      ],
+      "capabilities": [
+        "推理",
+        "轻量"
+      ],
+      "hfRepo": "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 1117321312,
+          "files": [
+            {
+              "path": "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
+              "bytes": 1117321312
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 1285494880,
+          "files": [
+            {
+              "path": "DeepSeek-R1-Distill-Qwen-1.5B-Q5_K_M.gguf",
+              "bytes": 1285494880
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 1894532416,
+          "files": [
+            {
+              "path": "DeepSeek-R1-Distill-Qwen-1.5B-Q8_0.gguf",
+              "bytes": 1894532416
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "deepseek-r1-distill-qwen-7b",
+      "name": "DeepSeek-R1-Distill-Qwen-7B",
+      "displayName": "DeepSeek-R1 蒸馏 7B",
+      "developer": "深度求索 · DeepSeek",
+      "country": "CN",
+      "family": "DeepSeek-R1",
+      "parametersB": 7.6,
+      "activeParametersB": 7.6,
+      "contextLength": 32768,
+      "releaseYear": 2025,
+      "license": "MIT",
+      "description": "用 Qwen2.5-7B 蒸馏的 R1 推理模型，数学与代码推理强，输出会先展示思考过程。",
+      "tags": [
+        "推理",
+        "数学",
+        "代码"
+      ],
+      "capabilities": [
+        "编程",
+        "推理"
+      ],
+      "hfRepo": "unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 4683073248,
+          "files": [
+            {
+              "path": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf",
+              "bytes": 4683073248
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 5444830944,
+          "files": [
+            {
+              "path": "DeepSeek-R1-Distill-Qwen-7B-Q5_K_M.gguf",
+              "bytes": 5444830944
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 8098524896,
+          "files": [
+            {
+              "path": "DeepSeek-R1-Distill-Qwen-7B-Q8_0.gguf",
+              "bytes": 8098524896
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "glm-4-9b-0414",
+      "name": "GLM-4-9B-0414",
+      "displayName": "GLM-4-9B（0414）",
+      "developer": "智谱 AI · Zhipu",
+      "country": "CN",
+      "family": "GLM-4",
+      "parametersB": 9.4,
+      "activeParametersB": 9.4,
+      "contextLength": 32768,
+      "releaseYear": 2025,
+      "license": "GLM-4 License",
+      "description": "智谱 9B 通用模型，中文指令跟随与工具调用能力强，适合知识问答与 Agent 场景。",
+      "tags": [
+        "中文",
+        "工具调用",
+        "通用"
+      ],
+      "capabilities": [
+        "对话",
+        "工具调用"
+      ],
+      "hfRepo": "unsloth/GLM-4-9B-0414-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 6166574944,
+          "files": [
+            {
+              "path": "GLM-4-9B-0414-Q4_K_M.gguf",
+              "bytes": 6166574944
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/GLM-4-9B-0414-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 7050917728,
+          "files": [
+            {
+              "path": "GLM-4-9B-0414-Q5_K_M.gguf",
+              "bytes": 7050917728
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/GLM-4-9B-0414-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 9999611744,
+          "files": [
+            {
+              "path": "GLM-4-9B-0414-Q8_0.gguf",
+              "bytes": 9999611744
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/GLM-4-9B-0414-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "minicpm3-4b",
+      "name": "MiniCPM3-4B",
+      "displayName": "MiniCPM3-4B",
+      "developer": "面壁智能 · OpenBMB",
+      "country": "CN",
+      "family": "MiniCPM3",
+      "parametersB": 4.1,
+      "activeParametersB": 4.1,
+      "contextLength": 32768,
+      "releaseYear": 2024,
+      "license": "MiniCPM Model License",
+      "description": "面向端侧优化的 4B 模型，小体积下保持较强的中文与工具调用能力。",
+      "tags": [
+        "端侧",
+        "中文",
+        "轻量"
+      ],
+      "capabilities": [
+        "对话",
+        "轻量"
+      ],
+      "hfRepo": "openbmb/MiniCPM3-4B-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 2469791584,
+          "files": [
+            {
+              "path": "minicpm3-4b-q4_k_m.gguf",
+              "bytes": 2469791584
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "OpenBMB/MiniCPM3-4B-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "minicpm4-8b",
+      "name": "MiniCPM4-8B",
+      "displayName": "MiniCPM4-8B",
+      "developer": "面壁智能 · OpenBMB",
+      "country": "CN",
+      "family": "MiniCPM4",
+      "parametersB": 8.2,
+      "activeParametersB": 8.2,
+      "contextLength": 32768,
+      "releaseYear": 2025,
+      "license": "Apache-2.0",
+      "description": "端侧旗舰 8B 模型，长文本与推理效率出色，15W 级设备也能获得可用速度。",
+      "tags": [
+        "端侧",
+        "长文本",
+        "高效"
+      ],
+      "capabilities": [
+        "对话",
+        "长文本",
+        "轻量"
+      ],
+      "hfRepo": "openbmb/MiniCPM4-8B-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 4965526048,
+          "files": [
+            {
+              "path": "MiniCPM4-8B-Q4_K_M.gguf",
+              "bytes": 4965526048
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "OpenBMB/MiniCPM4-8B-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "internlm2.5-7b",
+      "name": "InternLM2.5-7B-Chat",
+      "displayName": "书生·浦语 2.5-7B",
+      "developer": "上海人工智能实验室",
+      "country": "CN",
+      "family": "InternLM2.5",
+      "parametersB": 7.7,
+      "activeParametersB": 7.7,
+      "contextLength": 32768,
+      "releaseYear": 2024,
+      "license": "Apache-2.0",
+      "description": "国产开源 7B 对话模型，百万级长上下文（外推），中文知识问答与工具调用稳定。",
+      "tags": [
+        "中文",
+        "长文本",
+        "工具调用"
+      ],
+      "capabilities": [
+        "对话",
+        "长文本",
+        "工具调用"
+      ],
+      "hfRepo": "internlm/internlm2_5-7b-chat-gguf",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 4712768320,
+          "files": [
+            {
+              "path": "internlm2_5-7b-chat-q4_k_m.gguf",
+              "bytes": 4712768320
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Shanghai_AI_Laboratory/internlm2_5-7b-chat-gguf",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 5506736960,
+          "files": [
+            {
+              "path": "internlm2_5-7b-chat-q5_k_m.gguf",
+              "bytes": 5506736960
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Shanghai_AI_Laboratory/internlm2_5-7b-chat-gguf",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 8224240448,
+          "files": [
+            {
+              "path": "internlm2_5-7b-chat-q8_0.gguf",
+              "bytes": 8224240448
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Shanghai_AI_Laboratory/internlm2_5-7b-chat-gguf",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "llama-3.1-8b",
+      "name": "Llama-3.1-8B-Instruct",
+      "displayName": "Llama 3.1 8B Instruct",
+      "developer": "Meta",
+      "country": "US",
+      "family": "Llama 3.1",
+      "parametersB": 8.0,
+      "activeParametersB": 8.0,
+      "contextLength": 131072,
+      "releaseYear": 2024,
+      "license": "Llama 3.1 Community License",
+      "description": "Meta 经典 8B 指令模型，英文对话与通用任务表现稳健，支持 128K 上下文。",
+      "tags": [
+        "英文",
+        "通用",
+        "长文本"
+      ],
+      "capabilities": [
+        "对话",
+        "长文本"
+      ],
+      "hfRepo": "unsloth/Llama-3.1-8B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 4920739200,
+          "files": [
+            {
+              "path": "Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+              "bytes": 4920739200
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/Llama-3.1-8B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 5732992384,
+          "files": [
+            {
+              "path": "Llama-3.1-8B-Instruct-Q5_K_M.gguf",
+              "bytes": 5732992384
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/Llama-3.1-8B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gemma-3-4b",
+      "name": "Gemma-3-4B-it",
+      "displayName": "Gemma 3 4B",
+      "developer": "Google",
+      "country": "US",
+      "family": "Gemma 3",
+      "parametersB": 4.3,
+      "activeParametersB": 4.3,
+      "contextLength": 131072,
+      "releaseYear": 2025,
+      "license": "Gemma Terms of Use",
+      "description": "Google 轻量多语言模型，英文与欧洲语言表现好，适合翻译与摘要任务。",
+      "tags": [
+        "多语言",
+        "轻量",
+        "英文"
+      ],
+      "capabilities": [
+        "对话",
+        "多语言",
+        "轻量"
+      ],
+      "hfRepo": "lmstudio-community/gemma-3-4b-it-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 2489757856,
+          "files": [
+            {
+              "path": "gemma-3-4b-it-Q4_K_M.gguf",
+              "bytes": 2489757856
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "lmstudio-community/gemma-3-4b-it-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 4130226336,
+          "files": [
+            {
+              "path": "gemma-3-4b-it-Q8_0.gguf",
+              "bytes": 4130226336
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "lmstudio-community/gemma-3-4b-it-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gemma-3-12b",
+      "name": "Gemma-3-12B-it",
+      "displayName": "Gemma 3 12B",
+      "developer": "Google",
+      "country": "US",
+      "family": "Gemma 3",
+      "parametersB": 12.2,
+      "activeParametersB": 12.2,
+      "contextLength": 131072,
+      "releaseYear": 2025,
+      "license": "Gemma Terms of Use",
+      "description": "12B 多语言模型，长上下文与图文理解架构（本包为纯文本 GGUF），适合内容创作。",
+      "tags": [
+        "多语言",
+        "长文本",
+        "高质量"
+      ],
+      "capabilities": [
+        "对话",
+        "多语言",
+        "长文本"
+      ],
+      "hfRepo": "lmstudio-community/gemma-3-12b-it-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 7300574976,
+          "files": [
+            {
+              "path": "gemma-3-12b-it-Q4_K_M.gguf",
+              "bytes": 7300574976
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "lmstudio-community/gemma-3-12b-it-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 12509949696,
+          "files": [
+            {
+              "path": "gemma-3-12b-it-Q8_0.gguf",
+              "bytes": 12509949696
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "lmstudio-community/gemma-3-12b-it-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phi-4-mini",
+      "name": "Phi-4-mini-instruct",
+      "displayName": "Phi-4-mini",
+      "developer": "Microsoft",
+      "country": "US",
+      "family": "Phi-4",
+      "parametersB": 3.8,
+      "activeParametersB": 3.8,
+      "contextLength": 131072,
+      "releaseYear": 2025,
+      "license": "MIT",
+      "description": "微软小模型，数学与逻辑推理突出，英文任务性价比高，适合低配电脑。",
+      "tags": [
+        "英文",
+        "推理",
+        "数学"
+      ],
+      "capabilities": [
+        "推理",
+        "轻量"
+      ],
+      "hfRepo": "lmstudio-community/Phi-4-mini-instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 2491874400,
+          "files": [
+            {
+              "path": "Phi-4-mini-instruct-Q4_K_M.gguf",
+              "bytes": 2491874400
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "lmstudio-community/Phi-4-mini-instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 4084611168,
+          "files": [
+            {
+              "path": "Phi-4-mini-instruct-Q8_0.gguf",
+              "bytes": 4084611168
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "lmstudio-community/Phi-4-mini-instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mistral-7b-v0.3",
+      "name": "Mistral-7B-Instruct-v0.3",
+      "displayName": "Mistral 7B Instruct v0.3",
+      "developer": "Mistral AI",
+      "country": "FR",
+      "family": "Mistral",
+      "parametersB": 7.2,
+      "activeParametersB": 7.2,
+      "contextLength": 32768,
+      "releaseYear": 2024,
+      "license": "Apache-2.0",
+      "description": "法国 Mistral 经典 7B 指令模型，英文写作与函数调用稳定，生态兼容性好。",
+      "tags": [
+        "英文",
+        "通用",
+        "函数调用"
+      ],
+      "capabilities": [
+        "对话",
+        "工具调用"
+      ],
+      "hfRepo": "lmstudio-community/Mistral-7B-Instruct-v0.3-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 4372812000,
+          "files": [
+            {
+              "path": "Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
+              "bytes": 4372812000
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "lmstudio-community/Mistral-7B-Instruct-v0.3-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 5136175328,
+          "files": [
+            {
+              "path": "Mistral-7B-Instruct-v0.3-Q5_K_M.gguf",
+              "bytes": 5136175328
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "lmstudio-community/Mistral-7B-Instruct-v0.3-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 7702565088,
+          "files": [
+            {
+              "path": "Mistral-7B-Instruct-v0.3-Q8_0.gguf",
+              "bytes": 7702565088
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "lmstudio-community/Mistral-7B-Instruct-v0.3-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gpt-oss-20b",
+      "name": "gpt-oss-20b",
+      "displayName": "GPT-OSS 20B（MoE）",
+      "developer": "OpenAI",
+      "country": "US",
+      "family": "GPT-OSS",
+      "parametersB": 21.0,
+      "activeParametersB": 3.6,
+      "contextLength": 131072,
+      "releaseYear": 2025,
+      "license": "Apache-2.0",
+      "description": "OpenAI 开源 MoE 模型，激活参数仅 3.6B，推理与工具调用强，需约 13GB 内存并建议 16GB 显存。",
+      "tags": [
+        "MoE",
+        "推理",
+        "工具调用",
+        "英文"
+      ],
+      "capabilities": [
+        "对话",
+        "推理",
+        "工具调用"
+      ],
+      "hfRepo": "ggml-org/gpt-oss-20b-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 12109566624,
+          "files": [
+            {
+              "path": "gpt-oss-20b-MXFP4.gguf",
+              "bytes": 12109566624
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "ggml-org/gpt-oss-20b-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen3-1.7b",
+      "name": "Qwen3-1.7B",
+      "displayName": "Qwen3-1.7B 轻量版",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen3",
+      "parametersB": 1.7,
+      "activeParametersB": 1.7,
+      "contextLength": 32768,
+      "releaseYear": 2025,
+      "license": "Apache-2.0",
+      "description": "1.7B 小模型，中文问答与摘要流畅，8GB 内存即可流畅运行，适合老笔记本。",
+      "tags": [
+        "轻量",
+        "中文",
+        "快速"
+      ],
+      "capabilities": [
+        "对话",
+        "轻量"
+      ],
+      "hfRepo": "Qwen/Qwen3-1.7B-GGUF",
+      "quants": [
+        {
+          "label": "Q8_0",
+          "totalBytes": 1834426016,
+          "files": [
+            {
+              "path": "Qwen3-1.7B-Q8_0.gguf",
+              "bytes": 1834426016
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-1.7B-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen3-32b",
+      "name": "Qwen3-32B",
+      "displayName": "Qwen3-32B",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen3",
+      "parametersB": 32.8,
+      "activeParametersB": 32.8,
+      "contextLength": 32768,
+      "releaseYear": 2025,
+      "license": "Apache-2.0",
+      "description": "32B 稠密模型，中文写作与复杂推理接近旗舰水平，建议 24GB 以上显存。",
+      "tags": [
+        "中文",
+        "高质量",
+        "复杂推理"
+      ],
+      "capabilities": [
+        "对话",
+        "推理"
+      ],
+      "hfRepo": "Qwen/Qwen3-32B-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 19762149024,
+          "files": [
+            {
+              "path": "Qwen3-32B-Q4_K_M.gguf",
+              "bytes": 19762149024
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-32B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 23214831232,
+          "files": [
+            {
+              "path": "Qwen3-32B-Q5_K_M.gguf",
+              "bytes": 23214831232
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-32B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 34817718912,
+          "files": [
+            {
+              "path": "Qwen3-32B-Q8_0.gguf",
+              "bytes": 34817718912
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen3-32B-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen3-coder-30b-a3b",
+      "name": "Qwen3-Coder-30B-A3B-Instruct",
+      "displayName": "Qwen3-Coder 30B-A3B（MoE）",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen3-Coder",
+      "parametersB": 30.5,
+      "activeParametersB": 3.3,
+      "contextLength": 262144,
+      "releaseYear": 2025,
+      "license": "Apache-2.0",
+      "description": "面向代码的稀疏 MoE 模型，每次激活 3.3B，仓库级代码理解与 Agent 编程强，需约 20GB 内存。",
+      "tags": [
+        "MoE",
+        "代码",
+        "工具调用"
+      ],
+      "capabilities": [
+        "编程",
+        "工具调用"
+      ],
+      "hfRepo": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 18556689568,
+          "files": [
+            {
+              "path": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+              "bytes": 18556689568
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 21725584544,
+          "files": [
+            {
+              "path": "Qwen3-Coder-30B-A3B-Instruct-Q5_K_M.gguf",
+              "bytes": 21725584544
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 32483935392,
+          "files": [
+            {
+              "path": "Qwen3-Coder-30B-A3B-Instruct-Q8_0.gguf",
+              "bytes": 32483935392
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen2.5-coder-7b",
+      "name": "Qwen2.5-Coder-7B-Instruct",
+      "displayName": "Qwen2.5-Coder 7B",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen2.5-Coder",
+      "parametersB": 7.6,
+      "activeParametersB": 7.6,
+      "contextLength": 32768,
+      "releaseYear": 2024,
+      "license": "Apache-2.0",
+      "description": "经典代码 7B，补全、解释与重构稳定，支持 90+ 编程语言，8GB 显存即可运行。",
+      "tags": [
+        "代码",
+        "中文",
+        "通用"
+      ],
+      "capabilities": [
+        "编程",
+        "对话"
+      ],
+      "hfRepo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 4683073536,
+          "files": [
+            {
+              "path": "qwen2.5-coder-7b-instruct-q4_k_m.gguf",
+              "bytes": 4683073536
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 5444831232,
+          "files": [
+            {
+              "path": "qwen2.5-coder-7b-instruct-q5_k_m.gguf",
+              "bytes": 5444831232
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 8098525184,
+          "files": [
+            {
+              "path": "qwen2.5-coder-7b-instruct-q8_0.gguf",
+              "bytes": 8098525184
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "deepseek-r1-distill-llama-8b",
+      "name": "DeepSeek-R1-Distill-Llama-8B",
+      "displayName": "DeepSeek-R1 蒸馏 Llama 8B",
+      "developer": "深度求索 · DeepSeek",
+      "country": "CN",
+      "family": "DeepSeek-R1",
+      "parametersB": 8.0,
+      "activeParametersB": 8.0,
+      "contextLength": 131072,
+      "releaseYear": 2025,
+      "license": "MIT",
+      "description": "用 Llama 3.1-8B 蒸馏的 R1，英文数学与逻辑推理更强，输出先展示思考过程。",
+      "tags": [
+        "推理",
+        "英文",
+        "数学"
+      ],
+      "capabilities": [
+        "推理"
+      ],
+      "hfRepo": "unsloth/DeepSeek-R1-Distill-Llama-8B-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 4920737216,
+          "files": [
+            {
+              "path": "DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf",
+              "bytes": 4920737216
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/DeepSeek-R1-Distill-Llama-8B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 5732990400,
+          "files": [
+            {
+              "path": "DeepSeek-R1-Distill-Llama-8B-Q5_K_M.gguf",
+              "bytes": 5732990400
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/DeepSeek-R1-Distill-Llama-8B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 8540773088,
+          "files": [
+            {
+              "path": "DeepSeek-R1-Distill-Llama-8B-Q8_0.gguf",
+              "bytes": 8540773088
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/DeepSeek-R1-Distill-Llama-8B-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "deepseek-r1-0528-qwen3-8b",
+      "name": "DeepSeek-R1-0528-Qwen3-8B",
+      "displayName": "DeepSeek-R1 0528 蒸馏 8B",
+      "developer": "深度求索 · DeepSeek",
+      "country": "CN",
+      "family": "DeepSeek-R1",
+      "parametersB": 8.2,
+      "activeParametersB": 8.2,
+      "contextLength": 131072,
+      "releaseYear": 2025,
+      "license": "MIT",
+      "description": "R1-0528 蒸馏到 Qwen3-8B，推理质量接近上一代 14B，适合数学题与代码分析。",
+      "tags": [
+        "推理",
+        "中文",
+        "代码"
+      ],
+      "capabilities": [
+        "编程",
+        "推理"
+      ],
+      "hfRepo": "unsloth/DeepSeek-R1-0528-Qwen3-8B-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 5027785216,
+          "files": [
+            {
+              "path": "DeepSeek-R1-0528-Qwen3-8B-Q4_K_M.gguf",
+              "bytes": 5027785216
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/DeepSeek-R1-0528-Qwen3-8B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 5851113984,
+          "files": [
+            {
+              "path": "DeepSeek-R1-0528-Qwen3-8B-Q5_K_M.gguf",
+              "bytes": 5851113984
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/DeepSeek-R1-0528-Qwen3-8B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 8709519872,
+          "files": [
+            {
+              "path": "DeepSeek-R1-0528-Qwen3-8B-Q8_0.gguf",
+              "bytes": 8709519872
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/DeepSeek-R1-0528-Qwen3-8B-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "glm-z1-9b-0414",
+      "name": "GLM-Z1-9B-0414",
+      "displayName": "GLM-Z1-9B（推理）",
+      "developer": "智谱 AI · Zhipu",
+      "country": "CN",
+      "family": "GLM-Z1",
+      "parametersB": 9.4,
+      "activeParametersB": 9.4,
+      "contextLength": 32768,
+      "releaseYear": 2025,
+      "license": "MIT",
+      "description": "智谱 9B 推理模型，中文数学与逻辑推理表现突出，思考过程清晰可读。",
+      "tags": [
+        "推理",
+        "中文",
+        "数学"
+      ],
+      "capabilities": [
+        "推理"
+      ],
+      "hfRepo": "unsloth/GLM-Z1-9B-0414-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 6166575232,
+          "files": [
+            {
+              "path": "GLM-Z1-9B-0414-Q4_K_M.gguf",
+              "bytes": 6166575232
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/GLM-Z1-9B-0414-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 7050918016,
+          "files": [
+            {
+              "path": "GLM-Z1-9B-0414-Q5_K_M.gguf",
+              "bytes": 7050918016
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/GLM-Z1-9B-0414-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 9999612032,
+          "files": [
+            {
+              "path": "GLM-Z1-9B-0414-Q8_0.gguf",
+              "bytes": 9999612032
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/GLM-Z1-9B-0414-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "llama-3.2-3b",
+      "name": "Llama-3.2-3B-Instruct",
+      "displayName": "Llama 3.2 3B Instruct",
+      "developer": "Meta",
+      "country": "US",
+      "family": "Llama 3.2",
+      "parametersB": 3.2,
+      "activeParametersB": 3.2,
+      "contextLength": 131072,
+      "releaseYear": 2024,
+      "license": "Llama 3.2 Community License",
+      "description": "Meta 3B 小模型，英文对话流畅，1.9GB 体积适合轻薄本与低功耗设备。",
+      "tags": [
+        "英文",
+        "轻量",
+        "通用"
+      ],
+      "capabilities": [
+        "对话",
+        "轻量"
+      ],
+      "hfRepo": "unsloth/Llama-3.2-3B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 2019377600,
+          "files": [
+            {
+              "path": "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+              "bytes": 2019377600
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/Llama-3.2-3B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 2322153920,
+          "files": [
+            {
+              "path": "Llama-3.2-3B-Instruct-Q5_K_M.gguf",
+              "bytes": 2322153920
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/Llama-3.2-3B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 3421898816,
+          "files": [
+            {
+              "path": "Llama-3.2-3B-Instruct-Q8_0.gguf",
+              "bytes": 3421898816
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/Llama-3.2-3B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gemma-3-27b",
+      "name": "Gemma-3-27B-it",
+      "displayName": "Gemma 3 27B",
+      "developer": "Google",
+      "country": "US",
+      "family": "Gemma 3",
+      "parametersB": 27.4,
+      "activeParametersB": 27.4,
+      "contextLength": 131072,
+      "releaseYear": 2025,
+      "license": "Gemma Terms of Use",
+      "description": "Google 27B 多语言模型，长文写作与摘要质量高，建议 20GB 以上显存。",
+      "tags": [
+        "多语言",
+        "高质量",
+        "长文本"
+      ],
+      "capabilities": [
+        "对话",
+        "多语言",
+        "长文本"
+      ],
+      "hfRepo": "lmstudio-community/gemma-3-27b-it-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 16546404736,
+          "files": [
+            {
+              "path": "gemma-3-27b-it-Q4_K_M.gguf",
+              "bytes": 16546404736
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "lmstudio-community/gemma-3-27b-it-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 28707604864,
+          "files": [
+            {
+              "path": "gemma-3-27b-it-Q8_0.gguf",
+              "bytes": 28707604864
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "lmstudio-community/gemma-3-27b-it-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phi-4",
+      "name": "Phi-4",
+      "displayName": "Phi-4 14B",
+      "developer": "Microsoft",
+      "country": "US",
+      "family": "Phi-4",
+      "parametersB": 14.7,
+      "activeParametersB": 14.7,
+      "contextLength": 16384,
+      "releaseYear": 2024,
+      "license": "MIT",
+      "description": "微软 14B 推理模型，数学与 STEM 表现突出，英文任务性价比高。",
+      "tags": [
+        "英文",
+        "推理",
+        "数学"
+      ],
+      "capabilities": [
+        "推理"
+      ],
+      "hfRepo": "unsloth/phi-4-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 8890306112,
+          "files": [
+            {
+              "path": "phi-4-Q4_K_M.gguf",
+              "bytes": 8890306112
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/phi-4-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 10412707392,
+          "files": [
+            {
+              "path": "phi-4-Q5_K_M.gguf",
+              "bytes": 10412707392
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/phi-4-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 15580507712,
+          "files": [
+            {
+              "path": "phi-4-Q8_0.gguf",
+              "bytes": 15580507712
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/phi-4-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "llama-3.3-70b",
+      "name": "Llama-3.3-70B-Instruct",
+      "displayName": "Llama 3.3 70B Instruct",
+      "developer": "Meta",
+      "country": "US",
+      "family": "Llama 3.3",
+      "parametersB": 70.6,
+      "activeParametersB": 70.6,
+      "contextLength": 131072,
+      "releaseYear": 2024,
+      "license": "Llama 3.3 Community License",
+      "description": "70B 开源旗舰，英文综合能力接近闭源模型，需 48GB 以上显存或内存。",
+      "tags": [
+        "英文",
+        "高质量",
+        "长文本"
+      ],
+      "capabilities": [
+        "对话",
+        "多语言",
+        "长文本"
+      ],
+      "hfRepo": "unsloth/Llama-3.3-70B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 42520398432,
+          "files": [
+            {
+              "path": "Llama-3.3-70B-Instruct-Q4_K_M.gguf",
+              "bytes": 42520398432
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/Llama-3.3-70B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 49949821536,
+          "files": [
+            {
+              "path": "Llama-3.3-70B-Instruct-Q5_K_M.gguf",
+              "bytes": 49949821536
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/Llama-3.3-70B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mistral-small-3.2-24b",
+      "name": "Mistral-Small-3.2-24B-Instruct-2506",
+      "displayName": "Mistral Small 3.2 24B",
+      "developer": "Mistral AI",
+      "country": "FR",
+      "family": "Mistral Small",
+      "parametersB": 24.0,
+      "activeParametersB": 24.0,
+      "contextLength": 131072,
+      "releaseYear": 2025,
+      "license": "Apache-2.0",
+      "description": "法国 Mistral 24B 指令模型，函数调用与多语言稳定，质量接近上一代 70B。",
+      "tags": [
+        "多语言",
+        "工具调用",
+        "高质量"
+      ],
+      "capabilities": [
+        "对话",
+        "工具调用",
+        "多语言"
+      ],
+      "hfRepo": "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 14333922848,
+          "files": [
+            {
+              "path": "Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf",
+              "bytes": 14333922848
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 16763997728,
+          "files": [
+            {
+              "path": "Mistral-Small-3.2-24B-Instruct-2506-Q5_K_M.gguf",
+              "bytes": 16763997728
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 25054793248,
+          "files": [
+            {
+              "path": "Mistral-Small-3.2-24B-Instruct-2506-Q8_0.gguf",
+              "bytes": 25054793248
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phi-4-mini-reasoning",
+      "name": "Phi-4-mini-reasoning",
+      "displayName": "Phi-4-mini 推理版",
+      "developer": "Microsoft",
+      "country": "US",
+      "family": "Phi-4",
+      "parametersB": 3.8,
+      "activeParametersB": 3.8,
+      "contextLength": 131072,
+      "releaseYear": 2025,
+      "license": "MIT",
+      "description": "微软 3.8B 推理小模型，专注数学与逻辑，输出长链思考，低配电脑可跑。",
+      "tags": [
+        "推理",
+        "数学",
+        "轻量"
+      ],
+      "capabilities": [
+        "推理",
+        "轻量"
+      ],
+      "hfRepo": "unsloth/phi-4-mini-reasoning-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 2491875232,
+          "files": [
+            {
+              "path": "Phi-4-mini-reasoning-Q4_K_M.gguf",
+              "bytes": 2491875232
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/phi-4-mini-reasoning-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 2848128928,
+          "files": [
+            {
+              "path": "Phi-4-mini-reasoning-Q5_K_M.gguf",
+              "bytes": 2848128928
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/phi-4-mini-reasoning-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 4084612000,
+          "files": [
+            {
+              "path": "Phi-4-mini-reasoning-Q8_0.gguf",
+              "bytes": 4084612000
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/phi-4-mini-reasoning-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "granite-4.0-h-micro",
+      "name": "granite-4.0-h-micro",
+      "displayName": "Granite 4.0 Micro",
+      "developer": "IBM · Granite",
+      "country": "US",
+      "family": "Granite 4.0",
+      "parametersB": 3.0,
+      "activeParametersB": 3.0,
+      "contextLength": 131072,
+      "releaseYear": 2025,
+      "license": "Apache-2.0",
+      "description": "IBM 3B 企业级模型，结构化输出与 RAG 场景稳定，1.8GB 超小体积。",
+      "tags": [
+        "英文",
+        "企业",
+        "轻量"
+      ],
+      "capabilities": [
+        "对话",
+        "工具调用",
+        "轻量"
+      ],
+      "hfRepo": "ibm-granite/granite-4.0-h-micro-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 1942564512,
+          "files": [
+            {
+              "path": "granite-4.0-h-micro-Q4_K_M.gguf",
+              "bytes": 1942564512
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "ibm-granite/granite-4.0-h-micro-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 2273455776,
+          "files": [
+            {
+              "path": "granite-4.0-h-micro-Q5_K_M.gguf",
+              "bytes": 2273455776
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "ibm-granite/granite-4.0-h-micro-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 3397676704,
+          "files": [
+            {
+              "path": "granite-4.0-h-micro-Q8_0.gguf",
+              "bytes": 3397676704
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "ibm-granite/granite-4.0-h-micro-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen2.5-coder-3b",
+      "name": "Qwen2.5-Coder-3B-Instruct",
+      "displayName": "Qwen2.5-Coder-3B 编程助手",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen2.5-Coder",
+      "parametersB": 3.1,
+      "activeParametersB": 3.1,
+      "contextLength": 32768,
+      "releaseYear": 2024,
+      "license": "Apache-2.0",
+      "description": "3B 轻量代码模型，补全、解释与单元测试生成都能在普通笔记本上离线完成，适合低配设备与快速草稿。",
+      "tags": [
+        "代码",
+        "中文",
+        "轻量"
+      ],
+      "capabilities": [
+        "编程",
+        "轻量"
+      ],
+      "hfRepo": "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 2104932800,
+          "files": [
+            {
+              "path": "qwen2.5-coder-3b-instruct-q4_k_m.gguf",
+              "bytes": 2104932800
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 2438740416,
+          "files": [
+            {
+              "path": "qwen2.5-coder-3b-instruct-q5_k_m.gguf",
+              "bytes": 2438740416
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 3616088512,
+          "files": [
+            {
+              "path": "qwen2.5-coder-3b-instruct-q8_0.gguf",
+              "bytes": 3616088512
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen2.5-coder-14b",
+      "name": "Qwen2.5-Coder-14B-Instruct",
+      "displayName": "Qwen2.5-Coder-14B 编程主力",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen2.5-Coder",
+      "parametersB": 14.7,
+      "activeParametersB": 14.7,
+      "contextLength": 32768,
+      "releaseYear": 2024,
+      "license": "Apache-2.0",
+      "description": "14B 代码专用模型，补全质量明显强于 7B，适合 12GB 以上显存；支持中文注释、跨文件理解与常见框架代码生成。",
+      "tags": [
+        "代码",
+        "中文",
+        "高质量"
+      ],
+      "capabilities": [
+        "编程"
+      ],
+      "hfRepo": "Qwen/Qwen2.5-Coder-14B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 8988110272,
+          "files": [
+            {
+              "path": "qwen2.5-coder-14b-instruct-q4_k_m.gguf",
+              "bytes": 8988110272
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-Coder-14B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 10508873152,
+          "files": [
+            {
+              "path": "qwen2.5-coder-14b-instruct-q5_k_m.gguf",
+              "bytes": 10508873152
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-Coder-14B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 15701597632,
+          "files": [
+            {
+              "path": "qwen2.5-coder-14b-instruct-q8_0.gguf",
+              "bytes": 15701597632
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-Coder-14B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen2.5-coder-32b",
+      "name": "Qwen2.5-Coder-32B-Instruct",
+      "displayName": "Qwen2.5-Coder-32B 旗舰",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen2.5-Coder",
+      "parametersB": 32.8,
+      "activeParametersB": 32.8,
+      "contextLength": 32768,
+      "releaseYear": 2024,
+      "license": "Apache-2.0",
+      "description": "32B 旗舰代码模型，适合 24GB 以上显存；复杂重构、长函数与多语言项目表现更强，适合作为主力编程模型。",
+      "tags": [
+        "代码",
+        "中文",
+        "高质量"
+      ],
+      "capabilities": [
+        "编程"
+      ],
+      "hfRepo": "Qwen/Qwen2.5-Coder-32B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 19851335872,
+          "files": [
+            {
+              "path": "qwen2.5-coder-32b-instruct-q4_k_m.gguf",
+              "bytes": 19851335872
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-Coder-32B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 23262156992,
+          "files": [
+            {
+              "path": "qwen2.5-coder-32b-instruct-q5_k_m.gguf",
+              "bytes": 23262156992
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-Coder-32B-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "deepseek-coder-v2-lite",
+      "name": "DeepSeek-Coder-V2-Lite-Instruct",
+      "displayName": "DeepSeek-Coder-V2-Lite 代码专家",
+      "developer": "深度求索 · DeepSeek",
+      "country": "CN",
+      "family": "DeepSeek-Coder-V2",
+      "parametersB": 15.7,
+      "activeParametersB": 2.4,
+      "contextLength": 131072,
+      "releaseYear": 2024,
+      "license": "DeepSeek License",
+      "description": "16B MoE 代码模型，激活仅 2.4B，支持 128K 上下文与 338 种编程语言；跨文件理解与补全速度兼顾。",
+      "tags": [
+        "代码",
+        "MoE",
+        "长文本"
+      ],
+      "capabilities": [
+        "编程",
+        "长文本"
+      ],
+      "hfRepo": "unsloth/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 10364416768,
+          "files": [
+            {
+              "path": "DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf",
+              "bytes": 10364416768
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "AI-ModelScope/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 11851313920,
+          "files": [
+            {
+              "path": "DeepSeek-Coder-V2-Lite-Instruct-Q5_K_M.gguf",
+              "bytes": 11851313920
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "AI-ModelScope/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 16702518016,
+          "files": [
+            {
+              "path": "DeepSeek-Coder-V2-Lite-Instruct-Q8_0.gguf",
+              "bytes": 16702518016
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "AI-ModelScope/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lfm2.5-1.2b-instruct",
+      "name": "LFM2.5-1.2B-Instruct",
+      "displayName": "LFM2.5-1.2B-Instruct 本地量化",
+      "developer": "LiquidAI",
+      "country": "US",
+      "family": "LFM2",
+      "parametersB": 1.2,
+      "activeParametersB": 1.2,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "LFM2.5-1.2B-Instruct 的 GGUF 量化版本，1.2B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "轻量",
+        "对话"
+      ],
+      "capabilities": [
+        "对话",
+        "轻量"
+      ],
+      "hfRepo": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 730895168,
+          "files": [
+            {
+              "path": "LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
+              "bytes": 730895168
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 843354944,
+          "files": [
+            {
+              "path": "LFM2.5-1.2B-Instruct-Q5_K_M.gguf",
+              "bytes": 843354944
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q6_K",
+          "totalBytes": 962843456,
+          "files": [
+            {
+              "path": "LFM2.5-1.2B-Instruct-Q6_K.gguf",
+              "bytes": 962843456
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "llama-3-8b-instruct-32k-v0.1",
+      "name": "Llama-3-8B-Instruct-32k-v0.1",
+      "displayName": "Llama-3-8B-Instruct-32k-v0.1 本地量化",
+      "developer": "MaziyarPanahi",
+      "country": "US",
+      "family": "Llama",
+      "parametersB": 8.0,
+      "activeParametersB": 8.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Llama-3-8B-Instruct-32k-v0.1 的 GGUF 量化版本，8B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话"
+      ],
+      "capabilities": [
+        "对话"
+      ],
+      "hfRepo": "MaziyarPanahi/Llama-3-8B-Instruct-32k-v0.1-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 4920734208,
+          "files": [
+            {
+              "path": "Llama-3-8B-Instruct-32k-v0.1.Q4_K_M.gguf",
+              "bytes": 4920734208
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Llama-3-8B-Instruct-32k-v0.1-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Llama-3-8B-Instruct-32k-v0.1-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_K_S",
+          "totalBytes": 4692668928,
+          "files": [
+            {
+              "path": "Llama-3-8B-Instruct-32k-v0.1.Q4_K_S.gguf",
+              "bytes": 4692668928
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Llama-3-8B-Instruct-32k-v0.1-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Llama-3-8B-Instruct-32k-v0.1-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 5732987392,
+          "files": [
+            {
+              "path": "Llama-3-8B-Instruct-32k-v0.1.Q5_K_M.gguf",
+              "bytes": 5732987392
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Llama-3-8B-Instruct-32k-v0.1-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Llama-3-8B-Instruct-32k-v0.1-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "llama-3.2-1b-instruct",
+      "name": "Llama-3.2-1B-Instruct",
+      "displayName": "Llama-3.2-1B-Instruct 本地量化",
+      "developer": "MaziyarPanahi",
+      "country": "US",
+      "family": "Llama",
+      "parametersB": 1.0,
+      "activeParametersB": 1.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Llama-3.2-1B-Instruct 的 GGUF 量化版本，1B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "轻量",
+        "对话"
+      ],
+      "capabilities": [
+        "对话",
+        "轻量"
+      ],
+      "hfRepo": "MaziyarPanahi/Llama-3.2-1B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 807694432,
+          "files": [
+            {
+              "path": "Llama-3.2-1B-Instruct.Q4_K_M.gguf",
+              "bytes": 807694432
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Llama-3.2-1B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Llama-3.2-1B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_K_S",
+          "totalBytes": 775647328,
+          "files": [
+            {
+              "path": "Llama-3.2-1B-Instruct.Q4_K_S.gguf",
+              "bytes": 775647328
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Llama-3.2-1B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Llama-3.2-1B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 911503456,
+          "files": [
+            {
+              "path": "Llama-3.2-1B-Instruct.Q5_K_M.gguf",
+              "bytes": 911503456
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Llama-3.2-1B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Llama-3.2-1B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "meta-llama-3-8b-instruct",
+      "name": "Meta-Llama-3-8B-Instruct",
+      "displayName": "Meta-Llama-3-8B-Instruct 本地量化",
+      "developer": "MaziyarPanahi",
+      "country": "US",
+      "family": "Meta",
+      "parametersB": 8.0,
+      "activeParametersB": 8.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Meta-Llama-3-8B-Instruct 的 GGUF 量化版本，8B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话"
+      ],
+      "capabilities": [
+        "对话"
+      ],
+      "hfRepo": "MaziyarPanahi/Meta-Llama-3-8B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 4921246944,
+          "files": [
+            {
+              "path": "Meta-Llama-3-8B-Instruct.Q4_K_M.gguf",
+              "bytes": 4921246944
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Meta-Llama-3-8B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Meta-Llama-3-8B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_K_S",
+          "totalBytes": 4693181664,
+          "files": [
+            {
+              "path": "Meta-Llama-3-8B-Instruct.Q4_K_S.gguf",
+              "bytes": 4693181664
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Meta-Llama-3-8B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Meta-Llama-3-8B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 5733500128,
+          "files": [
+            {
+              "path": "Meta-Llama-3-8B-Instruct.Q5_K_M.gguf",
+              "bytes": 5733500128
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Meta-Llama-3-8B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Meta-Llama-3-8B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ministral-3-14b-reasoning-2512",
+      "name": "Ministral-3-14B-Reasoning-2512",
+      "displayName": "Ministral-3-14B-Reasoning-2512 本地量化",
+      "developer": "MaziyarPanahi",
+      "country": "US",
+      "family": "Ministral",
+      "parametersB": 14.0,
+      "activeParametersB": 14.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Ministral-3-14B-Reasoning-2512 的 GGUF 量化版本，14B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话",
+        "推理"
+      ],
+      "capabilities": [
+        "对话",
+        "推理"
+      ],
+      "hfRepo": "MaziyarPanahi/Ministral-3-14B-Reasoning-2512-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 8239066752,
+          "files": [
+            {
+              "path": "Ministral-3-14B-Reasoning-2512.Q4_K_M.gguf",
+              "bytes": 8239066752
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Ministral-3-14B-Reasoning-2512-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Ministral-3-14B-Reasoning-2512-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 9620565632,
+          "files": [
+            {
+              "path": "Ministral-3-14B-Reasoning-2512.Q5_K_M.gguf",
+              "bytes": 9620565632
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Ministral-3-14B-Reasoning-2512-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Ministral-3-14B-Reasoning-2512-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q6_K",
+          "totalBytes": 11088408192,
+          "files": [
+            {
+              "path": "Ministral-3-14B-Reasoning-2512.Q6_K.gguf",
+              "bytes": 11088408192
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Ministral-3-14B-Reasoning-2512-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Ministral-3-14B-Reasoning-2512-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ministral-3-3b-reasoning-2512",
+      "name": "Ministral-3-3B-Reasoning-2512",
+      "displayName": "Ministral-3-3B-Reasoning-2512 本地量化",
+      "developer": "MaziyarPanahi",
+      "country": "US",
+      "family": "Ministral",
+      "parametersB": 3.0,
+      "activeParametersB": 3.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Ministral-3-3B-Reasoning-2512 的 GGUF 量化版本，3B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "轻量",
+        "对话",
+        "推理"
+      ],
+      "capabilities": [
+        "对话",
+        "推理",
+        "轻量"
+      ],
+      "hfRepo": "MaziyarPanahi/Ministral-3-3B-Reasoning-2512-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 2146496704,
+          "files": [
+            {
+              "path": "Ministral-3-3B-Reasoning-2512.Q4_K_M.gguf",
+              "bytes": 2146496704
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Ministral-3-3B-Reasoning-2512-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Ministral-3-3B-Reasoning-2512-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 2473652416,
+          "files": [
+            {
+              "path": "Ministral-3-3B-Reasoning-2512.Q5_K_M.gguf",
+              "bytes": 2473652416
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Ministral-3-3B-Reasoning-2512-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Ministral-3-3B-Reasoning-2512-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q6_K",
+          "totalBytes": 2821255360,
+          "files": [
+            {
+              "path": "Ministral-3-3B-Reasoning-2512.Q6_K.gguf",
+              "bytes": 2821255360
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Ministral-3-3B-Reasoning-2512-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Ministral-3-3B-Reasoning-2512-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mistral-7b-instruct-v0.3",
+      "name": "Mistral-7B-Instruct-v0.3",
+      "displayName": "Mistral-7B-Instruct-v0.3 本地量化",
+      "developer": "MaziyarPanahi",
+      "country": "US",
+      "family": "Mistral",
+      "parametersB": 7.0,
+      "activeParametersB": 7.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Mistral-7B-Instruct-v0.3 的 GGUF 量化版本，7B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话"
+      ],
+      "capabilities": [
+        "对话"
+      ],
+      "hfRepo": "MaziyarPanahi/Mistral-7B-Instruct-v0.3-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 4372811936,
+          "files": [
+            {
+              "path": "Mistral-7B-Instruct-v0.3.Q4_K_M.gguf",
+              "bytes": 4372811936
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Mistral-7B-Instruct-v0.3-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Mistral-7B-Instruct-v0.3-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_K_S",
+          "totalBytes": 4144746656,
+          "files": [
+            {
+              "path": "Mistral-7B-Instruct-v0.3.Q4_K_S.gguf",
+              "bytes": 4144746656
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Mistral-7B-Instruct-v0.3-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Mistral-7B-Instruct-v0.3-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 5136175264,
+          "files": [
+            {
+              "path": "Mistral-7B-Instruct-v0.3.Q5_K_M.gguf",
+              "bytes": 5136175264
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Mistral-7B-Instruct-v0.3-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Mistral-7B-Instruct-v0.3-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mistral-small-24b-instruct-2501",
+      "name": "Mistral-Small-24B-Instruct-2501",
+      "displayName": "Mistral-Small-24B-Instruct-2501 本地量化",
+      "developer": "MaziyarPanahi",
+      "country": "US",
+      "family": "Mistral",
+      "parametersB": 24.0,
+      "activeParametersB": 24.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Mistral-Small-24B-Instruct-2501 的 GGUF 量化版本，24B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话"
+      ],
+      "capabilities": [
+        "对话"
+      ],
+      "hfRepo": "MaziyarPanahi/Mistral-Small-24B-Instruct-2501-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 14333908416,
+          "files": [
+            {
+              "path": "Mistral-Small-24B-Instruct-2501.Q4_K_M.gguf",
+              "bytes": 14333908416
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Mistral-Small-24B-Instruct-2501-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Mistral-Small-24B-Instruct-2501-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_K_S",
+          "totalBytes": 13549278656,
+          "files": [
+            {
+              "path": "Mistral-Small-24B-Instruct-2501.Q4_K_S.gguf",
+              "bytes": 13549278656
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Mistral-Small-24B-Instruct-2501-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Mistral-Small-24B-Instruct-2501-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 16763983296,
+          "files": [
+            {
+              "path": "Mistral-Small-24B-Instruct-2501.Q5_K_M.gguf",
+              "bytes": 16763983296
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Mistral-Small-24B-Instruct-2501-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Mistral-Small-24B-Instruct-2501-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "yi-1.5-6b-chat",
+      "name": "Yi-1.5-6B-Chat",
+      "displayName": "Yi-1.5-6B-Chat 本地量化",
+      "developer": "MaziyarPanahi",
+      "country": "US",
+      "family": "Yi",
+      "parametersB": 6.0,
+      "activeParametersB": 6.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Yi-1.5-6B-Chat 的 GGUF 量化版本，6B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话"
+      ],
+      "capabilities": [
+        "对话"
+      ],
+      "hfRepo": "MaziyarPanahi/Yi-1.5-6B-Chat-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 3673968512,
+          "files": [
+            {
+              "path": "Yi-1.5-6B-Chat.Q4_K_M.gguf",
+              "bytes": 3673968512
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Yi-1.5-6B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Yi-1.5-6B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_K_S",
+          "totalBytes": 3502919552,
+          "files": [
+            {
+              "path": "Yi-1.5-6B-Chat.Q4_K_S.gguf",
+              "bytes": 3502919552
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Yi-1.5-6B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Yi-1.5-6B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 4304424832,
+          "files": [
+            {
+              "path": "Yi-1.5-6B-Chat.Q5_K_M.gguf",
+              "bytes": 4304424832
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Yi-1.5-6B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Yi-1.5-6B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "yi-coder-1.5b-chat",
+      "name": "Yi-Coder-1.5B-Chat",
+      "displayName": "Yi-Coder-1.5B-Chat 本地量化",
+      "developer": "MaziyarPanahi",
+      "country": "US",
+      "family": "Yi",
+      "parametersB": 1.5,
+      "activeParametersB": 1.5,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Yi-Coder-1.5B-Chat 的 GGUF 量化版本，1.5B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "编程",
+        "轻量",
+        "对话"
+      ],
+      "capabilities": [
+        "对话",
+        "编程",
+        "轻量"
+      ],
+      "hfRepo": "MaziyarPanahi/Yi-Coder-1.5B-Chat-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 963674304,
+          "files": [
+            {
+              "path": "Yi-Coder-1.5B-Chat.Q4_K_M.gguf",
+              "bytes": 963674304
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Yi-Coder-1.5B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Yi-Coder-1.5B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_K_S",
+          "totalBytes": 904184000,
+          "files": [
+            {
+              "path": "Yi-Coder-1.5B-Chat.Q4_K_S.gguf",
+              "bytes": 904184000
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Yi-Coder-1.5B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Yi-Coder-1.5B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 1100185792,
+          "files": [
+            {
+              "path": "Yi-Coder-1.5B-Chat.Q5_K_M.gguf",
+              "bytes": 1100185792
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Yi-Coder-1.5B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Yi-Coder-1.5B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "yi-coder-9b-chat",
+      "name": "Yi-Coder-9B-Chat",
+      "displayName": "Yi-Coder-9B-Chat 本地量化",
+      "developer": "MaziyarPanahi",
+      "country": "US",
+      "family": "Yi",
+      "parametersB": 9.0,
+      "activeParametersB": 9.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Yi-Coder-9B-Chat 的 GGUF 量化版本，9B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "编程",
+        "对话"
+      ],
+      "capabilities": [
+        "对话",
+        "编程"
+      ],
+      "hfRepo": "MaziyarPanahi/Yi-Coder-9B-Chat-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 5328958240,
+          "files": [
+            {
+              "path": "Yi-Coder-9B-Chat.Q4_K_M.gguf",
+              "bytes": 5328958240
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Yi-Coder-9B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Yi-Coder-9B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_K_S",
+          "totalBytes": 5071860512,
+          "files": [
+            {
+              "path": "Yi-Coder-9B-Chat.Q4_K_S.gguf",
+              "bytes": 5071860512
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Yi-Coder-9B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Yi-Coder-9B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 6258258720,
+          "files": [
+            {
+              "path": "Yi-Coder-9B-Chat.Q5_K_M.gguf",
+              "bytes": 6258258720
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/Yi-Coder-9B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/Yi-Coder-9B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mistral-small-3.1-24b-instruct-2503-hf",
+      "name": "mistral-small-3.1-24b-instruct-2503-hf",
+      "displayName": "mistral-small-3.1-24b-instruct-2503-hf 本地量化",
+      "developer": "MaziyarPanahi",
+      "country": "US",
+      "family": "mistral",
+      "parametersB": 24.0,
+      "activeParametersB": 24.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "mistral-small-3.1-24b-instruct-2503-hf 的 GGUF 量化版本，24B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话"
+      ],
+      "capabilities": [
+        "对话"
+      ],
+      "hfRepo": "MaziyarPanahi/mistral-small-3.1-24b-instruct-2503-hf-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 14333909536,
+          "files": [
+            {
+              "path": "mistral-small-3.1-24b-instruct-2503-hf.Q4_K_M.gguf",
+              "bytes": 14333909536
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/mistral-small-3.1-24b-instruct-2503-hf-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/mistral-small-3.1-24b-instruct-2503-hf-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_K_S",
+          "totalBytes": 13549279776,
+          "files": [
+            {
+              "path": "mistral-small-3.1-24b-instruct-2503-hf.Q4_K_S.gguf",
+              "bytes": 13549279776
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/mistral-small-3.1-24b-instruct-2503-hf-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/mistral-small-3.1-24b-instruct-2503-hf-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 16763984416,
+          "files": [
+            {
+              "path": "mistral-small-3.1-24b-instruct-2503-hf.Q5_K_M.gguf",
+              "bytes": 16763984416
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "MaziyarPanahi/mistral-small-3.1-24b-instruct-2503-hf-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "MaziyarPanahi/mistral-small-3.1-24b-instruct-2503-hf-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hermes-2-pro-mistral-7b",
+      "name": "Hermes-2-Pro-Mistral-7B",
+      "displayName": "Hermes-2-Pro-Mistral-7B 本地量化",
+      "developer": "Nous Research",
+      "country": "US",
+      "family": "Hermes",
+      "parametersB": 7.0,
+      "activeParametersB": 7.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Hermes-2-Pro-Mistral-7B 的 GGUF 量化版本，7B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话"
+      ],
+      "capabilities": [
+        "对话"
+      ],
+      "hfRepo": "NousResearch/Hermes-2-Pro-Mistral-7B-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 4368621312,
+          "files": [
+            {
+              "path": "Hermes-2-Pro-Mistral-7B.Q4_K_M.gguf",
+              "bytes": 4368621312
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "NousResearch/Hermes-2-Pro-Mistral-7B-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "NousResearch/Hermes-2-Pro-Mistral-7B-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_K_S",
+          "totalBytes": 4140556032,
+          "files": [
+            {
+              "path": "Hermes-2-Pro-Mistral-7B.Q4_K_S.gguf",
+              "bytes": 4140556032
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "NousResearch/Hermes-2-Pro-Mistral-7B-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "NousResearch/Hermes-2-Pro-Mistral-7B-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_0",
+          "totalBytes": 4109098752,
+          "files": [
+            {
+              "path": "Hermes-2-Pro-Mistral-7B.Q4_0.gguf",
+              "bytes": 4109098752
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "NousResearch/Hermes-2-Pro-Mistral-7B-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "NousResearch/Hermes-2-Pro-Mistral-7B-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hermes-3-llama-3.1-8b",
+      "name": "Hermes-3-Llama-3.1-8B",
+      "displayName": "Hermes-3-Llama-3.1-8B 本地量化",
+      "developer": "Nous Research",
+      "country": "US",
+      "family": "Hermes",
+      "parametersB": 8.0,
+      "activeParametersB": 8.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Hermes-3-Llama-3.1-8B 的 GGUF 量化版本，8B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话"
+      ],
+      "capabilities": [
+        "对话"
+      ],
+      "hfRepo": "NousResearch/Hermes-3-Llama-3.1-8B-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 4920733824,
+          "files": [
+            {
+              "path": "Hermes-3-Llama-3.1-8B.Q4_K_M.gguf",
+              "bytes": 4920733824
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "NousResearch/Hermes-3-Llama-3.1-8B-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "NousResearch/Hermes-3-Llama-3.1-8B-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 5732987008,
+          "files": [
+            {
+              "path": "Hermes-3-Llama-3.1-8B.Q5_K_M.gguf",
+              "bytes": 5732987008
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "NousResearch/Hermes-3-Llama-3.1-8B-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "NousResearch/Hermes-3-Llama-3.1-8B-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q6_K",
+          "totalBytes": 6596006016,
+          "files": [
+            {
+              "path": "Hermes-3-Llama-3.1-8B.Q6_K.gguf",
+              "bytes": 6596006016
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "NousResearch/Hermes-3-Llama-3.1-8B-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "NousResearch/Hermes-3-Llama-3.1-8B-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen1.5-0.5b-chat",
+      "name": "Qwen1.5-0.5B-Chat",
+      "displayName": "Qwen1.5-0.5B-Chat 本地量化",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen1",
+      "parametersB": 0.5,
+      "activeParametersB": 0.5,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Qwen1.5-0.5B-Chat 的 GGUF 量化版本，0.5B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "轻量",
+        "对话",
+        "中文"
+      ],
+      "capabilities": [
+        "对话",
+        "轻量"
+      ],
+      "hfRepo": "Qwen/Qwen1.5-0.5B-Chat-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 407155552,
+          "files": [
+            {
+              "path": "qwen1_5-0_5b-chat-q4_k_m.gguf",
+              "bytes": 407155552
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen1.5-0.5B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "Qwen/Qwen1.5-0.5B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_0",
+          "totalBytes": 394990432,
+          "files": [
+            {
+              "path": "qwen1_5-0_5b-chat-q4_0.gguf",
+              "bytes": 394990432
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen1.5-0.5B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "Qwen/Qwen1.5-0.5B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 459240288,
+          "files": [
+            {
+              "path": "qwen1_5-0_5b-chat-q5_k_m.gguf",
+              "bytes": 459240288
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen1.5-0.5B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "Qwen/Qwen1.5-0.5B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen2.5-0.5b-instruct",
+      "name": "Qwen2.5-0.5B-Instruct",
+      "displayName": "Qwen2.5-0.5B-Instruct 本地量化",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen2",
+      "parametersB": 0.5,
+      "activeParametersB": 0.5,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Qwen2.5-0.5B-Instruct 的 GGUF 量化版本，0.5B 参数，适合本地对话与推理（Q4_0 量化）。",
+      "tags": [
+        "轻量",
+        "对话",
+        "中文"
+      ],
+      "capabilities": [
+        "对话",
+        "轻量"
+      ],
+      "hfRepo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_0",
+          "totalBytes": 428730208,
+          "files": [
+            {
+              "path": "qwen2.5-0.5b-instruct-q4_0.gguf",
+              "bytes": 428730208
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen2.5-3b-instruct",
+      "name": "Qwen2.5-3B-Instruct",
+      "displayName": "Qwen2.5-3B-Instruct 本地量化",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen2",
+      "parametersB": 3.0,
+      "activeParametersB": 3.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Qwen2.5-3B-Instruct 的 GGUF 量化版本，3B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "轻量",
+        "对话",
+        "中文"
+      ],
+      "capabilities": [
+        "对话",
+        "轻量"
+      ],
+      "hfRepo": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 2104932768,
+          "files": [
+            {
+              "path": "qwen2.5-3b-instruct-q4_k_m.gguf",
+              "bytes": 2104932768
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_0",
+          "totalBytes": 1997879712,
+          "files": [
+            {
+              "path": "qwen2.5-3b-instruct-q4_0.gguf",
+              "bytes": 1997879712
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 2438740384,
+          "files": [
+            {
+              "path": "qwen2.5-3b-instruct-q5_k_m.gguf",
+              "bytes": 2438740384
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen2.5-7b-instruct",
+      "name": "Qwen2.5-7B-Instruct",
+      "displayName": "Qwen2.5-7B-Instruct 本地量化",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen2",
+      "parametersB": 7.0,
+      "activeParametersB": 7.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Qwen2.5-7B-Instruct 的 GGUF 量化版本，7B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话",
+        "中文"
+      ],
+      "capabilities": [
+        "对话"
+      ],
+      "hfRepo": "Qwen/Qwen2.5-7B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 4683073632,
+          "files": [
+            {
+              "path": "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf",
+              "bytes": 3993201344
+            },
+            {
+              "path": "qwen2.5-7b-instruct-q4_k_m-00002-of-00002.gguf",
+              "bytes": 689872288
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-7B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "Qwen/Qwen2.5-7B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_0",
+          "totalBytes": 4431390848,
+          "files": [
+            {
+              "path": "qwen2.5-7b-instruct-q4_0-00001-of-00002.gguf",
+              "bytes": 3983228352
+            },
+            {
+              "path": "qwen2.5-7b-instruct-q4_0-00002-of-00002.gguf",
+              "bytes": 448162496
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-7B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "Qwen/Qwen2.5-7B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 5444831360,
+          "files": [
+            {
+              "path": "qwen2.5-7b-instruct-q5_k_m-00001-of-00002.gguf",
+              "bytes": 3989841792
+            },
+            {
+              "path": "qwen2.5-7b-instruct-q5_k_m-00002-of-00002.gguf",
+              "bytes": 1454989568
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-7B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "Qwen/Qwen2.5-7B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qwen2.5-coder-1.5b-instruct",
+      "name": "Qwen2.5-Coder-1.5B-Instruct",
+      "displayName": "Qwen2.5-Coder-1.5B-Instruct 本地量化",
+      "developer": "阿里巴巴 · 通义千问",
+      "country": "CN",
+      "family": "Qwen2",
+      "parametersB": 1.5,
+      "activeParametersB": 1.5,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Qwen2.5-Coder-1.5B-Instruct 的 GGUF 量化版本，1.5B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "编程",
+        "轻量",
+        "对话",
+        "中文"
+      ],
+      "capabilities": [
+        "对话",
+        "编程",
+        "轻量"
+      ],
+      "hfRepo": "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 1117320768,
+          "files": [
+            {
+              "path": "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf",
+              "bytes": 1117320768
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_0",
+          "totalBytes": 1066227264,
+          "files": [
+            {
+              "path": "qwen2.5-coder-1.5b-instruct-q4_0.gguf",
+              "bytes": 1066227264
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 1285494336,
+          "files": [
+            {
+              "path": "qwen2.5-coder-1.5b-instruct-q5_k_m.gguf",
+              "bytes": 1285494336
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "llama-2-13b-chat",
+      "name": "Llama-2-13B-chat",
+      "displayName": "Llama-2-13B-chat 本地量化",
+      "developer": "TheBloke",
+      "country": "US",
+      "family": "Llama",
+      "parametersB": 13.0,
+      "activeParametersB": 13.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Llama-2-13B-chat 的 GGUF 量化版本，13B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话"
+      ],
+      "capabilities": [
+        "对话"
+      ],
+      "hfRepo": "TheBloke/Llama-2-13B-chat-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 7865956224,
+          "files": [
+            {
+              "path": "llama-2-13b-chat.Q4_K_M.gguf",
+              "bytes": 7865956224
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "TheBloke/Llama-2-13B-chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "TheBloke/Llama-2-13B-chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_K_S",
+          "totalBytes": 7414331264,
+          "files": [
+            {
+              "path": "llama-2-13b-chat.Q4_K_S.gguf",
+              "bytes": 7414331264
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "TheBloke/Llama-2-13B-chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "TheBloke/Llama-2-13B-chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_0",
+          "totalBytes": 7365834624,
+          "files": [
+            {
+              "path": "llama-2-13b-chat.Q4_0.gguf",
+              "bytes": 7365834624
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "TheBloke/Llama-2-13B-chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "TheBloke/Llama-2-13B-chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "llama-2-7b-chat",
+      "name": "Llama-2-7B-Chat",
+      "displayName": "Llama-2-7B-Chat 本地量化",
+      "developer": "TheBloke",
+      "country": "US",
+      "family": "Llama",
+      "parametersB": 7.0,
+      "activeParametersB": 7.0,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "apache-2.0",
+      "description": "Llama-2-7B-Chat 的 GGUF 量化版本，7B 参数，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话"
+      ],
+      "capabilities": [
+        "对话"
+      ],
+      "hfRepo": "TheBloke/Llama-2-7B-Chat-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 4081004224,
+          "files": [
+            {
+              "path": "llama-2-7b-chat.Q4_K_M.gguf",
+              "bytes": 4081004224
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "TheBloke/Llama-2-7B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "TheBloke/Llama-2-7B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_K_S",
+          "totalBytes": 3856740032,
+          "files": [
+            {
+              "path": "llama-2-7b-chat.Q4_K_S.gguf",
+              "bytes": 3856740032
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "TheBloke/Llama-2-7B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "TheBloke/Llama-2-7B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        },
+        {
+          "label": "Q4_0",
+          "totalBytes": 3825807040,
+          "files": [
+            {
+              "path": "llama-2-7b-chat.Q4_0.gguf",
+              "bytes": 3825807040
+            }
+          ],
+          "sources": [
+            {
+              "provider": "ModelScope",
+              "repo": "TheBloke/Llama-2-7B-Chat-GGUF",
+              "revision": "master"
+            },
+            {
+              "provider": "HuggingFace",
+              "repo": "TheBloke/Llama-2-7B-Chat-GGUF",
+              "revision": "main"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gemma-3-12b-it",
+      "name": "gemma-3-12b-it",
+      "displayName": "gemma-3-12b-it 本地量化",
+      "developer": "Google",
+      "country": "US",
+      "family": "gemma",
+      "parametersB": 12,
+      "activeParametersB": 12,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "Apache-2.0",
+      "description": "gemma-3-12b-it 的 GGUF 量化版本，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话"
+      ],
+      "capabilities": [
+        "对话"
+      ],
+      "hfRepo": "unsloth/gemma-3-12b-it-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 7300778336,
+          "files": [
+            {
+              "path": "gemma-3-12b-it-Q4_K_M.gguf",
+              "bytes": 7300778336
+            }
+          ],
+          "sources": [
+            {
+              "provider": "HuggingFace",
+              "repo": "unsloth/gemma-3-12b-it-GGUF",
+              "revision": "main"
+            },
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/gemma-3-12b-it-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q4_K_S",
+          "totalBytes": 6935333216,
+          "files": [
+            {
+              "path": "gemma-3-12b-it-Q4_K_S.gguf",
+              "bytes": 6935333216
+            }
+          ],
+          "sources": [
+            {
+              "provider": "HuggingFace",
+              "repo": "unsloth/gemma-3-12b-it-GGUF",
+              "revision": "main"
+            },
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/gemma-3-12b-it-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q4_0",
+          "totalBytes": 6909282656,
+          "files": [
+            {
+              "path": "gemma-3-12b-it-Q4_0.gguf",
+              "bytes": 6909282656
+            }
+          ],
+          "sources": [
+            {
+              "provider": "HuggingFace",
+              "repo": "unsloth/gemma-3-12b-it-GGUF",
+              "revision": "main"
+            },
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/gemma-3-12b-it-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gemma-3-4b-it",
+      "name": "gemma-3-4b-it",
+      "displayName": "gemma-3-4b-it 本地量化",
+      "developer": "Google",
+      "country": "US",
+      "family": "gemma",
+      "parametersB": 4,
+      "activeParametersB": 4,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "Apache-2.0",
+      "description": "gemma-3-4b-it 的 GGUF 量化版本，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话",
+        "轻量"
+      ],
+      "capabilities": [
+        "对话",
+        "轻量"
+      ],
+      "hfRepo": "unsloth/gemma-3-4b-it-GGUF",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 2489894016,
+          "files": [
+            {
+              "path": "gemma-3-4b-it-Q4_K_M.gguf",
+              "bytes": 2489894016
+            }
+          ],
+          "sources": [
+            {
+              "provider": "HuggingFace",
+              "repo": "unsloth/gemma-3-4b-it-GGUF",
+              "revision": "main"
+            },
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/gemma-3-4b-it-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q4_K_S",
+          "totalBytes": 2377929856,
+          "files": [
+            {
+              "path": "gemma-3-4b-it-Q4_K_S.gguf",
+              "bytes": 2377929856
+            }
+          ],
+          "sources": [
+            {
+              "provider": "HuggingFace",
+              "repo": "unsloth/gemma-3-4b-it-GGUF",
+              "revision": "main"
+            },
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/gemma-3-4b-it-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q4_0",
+          "totalBytes": 2370065536,
+          "files": [
+            {
+              "path": "gemma-3-4b-it-Q4_0.gguf",
+              "bytes": 2370065536
+            }
+          ],
+          "sources": [
+            {
+              "provider": "HuggingFace",
+              "repo": "unsloth/gemma-3-4b-it-GGUF",
+              "revision": "main"
+            },
+            {
+              "provider": "ModelScope",
+              "repo": "unsloth/gemma-3-4b-it-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "internlm3-8b-instruct",
+      "name": "internlm3-8b-instruct",
+      "displayName": "internlm3-8b-instruct 本地量化",
+      "developer": "上海 AI 实验室",
+      "country": "CN",
+      "family": "internlm3",
+      "parametersB": 8,
+      "activeParametersB": 8,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "Apache-2.0",
+      "description": "internlm3-8b-instruct 的 GGUF 量化版本，适合本地对话与推理（Q4_K_M 量化）。",
+      "tags": [
+        "对话",
+        "中文"
+      ],
+      "capabilities": [
+        "对话"
+      ],
+      "hfRepo": "internlm/internlm3-8b-instruct-gguf",
+      "quants": [
+        {
+          "label": "Q4_K_M",
+          "totalBytes": 5358623936,
+          "files": [
+            {
+              "path": "internlm3-8b-instruct-q4_k_m.gguf",
+              "bytes": 5358623936
+            }
+          ],
+          "sources": [
+            {
+              "provider": "HuggingFace",
+              "repo": "internlm/internlm3-8b-instruct-gguf",
+              "revision": "main"
+            },
+            {
+              "provider": "ModelScope",
+              "repo": "internlm/internlm3-8b-instruct-gguf",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q4_0",
+          "totalBytes": 5092613312,
+          "files": [
+            {
+              "path": "internlm3-8b-instruct-q4_0.gguf",
+              "bytes": 5092613312
+            }
+          ],
+          "sources": [
+            {
+              "provider": "HuggingFace",
+              "repo": "internlm/internlm3-8b-instruct-gguf",
+              "revision": "main"
+            },
+            {
+              "provider": "ModelScope",
+              "repo": "internlm/internlm3-8b-instruct-gguf",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 6264331456,
+          "files": [
+            {
+              "path": "internlm3-8b-instruct-q5_k_m.gguf",
+              "bytes": 6264331456
+            }
+          ],
+          "sources": [
+            {
+              "provider": "HuggingFace",
+              "repo": "internlm/internlm3-8b-instruct-gguf",
+              "revision": "main"
+            },
+            {
+              "provider": "ModelScope",
+              "repo": "internlm/internlm3-8b-instruct-gguf",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lfm2-1.2b",
+      "name": "LFM2-1.2B",
+      "displayName": "LFM2-1.2B 本地量化",
+      "developer": "Liquid AI",
+      "country": "US",
+      "family": "LFM2",
+      "parametersB": 1.2,
+      "activeParametersB": 1.2,
+      "contextLength": 32768,
+      "releaseYear": 2026,
+      "license": "Apache-2.0",
+      "description": "LFM2-1.2B 的 GGUF 量化版本，适合本地对话与推理（Q4_0 量化）。",
+      "tags": [
+        "对话",
+        "轻量"
+      ],
+      "capabilities": [
+        "对话",
+        "轻量"
+      ],
+      "hfRepo": "LiquidAI/LFM2-1.2B-GGUF",
+      "quants": [
+        {
+          "label": "Q4_0",
+          "totalBytes": 695749568,
+          "files": [
+            {
+              "path": "LFM2-1.2B-Q4_0.gguf",
+              "bytes": 695749568
+            }
+          ],
+          "sources": [
+            {
+              "provider": "HuggingFace",
+              "repo": "LiquidAI/LFM2-1.2B-GGUF",
+              "revision": "main"
+            },
+            {
+              "provider": "ModelScope",
+              "repo": "LiquidAI/LFM2-1.2B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q5_K_M",
+          "totalBytes": 843353024,
+          "files": [
+            {
+              "path": "LFM2-1.2B-Q5_K_M.gguf",
+              "bytes": 843353024
+            }
+          ],
+          "sources": [
+            {
+              "provider": "HuggingFace",
+              "repo": "LiquidAI/LFM2-1.2B-GGUF",
+              "revision": "main"
+            },
+            {
+              "provider": "ModelScope",
+              "repo": "LiquidAI/LFM2-1.2B-GGUF",
+              "revision": "master"
+            }
+          ]
+        },
+        {
+          "label": "Q8_0",
+          "totalBytes": 1246251968,
+          "files": [
+            {
+              "path": "LFM2-1.2B-Q8_0.gguf",
+              "bytes": 1246251968
+            }
+          ],
+          "sources": [
+            {
+              "provider": "HuggingFace",
+              "repo": "LiquidAI/LFM2-1.2B-GGUF",
+              "revision": "main"
+            },
+            {
+              "provider": "ModelScope",
+              "repo": "LiquidAI/LFM2-1.2B-GGUF",
+              "revision": "master"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LocalModelHub.App.ViewModels"
+             x:Class="LocalModelHub.App.Views.SkillsView"
+             x:DataType="vm:SkillsViewModel">
+  <Grid RowDefinitions="Auto,*">
+    <StackPanel Margin="30,0,30,14" Spacing="10">
+      <Border Classes="card" Padding="14" CornerRadius="16">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="可复用技能" Classes="h3" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1"
+                       Text="{Binding Status}"
+                       Classes="caption"
+                       VerticalAlignment="Center"/>
+          </Grid>
+          <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+            <CheckBox Content="任务完成后自动沉淀" IsChecked="{Binding AutoSkillEnabled, Mode=TwoWay}"/>
+            <CheckBox Grid.Column="1"
+                      Content="对话时注入技能"
+                      IsChecked="{Binding SkillsEnabled, Mode=TwoWay}"
+                      Margin="18,0,0,0"/>
+            <Button Grid.Column="3" Classes="ghost" Content="清空全部" Command="{Binding ClearCommand}"/>
+          </Grid>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+      <ItemsControl ItemsSource="{Binding Items}" Margin="30,0,14,22">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:SkillItemViewModel">
+            <Border Classes="card" CornerRadius="14" Padding="14,11" Margin="0,0,0,10">
+              <StackPanel Spacing="6">
+                <Grid ColumnDefinitions="*,Auto,Auto">
+                  <TextBlock Text="{Binding Name}"
+                             FontWeight="SemiBold"
+                             TextWrapping="Wrap"
+                             VerticalAlignment="Center"/>
+                  <Button Grid.Column="1"
+                          Classes="ghost"
+                          Content="{Binding ToggleText}"
+                          Command="{Binding ToggleCommand}"
+                          Margin="8,0,0,0"/>
+                  <Button Grid.Column="2"
+                          Classes="ghost"
+                          Content="删除"
+                          Command="{Binding DeleteCommand}"
+                          Margin="4,0,0,0"/>
+                </Grid>
+                <TextBlock Text="{Binding Trigger}" Classes="caption" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Steps}" TextWrapping="Wrap" LineHeight="19"/>
+                <TextBlock Text="{Binding MetaText}" Classes="caption"/>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

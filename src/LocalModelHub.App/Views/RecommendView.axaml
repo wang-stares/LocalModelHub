@@ -1,0 +1,97 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LocalModelHub.App.ViewModels"
+             xmlns:views="using:LocalModelHub.App.Views"
+             x:Class="LocalModelHub.App.Views.RecommendView"
+             x:DataType="vm:RecommendViewModel">
+  <Grid RowDefinitions="Auto,*">
+    <Border Classes="card" Padding="12" CornerRadius="16" Margin="30,0,30,14">
+      <StackPanel Spacing="9">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Border Classes="segmentHost">
+            <ListBox Classes="segments"
+                     ItemsSource="{Binding FitFilters}"
+                     SelectedIndex="{Binding FilterIndex, Mode=TwoWay}">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+            </ListBox>
+          </Border>
+          <TextBlock Grid.Column="2" Text="{Binding CountText}" Classes="muted" VerticalAlignment="Center" Margin="12,0,4,0"/>
+        </Grid>
+        <Grid ColumnDefinitions="Auto,*">
+          <Border Classes="segmentHost">
+            <ListBox Classes="segments"
+                     ItemsSource="{Binding CapabilityFilters}"
+                     SelectedIndex="{Binding CapabilityIndex, Mode=TwoWay}">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+            </ListBox>
+          </Border>
+        </Grid>
+        <Grid ColumnDefinitions="Auto,*">
+          <TextBox Classes="search"
+                   Width="260"
+                   Watermark="搜索模型 / 厂商 / 标签"
+                   Text="{Binding SearchText, Mode=TwoWay}"/>
+          <TextBlock Grid.Column="1"
+                     Text="默认只显示这台电脑能顺畅运行的模型，按「能否顺跑 → 模型能力 → 量化质量 → 速度」综合排序；速度低于 3 tok/s 的会排到后面，想浏览全部可切到「全部模型」。"
+                     Classes="caption"
+                     VerticalAlignment="Center"
+                     Margin="14,0,4,0"
+                     TextWrapping="Wrap"/>
+        </Grid>
+        <views:ModelLegendView Margin="0,2,0,0"/>
+      </StackPanel>
+    </Border>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="30,0,14,22">
+        <ItemsControl ItemsSource="{Binding Cards}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Orientation="Horizontal"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ModelCardViewModel">
+              <views:ModelCardView Width="306" Margin="0,0,16,16"/>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Button Classes="ghost"
+                Content="{Binding LoadMoreText}"
+                Command="{Binding LoadMoreCommand}"
+                IsVisible="{Binding HasMore}"
+                HorizontalAlignment="Center"
+                Margin="0,2,0,6"/>
+      </StackPanel>
+    </ScrollViewer>
+
+    <StackPanel Grid.Row="1"
+                IsVisible="{Binding IsEmpty}"
+                HorizontalAlignment="Center"
+                Margin="0,48,0,0"
+                Spacing="8">
+      <TextBlock Text="没有匹配的模型。"
+                 Classes="muted"
+                 HorizontalAlignment="Center"/>
+      <TextBlock Text="{Binding ActiveFilterText}"
+                 Classes="caption"
+                 HorizontalAlignment="Center"
+                 TextWrapping="Wrap"
+                 MaxWidth="560"
+                 TextAlignment="Center"/>
+      <Button Classes="ghost"
+              Content="重置筛选"
+              Command="{Binding ResetFiltersCommand}"
+              HorizontalAlignment="Center"/>
+    </StackPanel>
+  </Grid>
+</UserControl>

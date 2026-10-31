@@ -1,0 +1,12 @@
+# 构建中间产物
+src/**/bin/
+src/**/obj/
+tests/**/bin/
+tests/**/obj/
+dist/
+TestResults/
+
+# 编辑器与本地文件
+.vs/
+*.user
+*.suo

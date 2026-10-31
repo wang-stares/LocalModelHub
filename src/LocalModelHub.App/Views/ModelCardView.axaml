@@ -1,0 +1,128 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LocalModelHub.App.ViewModels"
+             x:Class="LocalModelHub.App.Views.ModelCardView"
+             x:DataType="vm:ModelCardViewModel">
+  <Border Classes="card cardHover" Padding="16" CornerRadius="18">
+    <StackPanel Spacing="10">
+      <Grid ColumnDefinitions="Auto,*">
+        <Border Width="40" Height="40" CornerRadius="13" Background="{DynamicResource AvatarBg}">
+          <TextBlock Text="{Binding Initial}"
+                     FontSize="13"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource Accent}"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="1" Margin="11,0,0,0" Spacing="2" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Title}" Classes="h3" TextTrimming="CharacterEllipsis"/>
+          <TextBlock Text="{Binding Developer}" Classes="caption" TextTrimming="CharacterEllipsis"/>
+        </StackPanel>
+      </Grid>
+
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Border Classes="badge"
+                Classes.cn="{Binding IsChinese}"
+                Classes.intl="{Binding !IsChinese}"
+                ToolTip.Tip="模型开发团队所在地区（国内 / 美国 / 法国 / 海外）。仅用于筛选，不影响本机运行速度。">
+          <TextBlock Text="{Binding OriginText}"/>
+        </Border>
+        <Border Classes="badge capability"
+                IsVisible="{Binding HasCapability}"
+                ToolTip.Tip="{Binding CapabilityText, StringFormat='这个模型的主要能力：{0}'}">
+          <TextBlock Text="{Binding PrimaryCapability}"/>
+        </Border>
+        <Border Classes="badge"
+                Classes.fitPerfect="{Binding IsFitPerfect}"
+                Classes.fitGood="{Binding IsFitGood}"
+                Classes.fitPlayable="{Binding IsFitPlayable}"
+                Classes.fitTight="{Binding IsFitTight}"
+                Classes.fitBad="{Binding IsFitBad}"
+                ToolTip.Tip="{Binding FitTip}">
+          <TextBlock Text="{Binding FitLabel}"/>
+        </Border>
+        <Border Classes="badge local" IsVisible="{Binding IsCustom}" ToolTip.Tip="通过「自定义模型」添加的条目">
+          <TextBlock Text="自定义"/>
+        </Border>
+        <Border Classes="badge accent"
+                IsVisible="{Binding ShowSourceBadge}"
+                ToolTip.Tip="来源：内置清单 / HuggingFace / 魔搭 ModelScope / Ollama 官方库 / 远程 API">
+          <TextBlock Text="{Binding SourceBadgeText}"/>
+        </Border>
+        <TextBlock Text="{Binding SpeedText}"
+                   Classes="caption"
+                   VerticalAlignment="Center"
+                   ToolTip.Tip="{Binding SpeedTip}"/>
+      </StackPanel>
+
+      <TextBlock Text="{Binding Description}"
+                 TextWrapping="Wrap"
+                 MaxLines="2"
+                 LineHeight="18"
+                 MinHeight="36"
+                 TextTrimming="CharacterEllipsis"
+                 Classes="muted"
+                 ToolTip.Tip="{Binding DescriptionTip}"/>
+
+      <TextBlock Text="{Binding MetaText}"
+                 Classes="caption"
+                 TextWrapping="Wrap"
+                 MaxLines="2"
+                 TextTrimming="CharacterEllipsis"
+                 ToolTip.Tip="{Binding MetaTip}"/>
+
+      <ComboBox ItemsSource="{Binding QuantOptions}"
+                SelectedIndex="{Binding QuantIndex, Mode=TwoWay}"
+                IsVisible="{Binding HasQuantChoices}"
+                IsEnabled="{Binding !IsDownloading}"
+                HorizontalAlignment="Left"
+                Width="158"
+                Height="32"
+                FontSize="11.5"
+                ToolTip.Tip="{Binding QuantTip}"/>
+
+      <TextBlock Text="{Binding FitDetail}"
+                 TextWrapping="Wrap"
+                 MaxLines="2"
+                 LineHeight="16"
+                 MinHeight="32"
+                 TextTrimming="CharacterEllipsis"
+                 Classes="caption"/>
+
+      <StackPanel IsVisible="{Binding ShowDownloadPanel}" Spacing="5">
+        <ProgressBar Value="{Binding Progress}" Maximum="100" Height="5"/>
+        <TextBlock Text="{Binding DownloadStatus}" Classes="caption" TextWrapping="Wrap" MaxLines="2"/>
+      </StackPanel>
+
+      <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,2,0,0">
+        <Button Classes="primary"
+                Command="{Binding PrimaryCommand}"
+                IsEnabled="{Binding CanAct}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <Path Classes="icon" Data="{StaticResource IconPlay}" IsVisible="{Binding IsInstalled}"/>
+            <Path Classes="icon" Data="{StaticResource IconDownload}" IsVisible="{Binding !IsInstalled}"/>
+            <TextBlock Text="{Binding ActionText}" VerticalAlignment="Center"/>
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="1"
+                Classes="icon"
+                Margin="8,0,0,0"
+                Command="{Binding OpenFolderCommand}"
+                IsVisible="{Binding IsInstalled}"
+                ToolTip.Tip="打开模型目录">
+          <Path Classes="icon" Data="{StaticResource IconFolder}" Width="15" Height="15"/>
+        </Button>
+        <Button Grid.Column="2"
+                Classes="icon"
+                Margin="8,0,0,0"
+                Command="{Binding DeleteCustomCommand}"
+                IsVisible="{Binding IsCustom}"
+                ToolTip.Tip="移除自定义模型">
+          <Path Classes="icon" Data="{StaticResource IconTrash}" Width="15" Height="15"/>
+        </Button>
+      </Grid>
+    </StackPanel>
+  </Border>
+</UserControl>

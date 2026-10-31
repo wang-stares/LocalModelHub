@@ -1,0 +1,143 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LocalModelHub.App.ViewModels"
+             xmlns:views="using:LocalModelHub.App.Views"
+             x:Class="LocalModelHub.App.Views.StoreView"
+             x:DataType="vm:StoreViewModel">
+  <Grid RowDefinitions="Auto,*">
+    <StackPanel Margin="30,0,30,14" Spacing="9">
+      <Border Classes="card" Padding="12" CornerRadius="16">
+        <StackPanel Spacing="9">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <Border Classes="segmentHost">
+              <ListBox Classes="segments"
+                       ItemsSource="{Binding SourceFilters}"
+                       SelectedIndex="{Binding SourceIndex, Mode=TwoWay}">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal"/>
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+              </ListBox>
+            </Border>
+            <TextBlock Grid.Column="2" Text="{Binding CountText}" Classes="muted" VerticalAlignment="Center" Margin="12,0,4,0"/>
+          </Grid>
+          <Grid ColumnDefinitions="Auto,*">
+            <Border Classes="segmentHost">
+              <ListBox Classes="segments"
+                       ItemsSource="{Binding OriginFilters}"
+                       SelectedIndex="{Binding OriginIndex, Mode=TwoWay}">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal"/>
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+              </ListBox>
+            </Border>
+          </Grid>
+          <Grid ColumnDefinitions="Auto,*">
+            <Border Classes="segmentHost">
+              <ListBox Classes="segments"
+                       ItemsSource="{Binding CapabilityFilters}"
+                       SelectedIndex="{Binding CapabilityIndex, Mode=TwoWay}">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal"/>
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+              </ListBox>
+            </Border>
+          </Grid>
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <TextBox Classes="search"
+                     Width="260"
+                     Watermark="搜索模型 / 厂商 / 标签"
+                     Text="{Binding SearchText, Mode=TwoWay}"/>
+            <TextBlock Grid.Column="1"
+                       Text="{Binding ImportStatus}"
+                       Classes="caption"
+                       VerticalAlignment="Center"
+                       Margin="12,0,12,0"
+                       TextTrimming="CharacterEllipsis"/>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+              <Button Classes="ghost" Command="{Binding SyncCommand}" IsEnabled="{Binding !IsSyncing}">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                  <Path Classes="icon" Data="{StaticResource IconSpark}" Width="15" Height="15"/>
+                  <TextBlock Text="从源同步" VerticalAlignment="Center"/>
+                </StackPanel>
+              </Button>
+              <Button Classes="ghost" Command="{Binding AddCustomModelCommand}" IsEnabled="{Binding !IsImporting}">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                  <Path Classes="icon" Data="{StaticResource IconPlus}" Width="15" Height="15"/>
+                  <TextBlock Text="自定义模型" VerticalAlignment="Center"/>
+                </StackPanel>
+              </Button>
+              <Button Classes="ghost" Command="{Binding ImportCommand}" IsEnabled="{Binding !IsImporting}">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                  <Path Classes="icon" Data="{StaticResource IconFolder}" Width="15" Height="15"/>
+                  <TextBlock Text="导入本地 GGUF" VerticalAlignment="Center"/>
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </Grid>
+          <views:ModelLegendView Margin="0,2,0,0"/>
+        </StackPanel>
+      </Border>
+      <StackPanel Spacing="3" Margin="4,0,0,0">
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <TextBlock Text="{Binding ProviderHint}" Classes="caption"/>
+          <TextBlock Text="{Binding SyncSummaryText}" Classes="caption"/>
+        </StackPanel>
+        <TextBlock Text="{Binding SyncStatus}"
+                   Classes="caption"
+                   Foreground="{DynamicResource Accent}"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding HasSyncStatus}"/>
+      </StackPanel>
+    </StackPanel>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="30,0,14,22">
+        <ItemsControl ItemsSource="{Binding Cards}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Orientation="Horizontal"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ModelCardViewModel">
+              <views:ModelCardView Width="306" Margin="0,0,16,16"/>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Button Classes="ghost"
+                Content="{Binding LoadMoreText}"
+                Command="{Binding LoadMoreCommand}"
+                IsVisible="{Binding HasMore}"
+                HorizontalAlignment="Center"
+                Margin="0,2,0,6"/>
+      </StackPanel>
+    </ScrollViewer>
+
+    <StackPanel Grid.Row="1"
+                IsVisible="{Binding IsEmpty}"
+                HorizontalAlignment="Center"
+                Margin="0,48,0,0"
+                Spacing="8">
+      <TextBlock Text="没有匹配的模型。"
+                 Classes="muted"
+                 HorizontalAlignment="Center"/>
+      <TextBlock Text="{Binding ActiveFilterText}"
+                 Classes="caption"
+                 HorizontalAlignment="Center"
+                 TextWrapping="Wrap"
+                 MaxWidth="560"
+                 TextAlignment="Center"/>
+      <Button Classes="ghost"
+              Content="重置筛选"
+              Command="{Binding ResetFiltersCommand}"
+              HorizontalAlignment="Center"/>
+    </StackPanel>
+  </Grid>
+</UserControl>

@@ -1,0 +1,40 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="LocalModelHub.App.Views.ApiModelPickerWindow"
+        Title="选择 API 模型"
+        Width="540"
+        Height="460"
+        MinWidth="420"
+        MinHeight="340"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBg}"
+        ShowInTaskbar="False">
+  <Grid Margin="24,20" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+    <StackPanel Spacing="3">
+      <TextBlock Text="选择要连接的模型" Classes="h2"/>
+      <TextBlock Text="模型列表来自该 API 的 /v1/models 接口；选择后会加入模型商店并立即连接。"
+                 Classes="caption"
+                 TextWrapping="Wrap"/>
+    </StackPanel>
+
+    <TextBox Grid.Row="1" x:Name="SearchBox" Watermark="搜索模型 ID"/>
+
+    <Border Grid.Row="2" Classes="card" CornerRadius="14" Padding="6">
+      <ListBox x:Name="ModelList" Background="Transparent">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <TextBlock Text="{Binding}" Classes="mono" FontSize="12.5" Margin="6,4"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+
+    <Grid Grid.Row="3" ColumnDefinitions="*,Auto">
+      <TextBlock x:Name="CountText" Classes="caption" VerticalAlignment="Center"/>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+        <Button Classes="ghost" Content="取消" Click="OnCancel"/>
+        <Button Classes="primary" Content="连接此模型" Click="OnConfirm" MinWidth="110"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>

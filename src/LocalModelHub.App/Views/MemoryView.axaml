@@ -1,0 +1,120 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LocalModelHub.App.ViewModels"
+             x:Class="LocalModelHub.App.Views.MemoryView"
+             x:DataType="vm:MemoryViewModel">
+  <Grid RowDefinitions="Auto,*">
+    <StackPanel Margin="30,0,30,14" Spacing="10">
+      <Border Classes="card" Padding="14" CornerRadius="16">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="长期记忆" Classes="h3" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="{Binding CountText}" Classes="caption" VerticalAlignment="Center"/>
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto,Auto">
+            <TextBox Watermark="添加一条记忆，例如：回答优先使用中文，代码注释用英文"
+                     MaxLength="500"
+                     Text="{Binding Input, Mode=TwoWay}"/>
+            <TextBlock Grid.Column="1"
+                       Text="{Binding InputCounter}"
+                       Classes="caption"
+                       VerticalAlignment="Center"
+                       Margin="8,0,8,0"/>
+            <Button Grid.Column="2"
+                    Classes="primary"
+                    Content="添加"
+                    Command="{Binding AddCommand}"
+                    IsEnabled="{Binding CanAdd}"
+                    MinWidth="86"/>
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Classes="search"
+                     Width="260"
+                     HorizontalAlignment="Left"
+                     Watermark="搜索记忆"
+                     Text="{Binding SearchText, Mode=TwoWay}"/>
+            <TextBlock Grid.Column="1"
+                       Text="{Binding Status}"
+                       Classes="caption"
+                       VerticalAlignment="Center"
+                       Margin="12,0,0,0"/>
+          </Grid>
+          <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+            <CheckBox Content="对话时引用记忆" IsChecked="{Binding MemoryEnabled, Mode=TwoWay}"/>
+            <CheckBox Grid.Column="1"
+                      Content="允许模型写入记忆"
+                      IsChecked="{Binding AllowModelWrites, Mode=TwoWay}"
+                      Margin="18,0,0,0"/>
+            <Button Grid.Column="3" Classes="ghost" Content="清空全部" Command="{Binding ClearCommand}"/>
+          </Grid>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+      <ItemsControl ItemsSource="{Binding Items}" Margin="30,0,14,22">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:MemoryItemViewModel">
+            <Border Classes="card" CornerRadius="14" Padding="14,11" Margin="0,0,0,10">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel IsVisible="{Binding !IsEditing}" Spacing="6">
+                  <TextBlock Text="{Binding Text}" TextWrapping="Wrap" LineHeight="19"/>
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Border Classes="badge" Classes.local="{Binding IsModel}">
+                      <TextBlock Text="{Binding SourceText}"/>
+                    </Border>
+                    <Border Classes="badge accent" IsVisible="{Binding IsPinned}">
+                      <TextBlock Text="已固定"/>
+                    </Border>
+                    <TextBlock Text="{Binding MetaText}" Classes="caption" VerticalAlignment="Center"/>
+                  </StackPanel>
+                </StackPanel>
+                <StackPanel IsVisible="{Binding IsEditing}" Spacing="8">
+                  <TextBox Text="{Binding EditText, Mode=TwoWay}"
+                           AcceptsReturn="True"
+                           TextWrapping="Wrap"
+                           MaxLength="500"
+                           MinHeight="64"/>
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                    <Button Classes="ghost" Content="取消" Command="{Binding CancelEditCommand}"/>
+                    <Button Classes="primary" Content="保存" Command="{Binding SaveEditCommand}" MinWidth="76"/>
+                  </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="6"
+                            Margin="10,0,0,0"
+                            VerticalAlignment="Top"
+                            IsVisible="{Binding !IsEditing}">
+                  <Button Classes="icon" Command="{Binding TogglePinCommand}" ToolTip.Tip="{Binding PinToolTip}">
+                    <Path Classes="icon" Data="{StaticResource IconPin}" Width="15" Height="15"/>
+                  </Button>
+                  <Button Classes="icon" Command="{Binding BeginEditCommand}" ToolTip.Tip="编辑">
+                    <Path Classes="icon" Data="{StaticResource IconEdit}" Width="15" Height="15"/>
+                  </Button>
+                  <Button Classes="icon" Command="{Binding RemoveCommand}" ToolTip.Tip="删除这条记忆">
+                    <Path Classes="icon" Data="{StaticResource IconTrash}" Width="15" Height="15"/>
+                  </Button>
+                </StackPanel>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+    <StackPanel Grid.Row="1"
+                IsVisible="{Binding IsEmpty}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="7">
+      <TextBlock Text="{Binding EmptyHint}" Classes="h2" HorizontalAlignment="Center"/>
+      <TextBlock Text="手动添加偏好或事实，或在计划 / 目标模式下让模型用 remember 工具写入。"
+                 Classes="muted"
+                 MaxWidth="520"
+                 TextAlignment="Center"
+                 TextWrapping="Wrap"
+                 HorizontalAlignment="Center"/>
+    </StackPanel>
+  </Grid>
+</UserControl>

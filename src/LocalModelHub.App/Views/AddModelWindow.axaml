@@ -1,0 +1,133 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="LocalModelHub.App.Views.AddModelWindow"
+        Title="添加自定义模型"
+        Width="620"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBg}"
+        ShowInTaskbar="False">
+  <StackPanel Margin="26,22" Spacing="14">
+    <StackPanel Spacing="3">
+      <TextBlock Text="添加自定义模型" Classes="h2"/>
+      <TextBlock Text="粘贴 HuggingFace / 魔搭仓库链接后点「解析」，会自动列出可选的 GGUF 文件并填好大小、参数量；也可以直接手动填写。"
+                 Classes="caption"
+                 TextWrapping="Wrap"/>
+    </StackPanel>
+
+    <Border Classes="card" CornerRadius="16" Padding="16">
+      <Grid ColumnDefinitions="120,*"
+            RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+            ColumnSpacing="12"
+            RowSpacing="10">
+        <TextBlock Text="模型名称 *" Classes="muted" VerticalAlignment="Center"/>
+        <TextBox x:Name="NameBox" Grid.Column="1" Watermark="例如 Qwen3-8B-Instruct"/>
+
+        <TextBlock Grid.Row="1" Text="开发者" Classes="muted" VerticalAlignment="Center"/>
+        <TextBox x:Name="DeveloperBox" Grid.Row="1" Grid.Column="1" Watermark="例如 阿里巴巴 · 通义千问"/>
+
+        <TextBlock Grid.Row="2" Text="地区" Classes="muted" VerticalAlignment="Center"/>
+        <ComboBox x:Name="CountryBox" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Left" Width="180"/>
+
+        <TextBlock Grid.Row="3" Text="下载源" Classes="muted" VerticalAlignment="Center"/>
+        <ComboBox x:Name="ProviderBox" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Left" Width="180"/>
+
+        <TextBlock Grid.Row="4" Text="仓库链接" Classes="muted" VerticalAlignment="Center"/>
+        <Grid Grid.Row="4" Grid.Column="1" ColumnDefinitions="*,Auto">
+          <TextBox x:Name="RepoLinkBox" Watermark="粘贴 HuggingFace / 魔搭链接或 owner/name"/>
+          <Button x:Name="ParseButton"
+                  Grid.Column="1"
+                  Classes="ghost"
+                  Content="解析"
+                  Click="OnParseRepo"
+                  Margin="8,0,0,0"/>
+        </Grid>
+
+        <TextBlock x:Name="FileLabel" Grid.Row="5" Text="选择文件" Classes="muted" VerticalAlignment="Center" IsVisible="False"/>
+        <ComboBox x:Name="FileCombo"
+                  Grid.Row="5"
+                  Grid.Column="1"
+                  IsVisible="False"
+                  SelectionChanged="OnFileSelected"
+                  HorizontalAlignment="Stretch"/>
+
+        <TextBlock Grid.Row="6" Text="仓库 ID *" Classes="muted" VerticalAlignment="Center"/>
+        <TextBox x:Name="RepoBox" Grid.Row="6" Grid.Column="1" Watermark="例如 Qwen/Qwen3-8B-GGUF"/>
+
+        <TextBlock Grid.Row="7" Text="文件名 *" Classes="muted" VerticalAlignment="Center"/>
+        <TextBox x:Name="FileBox" Grid.Row="7" Grid.Column="1" Watermark="例如 Qwen3-8B-Q4_K_M.gguf"/>
+
+        <TextBlock Grid.Row="8" Text="量化标签" Classes="muted" VerticalAlignment="Center"/>
+        <TextBox x:Name="QuantBox" Grid.Row="8" Grid.Column="1" Text="Q4_K_M"/>
+
+        <TextBlock Grid.Row="9" Text="文件大小 (GB) *" Classes="muted" VerticalAlignment="Center"/>
+        <NumericUpDown x:Name="SizeBox"
+                       Grid.Row="9"
+                       Grid.Column="1"
+                       Width="180"
+                       HorizontalAlignment="Left"
+                       Minimum="0.01"
+                       Maximum="2000"
+                       Increment="0.5"
+                       FormatString="0.###"
+                       Value="4"/>
+
+        <TextBlock Grid.Row="10" Text="参数量 (B) *" Classes="muted" VerticalAlignment="Center"/>
+        <NumericUpDown x:Name="ParamsBox"
+                       Grid.Row="10"
+                       Grid.Column="1"
+                       Width="180"
+                       HorizontalAlignment="Left"
+                       Minimum="0.1"
+                       Maximum="1000"
+                       Increment="1"
+                       FormatString="0.#"
+                       Value="8"/>
+
+        <TextBlock Grid.Row="11" Text="上下文 (tokens) *" Classes="muted" VerticalAlignment="Center"/>
+        <NumericUpDown x:Name="ContextBox"
+                       Grid.Row="11"
+                       Grid.Column="1"
+                       Width="180"
+                       HorizontalAlignment="Left"
+                       Minimum="1024"
+                       Maximum="1048576"
+                       Increment="1024"
+                       FormatString="0"
+                       Value="32768"/>
+
+        <TextBlock Grid.Row="12" Text="简介" Classes="muted" VerticalAlignment="Top" Margin="0,8,0,0"/>
+        <TextBox x:Name="DescriptionBox"
+                 Grid.Row="12"
+                 Grid.Column="1"
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 Height="64"
+                 Watermark="选填，展示在模型卡片上"/>
+      </Grid>
+    </Border>
+
+    <TextBlock x:Name="ParseStatus"
+               Classes="caption"
+               Foreground="{DynamicResource Accent}"
+               TextWrapping="Wrap"
+               IsVisible="False"/>
+
+    <TextBlock x:Name="StatusText"
+               Classes="caption"
+               Foreground="{DynamicResource Danger}"
+               TextWrapping="Wrap"
+               IsVisible="False"/>
+
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBlock Text="带 * 为必填；分片模型请先合并为单个 GGUF 文件。"
+                 Classes="caption"
+                 VerticalAlignment="Center"/>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+        <Button Classes="ghost" Content="取消" Click="OnCancel"/>
+        <Button Classes="primary" Content="添加模型" Click="OnAdd" MinWidth="110"/>
+      </StackPanel>
+    </Grid>
+  </StackPanel>
+</Window>

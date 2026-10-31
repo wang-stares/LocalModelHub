@@ -1,0 +1,293 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LocalModelHub.App.ViewModels"
+             xmlns:controls="using:LocalModelHub.App.Views.Controls"
+             x:Class="LocalModelHub.App.Views.ChatView"
+             x:DataType="vm:ChatViewModel">
+  <Grid Margin="30,0,30,20">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="{Binding SessionsWidth}"/>
+      <ColumnDefinition Width="{Binding SessionsGap}"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+    <!-- 会话列表 -->
+    <Border Grid.Column="0"
+            IsVisible="{Binding !IsSessionsCollapsed}"
+            Background="{DynamicResource CardBg}"
+            BorderBrush="{DynamicResource Stroke}"
+            BorderThickness="1"
+            CornerRadius="16"
+            Padding="12,14">
+      <Grid RowDefinitions="Auto,*,Auto">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="会话" Classes="h3" VerticalAlignment="Center"/>
+          <Button Grid.Column="1"
+                  Classes="icon"
+                  Command="{Binding NewSessionCommand}"
+                  ToolTip.Tip="新建会话">
+            <Path Classes="icon" Data="{StaticResource IconPlus}" Width="15" Height="15"/>
+          </Button>
+        </Grid>
+        <ListBox Grid.Row="1"
+                 Classes="sessions"
+                 Margin="0,10,0,0"
+                 ItemsSource="{Binding Sessions}"
+                 SelectedItem="{Binding SelectedSession, Mode=TwoWay}"
+                 IsEnabled="{Binding !IsStreaming}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:ChatSessionItemViewModel">
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding Title}"
+                           FontSize="12.5"
+                           TextTrimming="CharacterEllipsis"
+                           MaxLines="1"/>
+                <TextBlock Text="{Binding TimeText}" Classes="caption"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <Button Grid.Row="2"
+                Classes="ghost"
+                Content="删除当前会话"
+                Command="{Binding DeleteCurrentSessionCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Margin="0,8,0,0"/>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto">
+      <Border Grid.Row="0"
+              BorderBrush="{DynamicResource Stroke}"
+              BorderThickness="0,0,0,1"
+              Padding="0,2,0,14">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Spacing="4" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="9">
+              <TextBlock Text="{Binding ModelName}" Classes="h3" VerticalAlignment="Center"/>
+              <Border Classes="badge pill" Classes.accent="{Binding IsReady}" VerticalAlignment="Center">
+                <TextBlock Text="{Binding StatusText}"/>
+              </Border>
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <Button Classes="ghost" Content="会话" Command="{Binding ToggleSessionsCommand}" ToolTip.Tip="{Binding SessionsToggleTip}"/>
+            <Button Classes="ghost" Content="WebUI" Command="{Binding OpenWebUiCommand}" IsEnabled="{Binding IsReady}" ToolTip.Tip="打开 llama.cpp WebUI"/>
+            <Button Classes="ghost" Content="导出" Command="{Binding ExportMarkdownCommand}" IsEnabled="{Binding HasMessages}" ToolTip.Tip="导出当前会话为 Markdown"/>
+            <Button Classes="ghost" Content="停服" Command="{Binding StopServerCommand}" IsEnabled="{Binding IsReady}" ToolTip.Tip="停止推理服务"/>
+            <Button Classes="ghost" Content="清空" Command="{Binding ClearCommand}" IsEnabled="{Binding HasMessages}"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <ScrollViewer x:Name="MessagesScroll"
+                    Grid.Row="1"
+                    VerticalScrollBarVisibility="Auto"
+                    Margin="0,8,0,0">
+        <ItemsControl ItemsSource="{Binding Messages}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ChatMessageViewModel">
+              <Grid Margin="0,6">
+                <Border IsVisible="{Binding IsUser}"
+                        HorizontalAlignment="Right"
+                        MaxWidth="440"
+                        Background="{DynamicResource Accent}"
+                        CornerRadius="18,18,6,18"
+                        Padding="16,11">
+                  <StackPanel Spacing="4">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <Button Grid.Column="0"
+                              Classes="ghost"
+                              Content="编辑"
+                              Command="{Binding EditCommand}"
+                              IsVisible="{Binding CanEdit}"
+                              FontSize="10.5"
+                              Padding="6,2"
+                              MinHeight="0"
+                              Foreground="#FFFFFF"
+                              Background="Transparent"/>
+                      <TextBlock Grid.Column="2"
+                                 Text="{Binding RoleLabel}"
+                                 FontSize="10.5"
+                                 Foreground="#FFFFFF"
+                                 Opacity="0.75"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Center"/>
+                    </Grid>
+                    <TextBlock Text="{Binding DisplayText}"
+                               TextWrapping="Wrap"
+                               LineHeight="21"
+                               Foreground="#FFFFFF"/>
+                  </StackPanel>
+                </Border>
+                <Border IsVisible="{Binding IsAssistant}"
+                        HorizontalAlignment="Left"
+                        MaxWidth="520"
+                        Background="{DynamicResource CardBg}"
+                        BorderBrush="{DynamicResource Stroke}"
+                        BorderThickness="1"
+                        CornerRadius="18,18,18,6"
+                        Padding="16,11">
+                  <StackPanel Spacing="4">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{Binding RoleLabel}" Classes="caption" VerticalAlignment="Center"/>
+                      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                        <Button Classes="ghost"
+                                Content="重新生成"
+                                Command="{Binding RegenerateCommand}"
+                                IsVisible="{Binding CanRegenerate}"
+                                FontSize="10.5"
+                                Padding="8,2"
+                                MinHeight="0"/>
+                        <Button Classes="ghost"
+                                Content="{Binding SaveMemoryText}"
+                                Command="{Binding SaveToMemoryCommand}"
+                                IsVisible="{Binding CanSaveToMemory}"
+                                IsEnabled="{Binding CanSaveAgain}"
+                                FontSize="10.5"
+                                Padding="8,2"
+                                MinHeight="0"/>
+                      </StackPanel>
+                    </Grid>
+                    <Expander IsVisible="{Binding HasReasoning}"
+                              IsExpanded="{Binding IsReasoningExpanded, Mode=TwoWay}"
+                              Padding="0"
+                              Margin="0,2,0,2">
+                      <Expander.Header>
+                        <TextBlock Text="{Binding ReasoningHeaderText}"
+                                   Classes="caption"
+                                   Foreground="{DynamicResource Accent}"/>
+                      </Expander.Header>
+                      <Border Background="{DynamicResource InputBg}"
+                              CornerRadius="10"
+                              Padding="10,7"
+                              Margin="0,4,0,0">
+                        <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
+                          <TextBlock Text="{Binding Reasoning}"
+                                     Classes="caption"
+                                     TextWrapping="Wrap"/>
+                        </ScrollViewer>
+                      </Border>
+                    </Expander>
+                    <controls:MarkdownView Markdown="{Binding DisplayText}"/>
+                  </StackPanel>
+                </Border>
+                <Border IsVisible="{Binding IsTool}"
+                        HorizontalAlignment="Left"
+                        MaxWidth="520"
+                        Background="{DynamicResource InputBg}"
+                        CornerRadius="12"
+                        Padding="12,8">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="文件操作" Classes="caption"/>
+                    <TextBlock Text="{Binding DisplayText}"
+                               Classes="caption mono"
+                               TextWrapping="Wrap"/>
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <StackPanel Grid.Row="1"
+                  IsVisible="{Binding !HasMessages}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Spacing="7">
+        <TextBlock Text="和本地模型聊聊吧" Classes="h2" HorizontalAlignment="Center"/>
+        <TextBlock Text="先在“我的模型”里启动一个模型，然后输入问题。"
+                   Classes="muted"
+                   HorizontalAlignment="Center"/>
+      </StackPanel>
+
+      <Border Grid.Row="2"
+              Background="{DynamicResource InputBg}"
+              CornerRadius="13"
+              Margin="0,12,0,0"
+              Padding="13,9">
+        <StackPanel Spacing="5">
+          <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+            <Border Classes="segmentHost" VerticalAlignment="Center">
+              <ListBox Classes="segments"
+                       ItemsSource="{Binding Modes}"
+                       SelectedIndex="{Binding ModeIndex, Mode=TwoWay}">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal"/>
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+              </ListBox>
+            </Border>
+            <TextBlock Grid.Column="1"
+                       Text="{Binding WorkspaceLabel}"
+                       Classes="caption"
+                       TextTrimming="CharacterEllipsis"
+                       VerticalAlignment="Center"
+                       Margin="12,0,10,0"/>
+            <Button Grid.Column="2"
+                    Classes="ghost"
+                    Content="打开"
+                    Command="{Binding OpenWorkspaceCommand}"
+                    IsVisible="{Binding HasWorkspace}"
+                    Margin="0,0,6,0"/>
+            <Button Grid.Column="3"
+                    Classes="ghost"
+                    Content="选择文件夹"
+                    Command="{Binding ChooseWorkspaceCommand}"/>
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding ModeHint}" Classes="caption" TextWrapping="Wrap"/>
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="10"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding HasWorkspace}">
+              <CheckBox Content="多 Agent"
+                        IsChecked="{Binding MultiAgentEnabled, Mode=TwoWay}"
+                        ToolTip.Tip="目标模式下启用 Planner → Coder → Reviewer 串行协作：独立评审角色只依据工具轨迹与真实补丁判断，未通过时把具体问题交回 Coder 返工。"/>
+              <CheckBox Content="允许命令"
+                        IsChecked="{Binding AllowCommands, Mode=TwoWay}"
+                        ToolTip.Tip="允许模型运行白名单内的构建 / 测试命令（dotnet test、npm test、pytest 等）。命令在工作文件夹内执行，其它命令会被拒绝。"/>
+            </StackPanel>
+          </Grid>
+          <TextBlock Text="{Binding KnowledgeStatus}"
+                     Classes="caption"
+                     Foreground="{DynamicResource Accent}"
+                     IsVisible="{Binding HasKnowledgeStatus}"/>
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Row="3"
+              Classes="composer"
+              Margin="0,14,0,0">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox x:Name="InputBox"
+                   Classes="chatInput"
+                   AcceptsReturn="True"
+                   TextWrapping="Wrap"
+                   MinHeight="40"
+                   MaxHeight="140"
+                   VerticalContentAlignment="Center"
+                   Watermark="输入消息，Enter 发送，Shift + Enter 换行"
+                   Text="{Binding Input, Mode=TwoWay}"
+                   KeyDown="OnInputKeyDown"/>
+          <StackPanel Grid.Column="1"
+                      Orientation="Horizontal"
+                      Spacing="8"
+                      Margin="10,0,0,0"
+                      VerticalAlignment="Center">
+            <Button Classes="ghost" Content="停止" Command="{Binding StopCommand}" IsVisible="{Binding IsStreaming}"/>
+            <Button Classes="primary" Command="{Binding SendCommand}" IsEnabled="{Binding CanSend}" MinWidth="96">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <Path Classes="icon" Data="{StaticResource IconSend}" Width="15" Height="15"/>
+                <TextBlock Text="发送" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

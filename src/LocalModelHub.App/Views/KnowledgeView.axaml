@@ -1,0 +1,121 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LocalModelHub.App.ViewModels"
+             x:Class="LocalModelHub.App.Views.KnowledgeView"
+             x:DataType="vm:KnowledgeViewModel">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="30,0,30,30" Spacing="16" MaxWidth="940" HorizontalAlignment="Left">
+
+      <Border Classes="card" CornerRadius="20" Padding="20">
+        <StackPanel Spacing="14">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2">
+              <TextBlock Text="本地知识库" Classes="h3"/>
+              <TextBlock Text="{Binding CountText}" Classes="caption"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <Button Classes="ghost"
+                      Content="导入文件"
+                      Command="{Binding ImportFileCommand}"
+                      IsEnabled="{Binding !IsImporting}"/>
+              <Button Classes="ghost"
+                      Content="导入文件夹"
+                      Command="{Binding ImportFolderCommand}"
+                      IsEnabled="{Binding !IsImporting}"/>
+              <Button Classes="danger"
+                      Content="清空"
+                      Command="{Binding ClearCommand}"
+                      IsEnabled="{Binding HasDocuments}"/>
+            </StackPanel>
+          </Grid>
+
+          <CheckBox Content="对话时自动检索知识库并注入相关片段"
+                    IsChecked="{Binding KnowledgeEnabled, Mode=TwoWay}"/>
+
+          <TextBlock Text="支持 Markdown、文本与常见代码文件（单文件 ≤ 2 MB），内容只保存在本机；使用 BM25 关键词检索，不需要额外模型或网络。"
+                     Classes="caption"
+                     TextWrapping="Wrap"/>
+
+          <ProgressBar Height="4" IsIndeterminate="{Binding IsImporting}" IsVisible="{Binding IsImporting}"/>
+          <TextBlock Text="{Binding ImportStatus}" Classes="caption" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
+
+      <ItemsControl ItemsSource="{Binding Documents}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:KnowledgeDocumentItemViewModel">
+            <Border Classes="card cardHover" Padding="16" Margin="0,0,0,10" CornerRadius="16">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{Binding Title}" Classes="h3"/>
+                  <TextBlock Text="{Binding Detail}" Classes="muted" FontSize="11.5"/>
+                  <TextBlock Text="{Binding PathText}"
+                             Classes="caption"
+                             TextTrimming="CharacterEllipsis"
+                             MaxWidth="640"/>
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Classes="danger"
+                        Content="删除"
+                        Command="{Binding DeleteCommand}"
+                        VerticalAlignment="Center"/>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <Border Classes="card" Padding="36" CornerRadius="20" IsVisible="{Binding IsEmpty}">
+        <StackPanel Spacing="7" HorizontalAlignment="Center">
+          <TextBlock Text="还没有知识库文档" Classes="h3" HorizontalAlignment="Center"/>
+          <TextBlock Text="导入项目 README、设计文档或代码文件后，对话会自动检索相关片段并标注来源。"
+                     Classes="muted"
+                     HorizontalAlignment="Center"
+                     TextWrapping="Wrap"
+                     MaxWidth="560"/>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card" CornerRadius="20" Padding="20">
+        <StackPanel Spacing="12">
+          <StackPanel Spacing="2">
+            <TextBlock Text="检索测试" Classes="h3"/>
+            <TextBlock Text="输入问题或关键词，查看实际会被注入对话的片段与来源。"
+                       Classes="caption"
+                       TextWrapping="Wrap"/>
+          </StackPanel>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Text="{Binding SearchText, Mode=TwoWay}"
+                     Watermark="例如：如何配置局域网 API"
+                     Margin="0,0,8,0"/>
+            <Button Grid.Column="1"
+                    Classes="primary"
+                    Content="检索"
+                    Command="{Binding SearchCommand}"
+                    MinWidth="88"/>
+          </Grid>
+          <TextBlock Text="{Binding SearchStatus}" Classes="caption" TextWrapping="Wrap"/>
+
+          <ItemsControl ItemsSource="{Binding Results}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:KnowledgeHitItemViewModel">
+                <Border Background="{DynamicResource InputBg}"
+                        CornerRadius="12"
+                        Padding="13,10"
+                        Margin="0,0,0,8">
+                  <StackPanel Spacing="5">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{Binding SourceText}" Classes="caption"/>
+                      <TextBlock Grid.Column="1" Text="{Binding ScoreText}" Classes="caption"/>
+                    </Grid>
+                    <TextBlock Text="{Binding Snippet}" Classes="muted" TextWrapping="Wrap"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

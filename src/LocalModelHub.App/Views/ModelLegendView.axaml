@@ -1,0 +1,72 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LocalModelHub.App.Views.ModelLegendView">
+  <Expander HorizontalAlignment="Stretch" Padding="0">
+    <Expander.Header>
+      <TextBlock Text="这些标签是什么意思？（点开查看）"
+                 Classes="caption"
+                 FontWeight="SemiBold"/>
+    </Expander.Header>
+
+    <Border Classes="card" Padding="16,14" CornerRadius="14" Margin="0,8,0,0">
+      <StackPanel Spacing="7">
+        <Grid ColumnDefinitions="92,*" Margin="0,0,0,2">
+          <TextBlock Text="来源" FontWeight="SemiBold" FontSize="12"/>
+          <TextBlock Grid.Column="1"
+                     Classes="muted"
+                     TextWrapping="Wrap"
+                     FontSize="12"
+                     Text="内置 = 应用自带清单；HuggingFace / 魔搭 / Ollama = 从社区同步；远程 API = 外部 OpenAI 兼容服务。"/>
+        </Grid>
+        <Grid ColumnDefinitions="92,*">
+          <TextBlock Text="地区" FontWeight="SemiBold" FontSize="12"/>
+          <TextBlock Grid.Column="1"
+                     Classes="muted"
+                     TextWrapping="Wrap"
+                     FontSize="12"
+                     Text="国内 / 美国 / 法国 / 海外 = 模型开发团队所在地。只用来筛选，不影响它在这台电脑上的运行速度。"/>
+        </Grid>
+        <Grid ColumnDefinitions="92,*">
+          <TextBlock Text="适配度" FontWeight="SemiBold" FontSize="12"/>
+          <TextBlock Grid.Column="1"
+                     Classes="muted"
+                     TextWrapping="Wrap"
+                     FontSize="12"
+                     Text="完美运行 = 整个模型装进显存，最快；显存+内存 = 显存不够，部分层放到内存；CPU 运行 = 只用处理器和内存，较慢；勉强可跑 = 内存很紧张；内存不足 = 当前硬件加载困难。"/>
+        </Grid>
+        <Grid ColumnDefinitions="92,*">
+          <TextBlock Text="速度" FontWeight="SemiBold" FontSize="12"/>
+          <TextBlock Grid.Column="1"
+                     Classes="muted"
+                     TextWrapping="Wrap"
+                     FontSize="12"
+                     Text="tok/s = 每秒生成多少个 token，1 个汉字约等于 1–2 个 token。低于 1 tok/s 基本无法正常使用。"/>
+        </Grid>
+        <Grid ColumnDefinitions="92,*">
+          <TextBlock Text="量化" FontWeight="SemiBold" FontSize="12"/>
+          <TextBlock Grid.Column="1"
+                     Classes="muted"
+                     TextWrapping="Wrap"
+                     FontSize="12"
+                     Text="Q8_0 &gt; Q6_K &gt; Q5_K_M &gt; Q4_K_M（推荐）&gt; Q3_K_M &gt; Q2_K。数字越小体积越小、质量略降；IQ2 / IQ3 是更省体积的低比特量化。"/>
+        </Grid>
+        <Grid ColumnDefinitions="92,*">
+          <TextBlock Text="能力" FontWeight="SemiBold" FontSize="12"/>
+          <TextBlock Grid.Column="1"
+                     Classes="muted"
+                     TextWrapping="Wrap"
+                     FontSize="12"
+                     Text="编程 / 对话 / 推理 / 长文本 / 工具调用 / 多语言 / 轻量（参数不超过 4B，占用小、速度快）。"/>
+        </Grid>
+        <Grid ColumnDefinitions="92,*">
+          <TextBlock Text="下载量" FontWeight="SemiBold" FontSize="12"/>
+          <TextBlock Grid.Column="1"
+                     Classes="muted"
+                     TextWrapping="Wrap"
+                     FontSize="12"
+                     Text="来自模型社区的累计下载次数，代表热度与成熟度，不代表它在这台电脑上的速度。"/>
+        </Grid>
+      </StackPanel>
+    </Border>
+  </Expander>
+</UserControl>
