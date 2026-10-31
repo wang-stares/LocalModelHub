@@ -44,11 +44,18 @@ public sealed class HfFileInfo
     public HfLfsInfo? Lfs { get; set; }
 
     public long ActualSize => Lfs is { Size: > 0 } ? Lfs.Size : Size;
+
+    /// <summary>LFS 文件的 SHA-256（lfs.oid）；非 LFS 文件为空。</summary>
+    public string? Digest => string.IsNullOrWhiteSpace(Lfs?.Sha256) ? null : $"sha256:{Lfs.Sha256}";
 }
 
 public sealed class HfLfsInfo
 {
     public long Size { get; set; }
+
+    /// <summary>HuggingFace API 的 oid 字段即文件 SHA-256（64 位十六进制）。</summary>
+    [JsonPropertyName("oid")]
+    public string Sha256 { get; set; } = "";
 }
 
 public sealed class MsModelInfo
@@ -77,7 +84,7 @@ public sealed class MsFileInfo
 
 public sealed record OllamaLayer(string Digest, long Size);
 
-public sealed record RepoFileOption(string Path, string Label, long Bytes)
+public sealed record RepoFileOption(string Path, string Label, long Bytes, string? Digest = null)
 {
     public string Display => $"{Label} · {Formatters.Bytes(Bytes)} · {Path}";
 }
@@ -810,7 +817,8 @@ public sealed class RemoteCatalogService
             .Where(file => file.Path.EndsWith(".gguf", StringComparison.OrdinalIgnoreCase))
             .Where(file => !IsAuxiliaryFile(file.Path))
             .Where(file => !SplitRegex.IsMatch(file.Path))
-            .Select(file => new RepoFileOption(file.Path, ExtractQuantLabel(file.Path) ?? "GGUF", file.Bytes))
+            .Select(file => new RepoFileOption(
+                file.Path, ExtractQuantLabel(file.Path) ?? "GGUF", file.Bytes, file.Digest))
             .OrderBy(option => QuantRank(option.Label))
             .ThenByDescending(option => option.Bytes)
             .ToList();
@@ -840,7 +848,12 @@ public sealed class RemoteCatalogService
                 cancellationToken);
             files = ParseModelScopeFiles(json)
                 .Where(file => file.Type.Equals("blob", StringComparison.OrdinalIgnoreCase))
-                .Select(file => new ModelFile { Path = file.Path, Bytes = file.Size })
+                .Select(file => new ModelFile
+                {
+                    Path = file.Path,
+                    Bytes = file.Size,
+                    Digest = string.IsNullOrWhiteSpace(file.Sha256) ? null : $"sha256:{file.Sha256}"
+                })
                 .ToList();
 
             try
@@ -881,7 +894,7 @@ public sealed class RemoteCatalogService
             }
 
             files = ParseHuggingFaceTree(json)
-                .Select(file => new ModelFile { Path = file.Path, Bytes = file.ActualSize })
+                .Select(file => new ModelFile { Path = file.Path, Bytes = file.ActualSize, Digest = file.Digest })
                 .ToList();
 
             try
@@ -921,7 +934,7 @@ public sealed class RemoteCatalogService
     {
         var modelFiles = files
             .Where(file => file.Path.EndsWith(".gguf", StringComparison.OrdinalIgnoreCase))
-            .Select(file => new ModelFile { Path = file.Path, Bytes = file.ActualSize })
+            .Select(file => new ModelFile { Path = file.Path, Bytes = file.ActualSize, Digest = file.Digest })
             .ToList();
 
         var quants = BuildQuantList(modelFiles, "HuggingFace", repo.Id, "main");
@@ -1008,7 +1021,12 @@ public sealed class RemoteCatalogService
         var modelFiles = files
             .Where(file => file.Type.Equals("blob", StringComparison.OrdinalIgnoreCase))
             .Where(file => file.Path.EndsWith(".gguf", StringComparison.OrdinalIgnoreCase))
-            .Select(file => new ModelFile { Path = file.Path, Bytes = file.Size })
+            .Select(file => new ModelFile
+            {
+                Path = file.Path,
+                Bytes = file.Size,
+                Digest = string.IsNullOrWhiteSpace(file.Sha256) ? null : $"sha256:{file.Sha256}"
+            })
             .ToList();
 
         var quants = BuildQuantList(modelFiles, "ModelScope", repo.Id, "master");

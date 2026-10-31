@@ -32,7 +32,8 @@ public sealed class PerformanceScorer
         double cpuNorm;
         if (benchmark is { CpuGflops: > 0 })
         {
-            cpuNorm = 0.65 * Math.Clamp(benchmark.CpuGflops / 45d, 0, 1) + 0.35 * specCpuNorm;
+            // 60 GFLOPS ≈ 单核 AVX2/FMA 在 3.5 GHz 附近的实际上限；向量化内核测出的值不应长期顶格。
+            cpuNorm = 0.65 * Math.Clamp(benchmark.CpuGflops / 60d, 0, 1) + 0.35 * specCpuNorm;
         }
         else
         {

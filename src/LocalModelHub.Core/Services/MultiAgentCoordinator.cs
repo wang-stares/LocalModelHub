@@ -26,7 +26,8 @@ public sealed class MultiAgentCoordinator
 {
     private const int PlannerTokens = 512;
     private const int ReviewerTokens = 700;
-    private const int ReviewDiffChars = 3000;
+    private const int MaxDigestFiles = 12;
+    private const int MaxHunksPerFile = 3;
 
     private static readonly string ReviewerSystemPrompt = """
         你是独立评审角色（Reviewer），与负责改代码的 Coder 分离。
@@ -42,6 +43,7 @@ public sealed class MultiAgentCoordinator
     private readonly bool _allowCommands;
     private readonly ICommandRunner _commands;
     private readonly int _maxRounds;
+    private readonly bool _textToolProtocol;
 
     public MultiAgentCoordinator(
         IChatCompletion server,
@@ -50,7 +52,8 @@ public sealed class MultiAgentCoordinator
         bool allowMemoryWrites,
         bool allowCommands = false,
         ICommandRunner? commands = null,
-        int maxRounds = 2)
+        int maxRounds = 2,
+        bool textToolProtocol = false)
     {
         _server = server;
         _workspace = workspace;
@@ -59,13 +62,15 @@ public sealed class MultiAgentCoordinator
         _allowCommands = allowCommands;
         _commands = commands ?? new CommandService();
         _maxRounds = Math.Clamp(maxRounds, 1, 3);
+        _textToolProtocol = textToolProtocol;
     }
 
     public async Task<MultiAgentResult> RunAsync(
         IReadOnlyList<ChatMessage> history,
         string? memoryContext,
         Action<ToolActivity>? onActivity,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<string>? onDelta = null)
     {
         if (!_workspace.IsConfigured) throw new InvalidOperationException("请先设置工作文件夹。");
 
@@ -125,10 +130,13 @@ public sealed class MultiAgentCoordinator
 
         for (var round = 1; round <= _maxRounds; round++)
         {
+            // selfVerify: false —— 自检交给独立的 Reviewer，避免同一份改动被两套口径评审、Token 翻倍。
             var agent = new WorkspaceAgent(
                 _server, _workspace, _memory, AgentMode.Goal,
-                _allowMemoryWrites, _allowCommands, _commands);
-            coder = await agent.RunAsync(coderHistory, coderMemory, onActivity, cancellationToken, plan);
+                _allowMemoryWrites, _allowCommands, _commands,
+                textToolProtocol: _textToolProtocol, selfVerify: false);
+            coder = await agent.RunAsync(
+                coderHistory, coderMemory, onActivity, cancellationToken, plan, onDelta);
             roles.Add(new MultiAgentRoleOutput("coder", coder.Text));
 
             var after = await Task.Run(() => WorkspaceDiff.Capture(root), cancellationToken);
@@ -207,17 +215,8 @@ public sealed class MultiAgentCoordinator
             prompt.AppendLine(AgentProtocol.BuildVerifyPrompt(request, plan, coder.Trajectory?.Steps ?? []));
             prompt.AppendLine();
             prompt.AppendLine($"真实补丁：{files.Count} 个文件，+{patch.AddedLines} / -{patch.RemovedLines} 行。");
-            prompt.AppendLine(files.Count == 0 ? "（补丁为空，Coder 没有真实修改文件）" :
-                "变更文件：" + string.Join("、", files.Take(12)));
-            if (!patch.IsEmpty)
-            {
-                prompt.AppendLine("补丁预览（可能截断）：");
-                prompt.AppendLine("```diff");
-                prompt.AppendLine(patch.Text.Length <= ReviewDiffChars
-                    ? patch.Text
-                    : patch.Text[..ReviewDiffChars] + "\n…（补丁已截断）");
-                prompt.AppendLine("```");
-            }
+            prompt.AppendLine(files.Count == 0 ? "（补丁为空，Coder 没有真实修改文件）" : "变更清单与关键 hunk：");
+            if (!patch.IsEmpty) prompt.AppendLine(BuildChangeDigest(patch));
 
             var turn = await _server.ChatAsync(
                 [
@@ -235,6 +234,106 @@ public sealed class MultiAgentCoordinator
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// 用「文件清单 + 每文件行数统计 + 关键 hunk 头」替代整段 diff 预览：
+    /// Reviewer 需要的是改动范围与位置，而不是把 3000 字符补丁塞进上下文。
+    /// </summary>
+    private static string BuildChangeDigest(WorkspacePatch patch)
+    {
+        var builder = new StringBuilder();
+        var entries = new List<(string Path, int Added, int Removed, List<string> Hunks, List<string> Samples)>();
+        (string Path, int Added, int Removed, List<string> Hunks, List<string> Samples)? current = null;
+
+        void Flush()
+        {
+            if (current is { } entry) entries.Add(entry);
+            current = null;
+        }
+
+        foreach (var raw in patch.Text.Replace("\r\n", "\n").Split('\n'))
+        {
+            if (raw.StartsWith("+++ ", StringComparison.Ordinal))
+            {
+                Flush();
+                var path = raw[4..].Trim();
+                if (path.StartsWith("b/", StringComparison.Ordinal)) path = path[2..];
+                if (path == "/dev/null")
+                {
+                    // 删除文件：路径在上面的 --- 行里，解析不到就用 Removed 列表兜底
+                    continue;
+                }
+
+                current = (path, 0, 0, new List<string>(), new List<string>());
+                continue;
+            }
+
+            if (raw.StartsWith("--- ", StringComparison.Ordinal) && current is null)
+            {
+                var path = raw[4..].Trim();
+                if (path.StartsWith("a/", StringComparison.Ordinal)) path = path[2..];
+                if (path.Length > 0) current = (path, 0, 0, new List<string>(), new List<string>());
+                continue;
+            }
+
+            if (current is not { } file) continue;
+
+            if (raw.StartsWith("@@", StringComparison.Ordinal))
+            {
+                if (file.Hunks.Count < MaxHunksPerFile) file.Hunks.Add(raw.Trim());
+                current = file with { Hunks = file.Hunks };
+                continue;
+            }
+
+            if (raw.StartsWith('+') && !raw.StartsWith("+++", StringComparison.Ordinal))
+            {
+                file.Added++;
+                if (file.Samples.Count < 2) file.Samples.Add("+" + TrimSample(raw[1..]));
+            }
+            else if (raw.StartsWith('-') && !raw.StartsWith("---", StringComparison.Ordinal))
+            {
+                file.Removed++;
+                if (file.Samples.Count < 2) file.Samples.Add("-" + TrimSample(raw[1..]));
+            }
+
+            current = file;
+        }
+
+        Flush();
+
+        // 删除文件不会带 +++ 行，用 Removed 列表补齐，保证清单完整。
+        foreach (var removed in patch.Removed.Where(path => entries.All(entry => entry.Path != path)))
+        {
+            entries.Add((removed, 0, 0, [], []));
+        }
+
+        if (entries.Count == 0) return "（没有可解析的补丁内容）";
+
+        foreach (var entry in entries.Take(MaxDigestFiles))
+        {
+            var hunks = entry.Hunks.Count > 0
+                ? $"；hunk：{string.Join(" / ", entry.Hunks)}"
+                : "";
+            builder.AppendLine($"- {entry.Path}：+{entry.Added} / -{entry.Removed}，{entry.Hunks.Count} 个 hunk{hunks}");
+            foreach (var sample in entry.Samples)
+            {
+                builder.AppendLine($"  示例：{sample}");
+            }
+        }
+
+        if (entries.Count > MaxDigestFiles)
+        {
+            builder.AppendLine($"- …（共 {entries.Count} 个文件，仅列前 {MaxDigestFiles} 个）");
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private static string TrimSample(string text)
+    {
+        var trimmed = text.Trim();
+        return trimmed.Length <= 80 ? trimmed : trimmed[..80] + "…";
     }
 
     private static string FirstLine(string? text, int limit)

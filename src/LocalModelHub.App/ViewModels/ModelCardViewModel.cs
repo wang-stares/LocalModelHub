@@ -17,7 +17,8 @@ public sealed partial class ModelCardViewModel : ObservableObject, IDisposable
     private DownloadedModel? _installed;
     private ModelRecommendation? _recommendation;
     private bool _suppressQuantSync;
-    private bool _userPickedQuant;
+    private int _recommendedQuantIndex = -1;
+    private static DispatcherTimer? _invalidateTimer;
 
     public ModelCardViewModel(ModelEntry model, Func<ModelCardViewModel, Task> launch)
     {
@@ -70,6 +71,33 @@ public sealed partial class ModelCardViewModel : ObservableObject, IDisposable
     public bool IsChinese => Model.IsChinese;
     public bool IsCustom => Model.IsCustom;
 
+    /// <summary>
+    /// 工具调用标注：只有「当前正在运行的模型」才显示，避免把上一个模型的探测结果套到别的卡片上。
+    /// 原生 tool_calls 与文本协议（Thought / Action / Action Input）两种模式。
+    /// </summary>
+    public bool ShowToolModeBadge =>
+        !IsRemote && _installed is not null &&
+        AppServices.Current.Server.IsRunning &&
+        AppServices.Current.Server.LoadedModelPath is { } loaded &&
+        loaded.Equals(_installed.PrimaryPath, StringComparison.OrdinalIgnoreCase) &&
+        AppServices.Current.ActiveProfile is not null;
+
+    public string ToolModeBadgeText => AppServices.Current.ActiveProfile?.ToolModeText ?? "工具调用：未探测";
+
+    public string ToolModeBadgeTip => AppServices.Current.ActiveProfile is { } profile
+        ? $"{profile.ToolModeText}（{profile.ProbeSourceText}）。" +
+          (profile.SupportsNativeTools
+              ? "模型可直接返回 tool_calls，Agent 按原生方式调用工具。"
+              : "模型没有可用的原生工具调用，Agent 改用 Thought / Action / Action Input 文本协议，工具结果以 Observation 回填。")
+        : "尚未完成能力探测。";
+
+    public void RefreshProfileBadge()
+    {
+        OnPropertyChanged(nameof(ShowToolModeBadge));
+        OnPropertyChanged(nameof(ToolModeBadgeText));
+        OnPropertyChanged(nameof(ToolModeBadgeTip));
+    }
+
     public bool HasQuantChoices => !IsRemote && Model.Quants.Length > 1;
 
     /// <summary>量化下拉项：每个量化单独评估，直接标注「体积 · 适配度」，避免把某一档的结论套到全部量化。</summary>
@@ -117,13 +145,33 @@ public sealed partial class ModelCardViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(SelectedQuant));
         OnPropertyChanged(nameof(MetaText));
         OnPropertyChanged(nameof(QuantTip));
+        OnPropertyChanged(nameof(HasRecommendedQuant));
         RefreshInstalled();
         RefreshPartial();
         UpdateDownloadStatus();
 
         if (_suppressQuantSync || IsRemote || Model.Quants.Length <= 1) return;
-        _userPickedQuant = true;
         ApplyCore(EvaluateSelected() ?? _recommendation);
+        ScheduleEvaluationInvalidation();
+    }
+
+    /// <summary>
+    /// 连点量化下拉时合并广播：150 ms 内的多次切换只重算一次推荐排序，避免反复 WMI 采样。
+    /// </summary>
+    private static void ScheduleEvaluationInvalidation()
+    {
+        if (_invalidateTimer is null)
+        {
+            _invalidateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+            _invalidateTimer.Tick += (_, _) =>
+            {
+                _invalidateTimer!.Stop();
+                AppServices.Current.InvalidateEvaluation("quant");
+            };
+        }
+
+        _invalidateTimer.Stop();
+        _invalidateTimer.Start();
     }
 
     /// <summary>切换量化后，按当前量化重新评估适配度。</summary>
@@ -155,7 +203,8 @@ public sealed partial class ModelCardViewModel : ObservableObject, IDisposable
     {
         if (IsRemote || Model.Quants.Length <= 1) return;
         var index = FindInstalledQuantIndex();
-        if (index > 0 && index != QuantIndex) SetQuantSilently(index);
+        // 第 0 档是合法结果：旧代码忽略它，已安装的首档模型会被错误地显示成另一个量化。
+        if (index >= 0 && index != QuantIndex) SetQuantSilently(index);
     }
 
     private void SetQuantSilently(int index)
@@ -179,6 +228,7 @@ public sealed partial class ModelCardViewModel : ObservableObject, IDisposable
     public string FitTip => _recommendation is null
         ? "尚未完成硬件检测：点「概览」里的“一键检测”后即可看到适配结果。"
         : $"当前量化 {_recommendation.Quant.Label}：{_recommendation.FitLabel}。{_recommendation.FitDescription} {_recommendation.ContextNote}"
+          + (HasRecommendedQuant ? $"\n{RecommendedQuantText}（切换后按新量化重新评估，不会自动改你的选择）。" : "")
           + (_recommendation.HasReservedVram
               ? $"\n已扣除其它程序当前占用的显存约 {_recommendation.ReservedVramGb:0.#} GB。"
               : "");
@@ -314,31 +364,28 @@ public sealed partial class ModelCardViewModel : ObservableObject, IDisposable
         Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(ActionText)));
     }
 
-    public void ApplyRecommendation(ModelRecommendation? recommendation)
-    {
-        if (recommendation is not null && !IsRemote && Model.Quants.Length > 1)
-        {
-            var installedIndex = FindInstalledQuantIndex();
-            if (installedIndex >= 0)
-            {
-                // 已下载的量化优先展示；按该量化重新评估适配度。
-                if (installedIndex != QuantIndex) SetQuantSilently(installedIndex);
-                recommendation = EvaluateSelected() ?? recommendation;
-            }
-            else if (!_userPickedQuant)
-            {
-                var target = Array.FindIndex(Model.Quants, quant =>
-                    quant.Label.Equals(recommendation.Quant.Label, StringComparison.OrdinalIgnoreCase));
-                if (target >= 0 && target != QuantIndex) SetQuantSilently(target);
-            }
-            else
-            {
-                recommendation = EvaluateSelected() ?? recommendation;
-            }
-        }
+    /// <summary>推荐引擎给出的最佳量化档位，仅用于角标 / 提示，不改写用户当前选择。</summary>
+    public int RecommendedQuantIndex => _recommendedQuantIndex;
 
-        ApplyCore(recommendation);
+    public string RecommendedQuantText => !IsRemote && _recommendedQuantIndex >= 0 &&
+                                          _recommendedQuantIndex < Model.Quants.Length
+        ? $"建议 {Model.Quants[_recommendedQuantIndex].Label}"
+        : "";
+
+    public bool HasRecommendedQuant => RecommendedQuantText.Length > 0 && _recommendedQuantIndex != QuantIndex;
+
+    public void ApplyBestQuantHint(int index)
+    {
+        if (_recommendedQuantIndex == index) return;
+        _recommendedQuantIndex = index;
+        OnPropertyChanged(nameof(RecommendedQuantIndex));
+        OnPropertyChanged(nameof(RecommendedQuantText));
+        OnPropertyChanged(nameof(HasRecommendedQuant));
+        OnPropertyChanged(nameof(FitTip));
     }
+
+    /// <summary>按当前选中的量化重新评估；只读选择，不写回 QuantIndex，避免刷新时把用户选择弹回推荐档。</summary>
+    public void Reevaluate() => ApplyCore(EvaluateSelected());
 
     private void ApplyCore(ModelRecommendation? recommendation)
     {

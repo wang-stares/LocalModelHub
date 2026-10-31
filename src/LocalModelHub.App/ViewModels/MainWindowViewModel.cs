@@ -44,7 +44,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Chat = new ChatViewModel();
         KnowledgePage = new KnowledgeViewModel();
         SettingsPage = new SettingsViewModel();
-        SettingsPage.RecommendationSettingsChanged += RefreshRecommendations;
+        SettingsPage.RecommendationSettingsChanged += () => _services.InvalidateEvaluation("settings");
         MemoryPage = new MemoryViewModel();
         SkillsPage = new SkillsViewModel(_services);
         KnowledgeMemory = new KnowledgeMemoryViewModel(KnowledgePage, MemoryPage, SkillsPage);
@@ -54,14 +54,33 @@ public sealed partial class MainWindowViewModel : ObservableObject
             PageIndex = 1;
         };
 
-        Dashboard.DetectionCompleted += (_, _) => RefreshRecommendations();
+        // 统一失效入口：量化 / 设置 / 服务状态 / 检测 / 空闲卸载 / 导入都会走到这里，
+        // 保证推荐排序、筛选数量与仪表盘 Top 卡片始终与当前输入一致。
+        _services.EvaluationInvalidated += _ => Dispatcher.UIThread.Post(() =>
+        {
+            RefreshRecommendations();
+            Recommend.RefreshCount();
+            Models.RefreshCounts();
+            Dashboard.RefreshBudget();
+        });
+        Dashboard.DetectionCompleted += (_, _) => _services.InvalidateEvaluation("detect");
         _services.LibraryUpdated += () => Dispatcher.UIThread.Post(() =>
         {
             Recommend.RefreshCount();
             foreach (var card in _cards) card.RefreshLibraryState();
             Models.RefreshCounts();
         });
-        _services.Server.StateChanged += (_, _) => Dispatcher.UIThread.Post(RefreshServerState);
+        _services.Server.StateChanged += (_, _) => Dispatcher.UIThread.Post(() =>
+        {
+            RefreshServerState();
+            foreach (var card in _cards) card.RefreshProfileBadge();
+            _services.InvalidateEvaluation("server");
+        });
+        _services.ProfileChanged += () => Dispatcher.UIThread.Post(() =>
+        {
+            foreach (var card in _cards) card.RefreshProfileBadge();
+        });
+        _services.IdleSleep.Slept += () => Dispatcher.UIThread.Post(() => _services.InvalidateEvaluation("idle"));
         _services.RemoteApi.ActiveChanged += (_, _) => Dispatcher.UIThread.Post(() =>
         {
             RefreshServerState();
@@ -408,17 +427,25 @@ public sealed partial class MainWindowViewModel : ObservableObject
         SettingsPage.RefreshCatalogInfo();
     }
 
+    /// <summary>
+    /// 按「当前选中量化」重算每张卡片；推荐档位只作为角标提示，不改写用户选择。
+    /// 排序、筛选数量与仪表盘 Top 卡片都基于重算后的 SortScore。
+    /// </summary>
     private void RefreshRecommendations()
     {
-        var recommendations = _services.Recommender.Recommend(
-            _services.Hardware,
-            _services.Performance,
-            _services.Catalog,
-            _services.RecommendationOptions());
-        var lookup = recommendations.ToDictionary(r => r.Model.Id);
+        var hardware = _services.Hardware;
+        var performance = _services.Performance;
+        var options = _services.RecommendationOptions();
+
         foreach (var card in _cards)
         {
-            card.ApplyRecommendation(lookup.GetValueOrDefault(card.Model.Id));
+            if (!card.IsRemote)
+            {
+                var best = _services.Recommender.RecommendBestQuant(hardware, performance, card.Model, options);
+                card.ApplyBestQuantHint(best.Index);
+            }
+
+            card.Reevaluate();
         }
 
         var ordered = _cards

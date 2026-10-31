@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace LocalModelHub.Core.Services;
 
@@ -13,7 +15,10 @@ public sealed record RuntimeInstall(string ServerPath, string Variant, string Ta
 public sealed class RuntimeManager
 {
     private const string RepoUrl = "https://github.com/ggml-org/llama.cpp";
+    private const string ApiUrl = "https://api.github.com/repos/ggml-org/llama.cpp";
     private const string PinnedTag = "b11963";
+
+    private static readonly IReadOnlyDictionary<string, string> EmptyDigests = new Dictionary<string, string>();
 
     private readonly DownloadService _downloadService;
     private readonly SettingsService _settings;
@@ -29,14 +34,39 @@ public sealed class RuntimeManager
         var custom = _settings.Settings.RuntimePath;
         if (!string.IsNullOrWhiteSpace(custom) && File.Exists(custom)) return custom;
 
+        // runtime.json 记录的是当前运行时；优先使用，便于冒烟验证发现被替换成坏文件的二进制。
+        var marked = ReadMarkerServer();
+        if (!string.IsNullOrWhiteSpace(marked) && File.Exists(marked)) return marked;
+
         try
         {
             return Directory.EnumerateFiles(AppPaths.RuntimeDirectory, "llama-server.exe", SearchOption.AllDirectories)
                 .OrderByDescending(File.GetLastWriteTimeUtc)
                 .FirstOrDefault();
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Debug.WriteLine($"枚举运行时目录失败：{ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>读取 runtime.json 中的 serverPath；标记缺失、损坏或字段缺失时返回 null。</summary>
+    private static string? ReadMarkerServer()
+    {
+        var marker = Path.Combine(AppPaths.RuntimeDirectory, "runtime.json");
+        try
+        {
+            if (!File.Exists(marker)) return null;
+            using var document = JsonDocument.Parse(File.ReadAllText(marker));
+            return document.RootElement.TryGetProperty("serverPath", out var path) &&
+                   path.ValueKind == JsonValueKind.String
+                ? path.GetString()
+                : null;
+        }
+        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
+        {
+            Debug.WriteLine($"读取运行时标记失败：{ex.Message}");
             return null;
         }
     }
@@ -149,7 +179,34 @@ public sealed class RuntimeManager
         var existing = FindExistingServer();
         if (existing is not null)
         {
-            return new RuntimeInstall(existing, "existing", "local");
+            if (VerifyServer(existing, out var error))
+            {
+                return new RuntimeInstall(existing, "existing", "local");
+            }
+
+            // 自定义路径写错了要立即报错：继续下载也无法覆盖用户的显式配置。
+            var custom = _settings.Settings.RuntimePath;
+            if (!string.IsNullOrWhiteSpace(custom) && File.Exists(custom) &&
+                Path.GetFullPath(custom).Equals(Path.GetFullPath(existing), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"设置中指定的 llama-server.exe 无法运行：{error}。请更换路径，或清空该设置让应用自动安装。");
+            }
+
+            progress?.Report(new RuntimeProgress(
+                "verify", 0, $"现有运行时无法运行（{error}），尝试其它已安装版本…"));
+            foreach (var candidate in EnumerateServers()
+                         .Where(path => !path.Equals(existing, StringComparison.OrdinalIgnoreCase))
+                         .Take(8))
+            {
+                if (VerifyServer(candidate, out _))
+                {
+                    RememberWorkingRuntime(candidate);
+                    return new RuntimeInstall(candidate, "existing", "local");
+                }
+            }
+
+            progress?.Report(new RuntimeProgress("verify", 0, "已安装的运行时均无法运行，开始重新下载…"));
         }
 
         AppPaths.EnsureCreated();
@@ -161,6 +218,39 @@ public sealed class RuntimeManager
         progress?.Report(new RuntimeProgress("resolve", 0, "获取 llama.cpp 最新版本…"));
         var tag = await GetLatestTagAsync(cancellationToken);
         return await InstallWithFallbackAsync(tag, gpu, progress, cancellationToken);
+    }
+
+    /// <summary>
+    /// 把冒烟验证通过的已安装运行时写回 runtime.json（目录名形如 b11963-cuda-12.4），
+    /// 避免每次启动都重复验证同一个坏二进制。目录名不符合约定时保持不变。
+    /// </summary>
+    private static void RememberWorkingRuntime(string serverPath)
+    {
+        var directory = Path.GetDirectoryName(serverPath);
+        if (string.IsNullOrEmpty(directory)) return;
+
+        var folder = Path.GetFileName(directory);
+        var dash = folder.IndexOf('-');
+        if (dash < 4) return;
+
+        var tag = folder[..dash];
+        if (!tag.StartsWith('b') || tag.Length > 10) return;
+
+        SaveMarker(tag, folder[(dash + 1)..], new RuntimeInstall(serverPath, "existing", tag));
+    }
+
+    private static IEnumerable<string> EnumerateServers()
+    {
+        try
+        {
+            return Directory.EnumerateFiles(AppPaths.RuntimeDirectory, "llama-server.exe", SearchOption.AllDirectories)
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .ToArray();
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     /// <summary>检查并在用户确认后升级到上游最新运行时；已有本地运行时不会阻止升级。</summary>
@@ -184,17 +274,21 @@ public sealed class RuntimeManager
         var variant = ResolveVariant(gpu);
         var candidates = variant switch
         {
-            "cuda" => new[] { "cuda-12.4", "cuda-13.4", "vulkan", "cpu" },
+            "cuda" => CudaCandidates(
+                IsBlackwell(gpu?.Name),
+                gpu is null ? null : GpuMemoryProbe.QueryDriverVersion()),
             "vulkan" => new[] { "vulkan", "cpu" },
             _ => new[] { "cpu" }
         };
 
         Exception? lastError = null;
+        var failures = new List<string>();
         foreach (var candidate in candidates)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
+                progress?.Report(new RuntimeProgress("install", 0, $"准备 {candidate} 后端…"));
                 var install = await InstallVariantAsync(tag, candidate, progress, cancellationToken);
                 SaveMarker(tag, candidate, install);
                 return install;
@@ -206,12 +300,38 @@ public sealed class RuntimeManager
             catch (Exception ex)
             {
                 lastError = ex;
+                failures.Add($"{candidate}：{ShortMessage(ex.Message)}");
+                progress?.Report(new RuntimeProgress("fallback", 0, $"{candidate} 不可用，尝试下一个后端…"));
             }
         }
 
+        var detail = failures.Count == 0
+            ? ""
+            : "（已尝试：" + string.Join("；", failures) + "）";
         throw new InvalidOperationException(
-            "无法下载 llama.cpp 运行时。可以在“设置”中手动指定 llama-server.exe 路径，或检查网络后重试。" +
-            (lastError is null ? "" : $"（{lastError.Message}）"), lastError);
+            "无法下载并验证 llama.cpp 运行时。可以在“设置”中手动指定 llama-server.exe 路径，或检查网络后重试。" + detail,
+            lastError);
+    }
+
+    /// <summary>NVIDIA Blackwell（RTX 50 系 / B100 / B200）：只有新驱动 + CUDA 13 才能稳定运行。</summary>
+    public static bool IsBlackwell(string? gpuName) =>
+        !string.IsNullOrWhiteSpace(gpuName) &&
+        (Regex.IsMatch(gpuName, @"RTX\s*50\d\d", RegexOptions.IgnoreCase) ||
+         Regex.IsMatch(gpuName, @"\bB[12]00\b", RegexOptions.IgnoreCase) ||
+         gpuName.Contains("Blackwell", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// 后端候选顺序：Blackwell + 驱动 ≥ 570 优先 CUDA 13.x，其余沿用 CUDA 12.4 优先；
+    /// 两种顺序都以 vulkan → cpu 收尾，保证坏后端能被跳过。
+    /// </summary>
+    public static string[] CudaCandidates(bool blackwell, Version? driverVersion)
+    {
+        if (blackwell && driverVersion is { Major: >= 570 })
+        {
+            return ["cuda-13.4", "cuda-12.4", "vulkan", "cpu"];
+        }
+
+        return ["cuda-12.4", "cuda-13.4", "vulkan", "cpu"];
     }
 
     private string ResolveVariant(GpuInfo? gpu)
@@ -272,15 +392,20 @@ public sealed class RuntimeManager
         IProgress<RuntimeProgress>? progress,
         CancellationToken cancellationToken)
     {
-        var suffix = variant == "cpu" ? "cpu" : variant;
-        var assetName = $"llama-{tag}-bin-win-{suffix}-x64.zip";
+        var assetName = $"llama-{tag}-bin-win-{variant}-x64.zip";
         var assetUrl = $"{RepoUrl}/releases/download/{tag}/{assetName}";
         var targetDirectory = Path.Combine(AppPaths.RuntimeDirectory, $"{tag}-{variant}");
         Directory.CreateDirectory(targetDirectory);
 
+        // 发布页的 digest 字段即资产 SHA-256；取不到（离线 / 限流）时跳过校验并明确提示。
+        var digests = await GetReleaseDigestsAsync(tag, cancellationToken);
+        progress?.Report(digests.Count == 0
+            ? new RuntimeProgress("verify", 0, "未能获取发布页校验值，跳过安装包完整性校验")
+            : new RuntimeProgress("verify", 0, $"将校验 {variant} 安装包的 SHA-256…"));
+
         var mainZip = Path.Combine(AppPaths.DownloadsDirectory, assetName);
         var mainProgress = MapProgress(progress, $"下载推理引擎 · {variant}", 0, 80);
-        await _downloadService.DownloadFileAsync(assetUrl, mainZip, 0, mainProgress, cancellationToken);
+        await DownloadVerifiedAsync(assetUrl, assetName, mainZip, digests, mainProgress, cancellationToken);
 
         var cudartZip = "";
         if (variant.StartsWith("cuda", StringComparison.Ordinal))
@@ -291,11 +416,13 @@ public sealed class RuntimeManager
             var cudartProgress = MapProgress(progress, "下载 CUDA 运行库", 80, 92);
             try
             {
-                await _downloadService.DownloadFileAsync(cudartUrl, cudartZip, 0, cudartProgress, cancellationToken);
+                await DownloadVerifiedAsync(cudartUrl, cudartName, cudartZip, digests, cudartProgress, cancellationToken);
             }
-            catch (HttpRequestException)
+            catch (Exception ex) when (ex is HttpRequestException or InvalidDataException)
             {
                 cudartZip = "";
+                progress?.Report(new RuntimeProgress(
+                    "install", 80, $"CUDA 运行库不可用（{ShortMessage(ex.Message)}），继续尝试主程序…"));
             }
         }
 
@@ -310,11 +437,204 @@ public sealed class RuntimeManager
             .FirstOrDefault();
         if (server is null)
         {
+            TryDeleteDirectory(targetDirectory);
             throw new FileNotFoundException("运行时包中未找到 llama-server.exe");
+        }
+
+        progress?.Report(new RuntimeProgress("verify", 95, $"验证 {variant} 后端能否运行…"));
+        if (!VerifyServer(server, out var error))
+        {
+            TryDeleteDirectory(targetDirectory);
+            throw new InvalidOperationException($"{variant} 后端无法启动：{error}");
         }
 
         progress?.Report(new RuntimeProgress("done", 100, "推理引擎已就绪"));
         return new RuntimeInstall(server, variant, tag);
+    }
+
+    /// <summary>
+    /// 冒烟验证：执行 `llama-server.exe --version`，确认二进制与后端 DLL 能加载。
+    /// 退出码非 0（如 0xC0000005 缺 CUDA 运行库或显卡不受支持）即判定该后端不可用。
+    /// </summary>
+    public static bool VerifyServer(string serverPath, out string error)
+    {
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo(serverPath, "--version")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            });
+            if (process is null)
+            {
+                error = "无法启动进程";
+                return false;
+            }
+
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(10_000))
+            {
+                try { process.Kill(true); }
+                catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+                {
+                    Debug.WriteLine($"终止验证进程失败：{ex.Message}");
+                }
+
+                error = "启动后 10 秒内未退出（可能缺少运行库或显卡不受支持）";
+                return false;
+            }
+
+            var output = (stdout.GetAwaiter().GetResult() + "\n" + stderr.GetAwaiter().GetResult()).Trim();
+            if (process.ExitCode != 0)
+            {
+                error = $"退出码 {process.ExitCode}（0x{(uint)process.ExitCode:X8}）：{FirstLines(output, 3)}";
+                return false;
+            }
+
+            error = "";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 读取 GitHub Releases API 中每个资产的 SHA-256 摘要（"sha256:…"）。
+    /// 失败（离线、限流、字段缺失）返回空字典，由调用方跳过校验。
+    /// </summary>
+    private async Task<IReadOnlyDictionary<string, string>> GetReleaseDigestsAsync(
+        string tag,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(20));
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get, $"{ApiUrl}/releases/tags/{Uri.EscapeDataString(tag)}");
+            request.Headers.Accept.ParseAdd("application/vnd.github+json");
+            using var response = await _downloadService.Client.SendAsync(request, cts.Token);
+            if (!response.IsSuccessStatusCode)
+            {
+                Debug.WriteLine($"获取 {tag} 资产摘要失败：HTTP {(int)response.StatusCode}");
+                return EmptyDigests;
+            }
+
+            var json = await response.Content.ReadAsStringAsync(cts.Token);
+            var digests = ParseAssetDigests(json);
+            return digests.Count == 0 ? EmptyDigests : digests;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException)
+        {
+            Debug.WriteLine($"获取 {tag} 资产摘要失败：{ex.Message}");
+            return EmptyDigests;
+        }
+    }
+
+    /// <summary>
+    /// 从 GitHub Releases API 的 JSON 中提取「资产名 → sha256:…」；无 digest 字段的资产跳过。
+    /// 解析失败返回空字典，让调用方退化为“不校验”而不是安装失败。
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> ParseAssetDigests(string json)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (!document.RootElement.TryGetProperty("assets", out var assets) ||
+                assets.ValueKind != JsonValueKind.Array)
+            {
+                return EmptyDigests;
+            }
+
+            var digests = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var asset in assets.EnumerateArray())
+            {
+                var name = asset.TryGetProperty("name", out var nameElement) ? nameElement.GetString() : null;
+                var digest = asset.TryGetProperty("digest", out var digestElement) ? digestElement.GetString() : null;
+                if (!string.IsNullOrWhiteSpace(name) && FileIntegrity.NormalizeSha256(digest) is not null)
+                {
+                    digests[name] = digest!;
+                }
+            }
+
+            return digests;
+        }
+        catch (JsonException ex)
+        {
+            Debug.WriteLine($"解析发布资产摘要失败：{ex.Message}");
+            return EmptyDigests;
+        }
+    }
+
+    /// <summary>下载资产并按已发布的 SHA-256 校验；不匹配时删除文件并重试一次。</summary>
+    private async Task DownloadVerifiedAsync(
+        string url,
+        string assetName,
+        string destination,
+        IReadOnlyDictionary<string, string> digests,
+        IProgress<DownloadProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        var expected = digests.TryGetValue(assetName, out var digest) ? digest : null;
+        for (var attempt = 1; ; attempt++)
+        {
+            await _downloadService.DownloadFileAsync(url, destination, 0, progress, cancellationToken);
+            if (await FileIntegrity.VerifyFileAsync(destination, expected, cancellationToken)) return;
+
+            try
+            {
+                File.Delete(destination);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Debug.WriteLine($"删除校验失败的安装包失败：{ex.Message}");
+            }
+
+            if (attempt >= 2)
+            {
+                throw new InvalidDataException(
+                    $"{assetName} 完整性校验失败：SHA-256 与发布页不一致，已重新下载仍未通过");
+            }
+        }
+    }
+
+    private static string FirstLines(string? text, int count)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "无输出";
+        var lines = text.Split('\n', StringSplitOptions.TrimEntries)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Take(count)
+            .ToArray();
+        var joined = string.Join(" / ", lines);
+        return joined.Length <= 240 ? joined : joined[..240] + "…";
+    }
+
+    private static string ShortMessage(string? message)
+    {
+        var text = (message ?? "").ReplaceLineEndings(" ").Trim();
+        return text.Length <= 160 ? text : text[..160] + "…";
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Debug.WriteLine($"清理运行时目录失败（{path}）：{ex.Message}");
+        }
     }
 
     private static IProgress<DownloadProgress> MapProgress(

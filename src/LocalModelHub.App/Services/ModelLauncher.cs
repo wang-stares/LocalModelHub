@@ -50,10 +50,6 @@ public sealed class ModelLauncher
             context = Math.Clamp(tunedContext, 1024, 131072);
         }
 
-        var layers = info.BlockCount > 0
-            ? RecommendationEngine.ComputeGpuLayers(services.Performance, model.TotalBytes, info.BlockCount, context)
-            : -1; // 无法读取层数时交给 llama.cpp 的 -ngl auto
-        if (tuning?.GpuLayers is { } tunedLayers) layers = tunedLayers;
         var threads = settings.Threads > 0 ? settings.Threads : services.Hardware.Cpu.PhysicalCores;
         if (threads <= 0) threads = Environment.ProcessorCount;
         var port = FindFreePort(settings.ServerPort);
@@ -62,6 +58,18 @@ public sealed class ModelLauncher
         var cacheType = tuning?.CacheType ??
                         (string.IsNullOrWhiteSpace(settings.KvCacheType) ? "f16" : settings.KvCacheType);
         var flashAttention = tuning?.FlashAttention ?? settings.FlashAttention;
+
+        var layers = info.BlockCount > 0
+            ? RecommendationEngine.ComputeGpuLayers(
+                services.Performance,
+                model.TotalBytes,
+                info.BlockCount,
+                context,
+                cacheType,
+                cacheType,
+                flashAttention: !flashAttention.Equals("off", StringComparison.OrdinalIgnoreCase))
+            : -1; // 无法读取层数时交给 llama.cpp 的 -ngl auto
+        if (tuning?.GpuLayers is { } tunedLayers) layers = tunedLayers;
 
         statusProgress?.Report($"正在加载 {model.DisplayName}…");
         await services.Server.StartAsync(
@@ -84,6 +92,27 @@ public sealed class ModelLauncher
                 ReasoningFormat: settings.ReasoningEnabled ? "deepseek" : "none",
                 EnableMetrics: settings.MetricsEnabled),
             cancellationToken);
+
+        // 加载后探测一次工具调用能力：结果按「模型指纹 + 模板指纹」缓存，换模型才重探。
+        try
+        {
+            services.ActiveProfile = await ModelCapabilityProbe.ProbeAsync(
+                services.Server,
+                model.PrimaryPath,
+                services.Server.ContextTokens,
+                services.Server.Props?.ChatTemplate,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // 探测失败不影响模型已经可用：按原生工具调用继续，Agent 失败时仍会给出可诊断信息。
+            Debug.WriteLine($"[ModelLauncher] 能力探测失败：{ex.Message}");
+            services.ActiveProfile = null;
+        }
 
         settings.LastModelPath = model.PrimaryPath;
         services.SettingsService.Save();

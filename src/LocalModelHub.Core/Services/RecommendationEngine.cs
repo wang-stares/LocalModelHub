@@ -120,7 +120,15 @@ public sealed class RecommendationEngine
     /// <summary>
     /// 按常见 GQA 配置估算 KV cache 体积（FP16）：小模型用窄 KV，大模型用宽 KV。
     /// </summary>
-    public static double EstimateKvCacheGb(double parametersB, int contextTokens)
+    public static double EstimateKvCacheGb(double parametersB, int contextTokens) =>
+        EstimateKvCacheGb(parametersB, contextTokens, "f16", "f16");
+
+    /// <summary>按 K/V 量化位宽估算 KV cache：q8_0 约为 f16 的 53%，q4_0 约为 28%。</summary>
+    public static double EstimateKvCacheGb(
+        double parametersB,
+        int contextTokens,
+        string kvTypeK,
+        string kvTypeV)
     {
         var (layers, kvWidth) = parametersB switch
         {
@@ -133,9 +141,26 @@ public sealed class RecommendationEngine
             _ => (80, 1024)
         };
 
-        var perTokenBytes = 2d * layers * kvWidth * 2; // K + V，每元素 2 字节
+        var perTokenBytes = layers * kvWidth * (KvBytesPerElement(kvTypeK) + KvBytesPerElement(kvTypeV));
         return Math.Max(0.05, perTokenBytes * contextTokens / Gib);
     }
+
+    /// <summary>每种 KV 量化类型每元素占用的字节数（含 block scale 开销）。</summary>
+    public static double KvBytesPerElement(string? type) => (type ?? "f16").Trim().ToLowerInvariant() switch
+    {
+        "f32" => 4.0,
+        "bf16" or "f16" => 2.0,
+        "q8_0" => 1.0625,   // 8.5 bit
+        "q5_1" => 0.75,
+        "q5_0" => 0.6875,
+        "q4_1" => 0.625,
+        "q4_0" or "iq4_nl" => 0.5625,
+        _ => 2.0
+    };
+
+    /// <summary>llama.cpp 只在 FlashAttention 开启时支持量化 V cache，关闭时按 f16 计。</summary>
+    public static string EffectiveKvTypeV(RecommendationOptions options) =>
+        options.FlashAttention ? options.KvCacheTypeV : "f16";
 
     public ModelRecommendation Evaluate(
         HardwareProfile hw,
@@ -173,10 +198,10 @@ public sealed class RecommendationEngine
         // 显存在 Windows 下还会被桌面/驱动/碎片占用，按九成预算判断「完整装入」。
         var vramBudgetGb = usableVramGb * 0.9;
 
-        var plan = PlanFit(model.ParametersB, sizeGb, ctx, usableVramGb, usableRamGb, vramBudgetGb, discrete);
+        var plan = PlanFit(model.ParametersB, sizeGb, ctx, usableVramGb, usableRamGb, vramBudgetGb, discrete, options);
         var fit = plan.Fit;
         var (suggestedCtx, contextNote, contextLimited) = SuggestContext(
-            model.ParametersB, sizeGb, ctx, usableVramGb, usableRamGb, vramBudgetGb, discrete, fit);
+            model.ParametersB, sizeGb, ctx, usableVramGb, usableRamGb, vramBudgetGb, discrete, fit, options);
 
         var activeSizeGb = model.IsMoe && model.ParametersB > 0
             ? Math.Max(0.4, sizeGb * model.ActiveParametersB / model.ParametersB)
@@ -310,10 +335,12 @@ public sealed class RecommendationEngine
         double usableVramGb,
         double usableRamGb,
         double vramBudgetGb,
-        bool hasDiscreteGpu)
+        bool hasDiscreteGpu,
+        RecommendationOptions options)
     {
-        // KV cache + 计算缓冲（计算缓冲随权重规模增长，大模型不能只按固定值估）
-        var kvGb = EstimateKvCacheGb(parametersB, contextTokens);
+        // KV cache 按 K/V 各自的量化位宽计算；计算缓冲随权重规模与上下文增长。
+        var kvGb = EstimateKvCacheGb(parametersB, contextTokens,
+            options.KvCacheTypeK, EffectiveKvTypeV(options));
         var computeBufferGb = 0.3 + sizeGb * 0.03 + contextTokens / 8192d * 0.12;
         var overheadGb = kvGb + computeBufferGb;
         var fullVramGb = sizeGb * 1.08 + overheadGb;
@@ -353,10 +380,11 @@ public sealed class RecommendationEngine
         double usableRamGb,
         double vramBudgetGb,
         bool hasDiscreteGpu,
-        FitLevel currentFit)
+        FitLevel currentFit,
+        RecommendationOptions options)
     {
         // 适配等级随上下文单调变差，2K 时的档位就是该量化在本机的最好结果。
-        var best = PlanFit(parametersB, sizeGb, 2048, usableVramGb, usableRamGb, vramBudgetGb, hasDiscreteGpu).Fit;
+        var best = PlanFit(parametersB, sizeGb, 2048, usableVramGb, usableRamGb, vramBudgetGb, hasDiscreteGpu, options).Fit;
         if (best > FitLevel.Playable)
         {
             return (2048, "即使 2K 上下文，显存/内存预算仍然不够，可能加载失败。", false);
@@ -364,7 +392,7 @@ public sealed class RecommendationEngine
 
         for (var candidate = currentCtx; candidate >= 2048; candidate -= 2048)
         {
-            var plan = PlanFit(parametersB, sizeGb, candidate, usableVramGb, usableRamGb, vramBudgetGb, hasDiscreteGpu);
+            var plan = PlanFit(parametersB, sizeGb, candidate, usableVramGb, usableRamGb, vramBudgetGb, hasDiscreteGpu, options);
             if (plan.Fit != best) continue;
 
             return candidate >= currentCtx
@@ -445,13 +473,19 @@ public sealed class RecommendationEngine
         PerformanceScore performance,
         long modelBytes,
         int blockCount,
-        int contextTokens)
+        int contextTokens,
+        string kvTypeK = "f16",
+        string kvTypeV = "f16",
+        bool flashAttention = true)
     {
         var gpu = performance.BestGpu;
         if (gpu is null || gpu.IsIntegrated || blockCount <= 0) return 0;
 
         var sizeGb = modelBytes / Gib;
-        var kvGb = 2d * blockCount * 512 * 2 * contextTokens / Gib;
+        var effectiveV = flashAttention ? kvTypeV : "f16";
+        // 这里只有层数、没有真实 KV 宽度，按常见的 512 维估计；K/V 量化位宽与评估口径保持一致。
+        var kvGb = blockCount * 512 * (KvBytesPerElement(kvTypeK) + KvBytesPerElement(effectiveV)) *
+                   contextTokens / Gib;
         var overheadGb = 0.35 + contextTokens / 8192d * 0.12 + kvGb;
         var fullNeed = sizeGb * 1.07 + overheadGb;
         if (gpu.UsableVramGb >= fullNeed) return 999;

@@ -160,6 +160,11 @@ public partial class AddModelWindow : Window
         var provider = ProviderBox.SelectedIndex == 1 ? "HuggingFace" : "ModelScope";
         var bytes = (long)(sizeGb * 1024m * 1024m * 1024m);
 
+        // 解析过仓库时沿用来源提供的 SHA-256，下载完成后可校验文件完整性。
+        var digest = _fileOptions
+            .FirstOrDefault(option => option.Path.Equals(fileName, StringComparison.OrdinalIgnoreCase))
+            ?.Digest;
+
         CreatedModel = new ModelEntry
         {
             Name = name,
@@ -181,7 +186,7 @@ public partial class AddModelWindow : Window
                 {
                     Label = quantLabel.Length == 0 ? "Q4_K_M" : quantLabel,
                     TotalBytes = bytes,
-                    Files = [new ModelFile { Path = fileName, Bytes = bytes }],
+                    Files = [new ModelFile { Path = fileName, Bytes = bytes, Digest = digest }],
                     Sources = [new ModelSource { Provider = provider, Repo = repo, Revision = "master" }]
                 }
             ]

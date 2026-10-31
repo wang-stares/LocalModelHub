@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace LocalModelHub.Core.Services;
@@ -118,6 +119,15 @@ public sealed class ModelDownloadManager
                         await _downloadService.DownloadFileAsync(
                             candidate.Url, destination, file.Bytes, fileProgress, cancellationToken,
                             allowRetry: candidates.Count == 1);
+
+                        // 来源提供了 SHA-256 时必须比对：镜像被劫持或文件被替换时不能写入模型库。
+                        if (!await FileIntegrity.VerifyFileAsync(destination, file.Digest, cancellationToken))
+                        {
+                            DeleteCorrupted(destination);
+                            throw new InvalidDataException(
+                                $"{fileName} 校验失败：SHA-256 与来源清单不一致");
+                        }
+
                         succeeded = true;
                         usedProvider = candidate.Provider;
                         break;
@@ -153,6 +163,12 @@ public sealed class ModelDownloadManager
 
                 if (!succeeded)
                 {
+                    if (lastError is InvalidDataException)
+                    {
+                        throw new InvalidDataException(
+                            $"{fileName} 已下载但完整性校验失败，损坏文件已删除，请重试或更换下载源。", lastError);
+                    }
+
                     throw new IOException($"下载 {fileName} 失败：{lastError?.Message}", lastError);
                 }
 
@@ -172,7 +188,10 @@ public sealed class ModelDownloadManager
                 provider = usedProvider ?? "",
                 imported = false,
                 addedAt = DateTime.Now,
-                totalBytes
+                totalBytes,
+                files = files
+                    .Select(f => new { relativePath = Path.GetFileName(f.Path), bytes = f.Bytes })
+                    .ToArray()
             };
             await File.WriteAllTextAsync(manifestPath, JsonSerializer.Serialize(manifest, JsonOptions), cancellationToken);
 
@@ -183,6 +202,19 @@ public sealed class ModelDownloadManager
         finally
         {
             _gate.Release();
+        }
+    }
+
+    /// <summary>删除校验失败的最终文件；断点已由 DownloadService 合并，删除目标即可阻止其进入模型库。</summary>
+    private static void DeleteCorrupted(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Debug.WriteLine($"删除校验失败的文件失败（{path}）：{ex.Message}");
         }
     }
 }

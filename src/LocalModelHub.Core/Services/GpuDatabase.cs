@@ -77,10 +77,38 @@ public static class GpuDatabase
         return Math.Clamp(60 + vram * 32, 60, 1200);
     }
 
-    public static bool IsIntegrated(GpuInfo gpu) =>
-        gpu.DedicatedVideoMemoryBytes < 512L * 1024 * 1024 ||
-        ((gpu.Vendor is "Intel" || gpu.Name.Contains("Radeon Graphics", StringComparison.OrdinalIgnoreCase) ||
-          gpu.Name.Contains("Vega", StringComparison.OrdinalIgnoreCase)) && gpu.DedicatedVramGb < 2);
+    /// <summary>未知显存容量时用于估算的保守值：按 4 GB 独显计，宁可少卸载也不要把独显当成核显。</summary>
+    public const long UnknownDiscreteVramBytes = 4L * 1024 * 1024 * 1024;
+
+    public static bool IsIntegrated(GpuInfo gpu)
+    {
+        // WMI 的 AdapterRAM 被 uint32 截断、nvidia-smi / 注册表也拿不到容量时，
+        // 0 显存并不代表核显；此时只能按型号线索判断，否则独显会被整卡忽略。
+        if (gpu.VramEstimated && gpu.DedicatedVideoMemoryBytes == 0)
+        {
+            return LooksIntegrated(gpu);
+        }
+
+        return gpu.DedicatedVideoMemoryBytes < 512L * 1024 * 1024 ||
+            (LooksIntegrated(gpu) && gpu.DedicatedVramGb < 2);
+    }
+
+    private static bool LooksIntegrated(GpuInfo gpu)
+    {
+        var name = gpu.Name;
+        if (name.Contains("Arc", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("RX", StringComparison.OrdinalIgnoreCase))
+        {
+            return false; // Intel Arc / AMD Radeon RX 均为独显
+        }
+
+        return gpu.Vendor == "Intel"
+            || name.Contains("UHD", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("Iris", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("HD Graphics", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("Radeon", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("Vega", StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>
     /// 估算 FP16 算力（TFLOPS），用于首字延迟（prefill）。未收录型号按显存档位保守兜底，
@@ -114,9 +142,9 @@ public static class GpuDatabase
         {
             var integrated = IsIntegrated(gpu);
             var bandwidth = EstimateBandwidthGBps(gpu, integrated);
-            var usable = integrated
-                ? 0L
-                : Math.Max(0L, gpu.DedicatedVideoMemoryBytes - (long)(0.8 * Formatters.Gib));
+            var vram = gpu.DedicatedVideoMemoryBytes;
+            if (!integrated && vram <= 0 && gpu.VramEstimated) vram = UnknownDiscreteVramBytes;
+            var usable = integrated ? 0L : Math.Max(0L, vram - (long)(0.8 * Formatters.Gib));
             var capability = new GpuCapability(gpu, bandwidth, integrated, usable);
             if (best is null ||
                 usable > best.UsableVramBytes ||

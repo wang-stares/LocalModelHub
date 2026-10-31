@@ -495,6 +495,74 @@ public class RecommendationEngineTests
     }
 
     [Fact]
+    public void Kv_quantization_reduces_cache_estimate()
+    {
+        var f16 = RecommendationEngine.EstimateKvCacheGb(12, 8192, "f16", "f16");
+        var q8 = RecommendationEngine.EstimateKvCacheGb(12, 8192, "q8_0", "q8_0");
+        var q4 = RecommendationEngine.EstimateKvCacheGb(12, 8192, "q4_0", "q4_0");
+
+        // q8_0 为 8.5 bit，约为 f16 的 53%；q4_0 约为 28%。
+        Assert.InRange(q8 / f16, 0.50, 0.56);
+        Assert.InRange(q4 / f16, 0.25, 0.30);
+        Assert.Equal(2.0, RecommendationEngine.KvBytesPerElement("unknown"));
+        Assert.Equal(1.0625, RecommendationEngine.KvBytesPerElement("Q8_0"));
+    }
+
+    [Fact]
+    public void Kv_quantization_lowers_reported_vram_and_never_downgrades_fit()
+    {
+        var hw = Hardware(8, 32);
+        var score = new PerformanceScorer().Score(hw);
+        var model = Catalog().Models.Single(m => m.Id == "qwen3-8b");
+        var quant = model.PrimaryQuant;
+
+        var f16 = Engine.Evaluate(hw, score, model, quant,
+            new RecommendationOptions { ContextTokens = 32768, KvCacheTypeK = "f16", KvCacheTypeV = "f16" });
+        var q8 = Engine.Evaluate(hw, score, model, quant,
+            new RecommendationOptions { ContextTokens = 32768, KvCacheTypeK = "q8_0", KvCacheTypeV = "q8_0" });
+
+        Assert.True(q8.RequiredVramGb <= f16.RequiredVramGb,
+            $"q8_0 需求 {q8.RequiredVramGb:0.##} GB 应不高于 f16 {f16.RequiredVramGb:0.##} GB");
+        Assert.True(f16.RequiredVramGb - q8.RequiredVramGb >= 0.3,
+            $"32K 上下文下 q8_0 应比 f16 少用约 0.5 GB，实际差 {f16.RequiredVramGb - q8.RequiredVramGb:0.##} GB");
+        Assert.True(q8.Fit <= f16.Fit, "KV 量化不应让适配档位变差");
+    }
+
+    [Fact]
+    public void Quantized_v_cache_is_ignored_when_flash_attention_is_off()
+    {
+        var hw = Hardware(8, 32);
+        var model = Catalog().Models.Single(m => m.Id == "qwen3-8b");
+        var options = new RecommendationOptions
+        {
+            ContextTokens = 16384,
+            KvCacheTypeK = "q8_0",
+            KvCacheTypeV = "q8_0",
+            FlashAttention = false
+        };
+
+        // 关闭 FA 时 llama.cpp 不接受量化 V，评估必须按 f16 计，否则会低估显存。
+        Assert.Equal("f16", RecommendationEngine.EffectiveKvTypeV(options));
+        Assert.Equal(
+            RecommendationEngine.EstimateKvCacheGb(model.ParametersB, 16384, "q8_0", "f16"),
+            RecommendationEngine.EstimateKvCacheGb(model.ParametersB, 16384, "q8_0",
+                RecommendationEngine.EffectiveKvTypeV(options)));
+    }
+
+    [Fact]
+    public void Kv_quantization_can_increase_gpu_layers()
+    {
+        var hw = Hardware(8, 32);
+        var score = new PerformanceScorer().Score(hw);
+        var bytes = (long)(4.5 * Formatters.Gib);
+
+        var f16 = RecommendationEngine.ComputeGpuLayers(score, bytes, 32, 32768, "f16", "f16");
+        var q8 = RecommendationEngine.ComputeGpuLayers(score, bytes, 32, 32768, "q8_0", "q8_0");
+
+        Assert.True(q8 >= f16, $"q8_0 可卸载层数 {q8} 应不少于 f16 的 {f16}");
+    }
+
+    [Fact]
     public void Mid_size_model_outranks_tiny_model_when_both_run()
     {
         var hw = Hardware(8, 32);

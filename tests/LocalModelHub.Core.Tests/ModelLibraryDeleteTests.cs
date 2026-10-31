@@ -55,6 +55,91 @@ public class ModelLibraryDeleteTests : IAsyncLifetime
     }
 
     [Fact]
+    public void Deleting_one_quant_keeps_other_quant_in_same_folder()
+    {
+        var folder = Path.Combine(_root, "Qwen3-8B");
+        Directory.CreateDirectory(folder);
+        var q4 = Path.Combine(folder, "Qwen3-8B-Q4_K_M.gguf");
+        var q8 = Path.Combine(folder, "Qwen3-8B-Q8_0.gguf");
+        File.WriteAllText(q4, "q4-bytes");
+        File.WriteAllText(q8, "q8-bytes");
+
+        var model = Scanned(folder);
+        var result = _library.Delete(model, useRecycleBin: false);
+
+        Assert.True(result.Success);
+        Assert.False(File.Exists(q4));
+        Assert.True(File.Exists(q8), "同目录的其它量化不应被删除");
+        Assert.True(Directory.Exists(folder));
+        Assert.Equal(1, result.DeletedFiles);
+        Assert.True(result.ReleasedBytes > 0);
+    }
+
+    [Fact]
+    public void Deletes_all_shards_of_a_quant_as_one_group()
+    {
+        var folder = Path.Combine(_root, "Qwen3-14B", "Q4_K_M");
+        Directory.CreateDirectory(folder);
+        var shard1 = Path.Combine(folder, "model-Q4_K_M-00001-of-00002.gguf");
+        var shard2 = Path.Combine(folder, "model-Q4_K_M-00002-of-00002.gguf");
+        File.WriteAllText(shard1, "shard-1");
+        File.WriteAllText(shard2, "shard-2");
+
+        var model = Scanned(folder);
+        Assert.Equal(2, model.Files.Count);
+
+        var result = _library.Delete(model, useRecycleBin: false);
+
+        Assert.True(result.Success);
+        Assert.Equal(2, result.DeletedFiles);
+        Assert.False(File.Exists(shard1));
+        Assert.False(File.Exists(shard2));
+        Assert.False(Directory.Exists(folder));
+    }
+
+    [Fact]
+    public void Manifest_file_list_marks_owned_files_and_limits_deletion()
+    {
+        var folder = Path.Combine(_root, "Imported", "Q4_K_M");
+        Directory.CreateDirectory(folder);
+        var owned = Path.Combine(folder, "owned.gguf");
+        var stray = Path.Combine(folder, "stray.gguf");
+        File.WriteAllText(owned, "owned");
+        File.WriteAllText(stray, "stray");
+        File.WriteAllText(Path.Combine(folder, "manifest.json"),
+            """{"modelId":"qwen3-8b","quant":"Q4_K_M","files":[{"relativePath":"owned.gguf","bytes":5}]}""");
+
+        var model = Scanned(folder);
+        Assert.Single(model.Files);
+
+        var result = _library.Delete(model, useRecycleBin: false);
+
+        Assert.True(result.Success);
+        Assert.False(File.Exists(owned));
+        Assert.True(File.Exists(stray));
+        Assert.True(Directory.Exists(folder));
+        Assert.Equal(1, result.DeletedFiles);
+        Assert.Equal(1, result.RemainingSiblingFiles);
+    }
+
+    [Fact]
+    public void Plan_lists_files_size_and_siblings()
+    {
+        var folder = Path.Combine(_root, "Qwen3-8B");
+        Directory.CreateDirectory(folder);
+        var q4 = Path.Combine(folder, "Qwen3-8B-Q4_K_M.gguf");
+        var q8 = Path.Combine(folder, "Qwen3-8B-Q8_0.gguf");
+        File.WriteAllText(q4, "q4-bytes");
+        File.WriteAllText(q8, "q8-bytes");
+
+        var plan = _library.PlanDelete(Scanned(folder));
+
+        Assert.Single(plan.Files);
+        Assert.Equal(new FileInfo(q4).Length, plan.TotalBytes);
+        Assert.Equal(1, plan.RemainingSiblingFiles);
+    }
+
+    [Fact]
     public void Refuses_paths_outside_models_directory()
     {
         Directory.CreateDirectory(_outside);
@@ -76,6 +161,13 @@ public class ModelLibraryDeleteTests : IAsyncLifetime
 
         Assert.False(result.Success);
         Assert.Contains("已不存在", result.Error);
+    }
+
+    private DownloadedModel Scanned(string folder)
+    {
+        var catalog = new CatalogService().LoadEmbedded();
+        return _library.Scan(catalog)
+            .Single(m => string.Equals(m.FolderPath, folder, StringComparison.OrdinalIgnoreCase));
     }
 
     private static DownloadedModel Model(string folder) => new()

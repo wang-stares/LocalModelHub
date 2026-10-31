@@ -20,6 +20,7 @@ public static class AppPaths
     public static string SessionsFile => Path.Combine(RootDirectory, "sessions.json");
     public static string KnowledgeFile => Path.Combine(RootDirectory, "knowledge.json");
     public static string SkillsFile => Path.Combine(RootDirectory, "skills.json");
+    public static string ModelProfilesFile => Path.Combine(RootDirectory, "model-profiles.json");
 
     public static void EnsureCreated()
     {

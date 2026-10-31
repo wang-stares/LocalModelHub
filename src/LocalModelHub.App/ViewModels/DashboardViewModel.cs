@@ -64,16 +64,19 @@ public sealed partial class DashboardViewModel : ObservableObject
         DetectStatus = "正在读取硬件信息…";
         try
         {
+            // 检测前采样一次：检测期间可能有程序释放 / 占用内存，沿用旧快照会让结论失真。
+            _services.RefreshBudgetSnapshot();
             var progress = new Progress<string>(text => DetectStatus = text);
             var hardware = await Task.Run(() => _services.HardwareDetector.Detect(progress, _services.Settings.ModelsDirectory));
             _services.Hardware = hardware;
 
             DetectStatus = "正在运行 CPU 基准测试…";
-            var benchmark = await Task.Run(() => _services.Benchmark.Run(progress));
+            var benchmark = await Task.Run(() => _services.Benchmark.Run(progress, l3CacheKb: hardware.Cpu.L3CacheKb));
             _services.LastBenchmark = benchmark;
             _services.Performance = _services.Scorer.Score(hardware, benchmark);
 
-            BenchmarkText = $"实测 CPU {benchmark.CpuGflops:0.#} GFLOPS · 内存带宽 {benchmark.MemoryBandwidthGBps:0.#} GB/s · 用时 {benchmark.Duration.TotalSeconds:0.0}s";
+            BenchmarkText = $"实测 CPU {benchmark.CpuGflops:0.#} GFLOPS · 内存带宽 {benchmark.MemoryBandwidthGBps:0.#} GB/s · 用时 {benchmark.Duration.TotalSeconds:0.0}s"
+                + (benchmark.LowConfidence ? $" · {benchmark.QualityText}（波动 {benchmark.StdevRatio:P0}）" : "");
             Refresh();
             DetectionCompleted?.Invoke(this, EventArgs.Empty);
             DetectStatus = "检测完成";
@@ -90,20 +93,47 @@ public sealed partial class DashboardViewModel : ObservableObject
 
     public void SetTopCards(IReadOnlyList<ModelCardViewModel> ordered)
     {
-        TopCards.Clear();
         var suitable = ordered.Where(c => c.Fit <= FitLevel.Playable).Take(3).ToList();
         if (suitable.Count == 0)
         {
             suitable = ordered.OrderBy(c => c.Model.ParametersB).Take(3).ToList();
         }
 
-        foreach (var card in suitable) TopCards.Add(card);
+        // 原地替换而不是 Clear + Add：避免每次评估刷新都重建列表、滚动位置跳动。
+        for (var i = 0; i < suitable.Count; i++)
+        {
+            if (i >= TopCards.Count) TopCards.Add(suitable[i]);
+            else if (!ReferenceEquals(TopCards[i], suitable[i])) TopCards[i] = suitable[i];
+        }
+
+        while (TopCards.Count > suitable.Count) TopCards.RemoveAt(TopCards.Count - 1);
+    }
+
+    /// <summary>预算快照刷新后只更新内存 / 显存一行，不重置评分与检测状态。</summary>
+    public void RefreshBudget()
+    {
+        var hw = _services.Hardware;
+        if (hw.DetectedAt == DateTime.MinValue) return;
+
+        RamTitle = $"{hw.TotalRamGb:0.#} GB";
+        RamDetail = $"当前可用 {hw.AvailableRamGb:0.#} GB · 推理建议占用不超过 {hw.TotalRamGb * 0.8:0.#} GB";
+
+        var gpu = _services.Performance.BestGpu;
+        if (gpu is not null)
+        {
+            GpuTitle = gpu.Gpu.Name;
+            GpuDetail = gpu.IsIntegrated
+                ? $"核显 · 共享内存 {Formatters.Gb(gpu.Gpu.SharedSystemMemoryBytes)} · 建议使用 CPU 推理"
+                : $"{gpu.UsableVramGb:0.#} GB 可用显存 · 带宽约 {gpu.BandwidthGBps:0} GB/s · {gpu.Gpu.Vendor}"
+                  + (gpu.Gpu.VramEstimated ? " · 驱动未报告总显存，按 4 GB 保守估算" : "");
+        }
     }
 
     private async Task QuickDetectAsync()
     {
         try
         {
+            _services.RefreshBudgetSnapshot();
             var hardware = await Task.Run(() => _services.HardwareDetector.Detect(null, _services.Settings.ModelsDirectory));
             _services.Hardware = hardware;
             _services.Performance = _services.Scorer.Score(hardware);
@@ -152,7 +182,8 @@ public sealed partial class DashboardViewModel : ObservableObject
                 GpuTitle = gpu.Gpu.Name;
                 GpuDetail = gpu.IsIntegrated
                     ? $"核显 · 共享内存 {Formatters.Gb(gpu.Gpu.SharedSystemMemoryBytes)} · 建议使用 CPU 推理"
-                    : $"{gpu.UsableVramGb:0.#} GB 可用显存 · 带宽约 {gpu.BandwidthGBps:0} GB/s · {gpu.Gpu.Vendor}";
+                    : $"{gpu.UsableVramGb:0.#} GB 可用显存 · 带宽约 {gpu.BandwidthGBps:0} GB/s · {gpu.Gpu.Vendor}"
+                      + (gpu.Gpu.VramEstimated ? " · 驱动未报告总显存，按 4 GB 保守估算" : "");
             }
             else
             {

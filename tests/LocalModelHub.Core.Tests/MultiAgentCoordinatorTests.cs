@@ -164,6 +164,73 @@ public sealed class MultiAgentCoordinatorTests : IDisposable
         Assert.DoesNotContain(result.Activities, activity => activity.Name == "repair");
     }
 
+    [Fact]
+    public async Task Coder_does_not_run_its_own_verification()
+    {
+        var act = 0;
+        _chat.Handler = call =>
+        {
+            if (IsReviewer(call)) return Text("""{"pass": true, "summary": "通过"}""");
+            if (call.MaxTokens == 512) return Text("1. 读取 a.txt\n2. 修改 a.txt");
+            if (!call.HasTools) return Text("""{"pass": true, "summary": "完成"}""");
+
+            return act++ switch
+            {
+                0 => Tool("read_file", """{"path":"a.txt"}"""),
+                1 => Tool("replace_in_file", """{"path":"a.txt","old_text":"old","new_text":"new"}"""),
+                _ => Text("完成：a.txt 已更新")
+            };
+        };
+
+        var coordinator = new MultiAgentCoordinator(
+            _chat, _workspace, _memory, allowMemoryWrites: false);
+
+        var result = await coordinator.RunAsync(
+            [ChatMessage.User("把 a.txt 改成 new")], null, null, CancellationToken.None);
+
+        // 自检交给独立 Reviewer：Coder 不应再跑一遍验收调用
+        Assert.Null(result.Coder!.Verification);
+        Assert.DoesNotContain(result.Coder.Activities, activity => activity.Name == "verify");
+        Assert.DoesNotContain(result.Coder.Trajectory!.Steps, step => step.Stage == AgentStage.Verify);
+        Assert.DoesNotContain(_chat.Calls, call =>
+            call.Messages.Any(message => message.Content.Contains("你是验收角色", StringComparison.Ordinal)));
+        Assert.True(result.Review!.Passed);
+    }
+
+    [Fact]
+    public async Task Reviewer_receives_change_digest_instead_of_full_patch()
+    {
+        var act = 0;
+        var longText = new string('x', 3000);
+        _chat.Handler = call =>
+        {
+            if (IsReviewer(call)) return Text("""{"pass": true, "summary": "通过"}""");
+            if (call.MaxTokens == 512) return Text("1. 新建 big.txt\n2. 验收");
+            if (!call.HasTools) return Text("""{"pass": true, "summary": "完成"}""");
+
+            return act++ switch
+            {
+                0 => Tool("write_file", $$"""{"path":"big.txt","content":"{{longText}}"}"""),
+                _ => Text("完成：big.txt 已新建")
+            };
+        };
+
+        var coordinator = new MultiAgentCoordinator(
+            _chat, _workspace, _memory, allowMemoryWrites: false);
+
+        var result = await coordinator.RunAsync(
+            [ChatMessage.User("新建 big.txt")], null, null, CancellationToken.None);
+
+        var reviewerCall = _chat.Calls.Single(IsReviewer);
+        var reviewerInput = string.Join('\n', reviewerCall.Messages.Select(message => message.Content));
+
+        Assert.DoesNotContain(longText, reviewerInput);
+        Assert.Contains("变更清单与关键 hunk", reviewerInput);
+        Assert.Contains("big.txt", reviewerInput);
+        Assert.Contains("@@", reviewerInput);
+        Assert.Contains("+1 / -0", reviewerInput);
+    }
+
     private static bool IsReviewer(Call call) =>
         call.Messages.Any(message => message.Content.Contains("独立评审角色"));
 

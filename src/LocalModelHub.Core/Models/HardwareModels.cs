@@ -14,7 +14,8 @@ public sealed record GpuInfo(
     string Name,
     int VendorId,
     long DedicatedVideoMemoryBytes,
-    long SharedSystemMemoryBytes)
+    long SharedSystemMemoryBytes,
+    bool VramEstimated = false)
 {
     public const int VendorNvidia = 0x10DE;
     public const int VendorAmd = 0x1002;
@@ -67,7 +68,14 @@ public sealed record HardwareProfile(
 public sealed record BenchmarkResult(
     double CpuGflops,
     double MemoryBandwidthGBps,
-    TimeSpan Duration);
+    TimeSpan Duration,
+    double StdevRatio = 0)
+{
+    /// <summary>标准差 / 均值超过 15%：测量期间系统负载波动大，结果仅供参考。</summary>
+    public bool LowConfidence => StdevRatio > 0.15;
+
+    public string QualityText => LowConfidence ? "系统负载高，结果仅供参考" : "测量稳定";
+}
 
 public sealed record GpuCapability(
     GpuInfo Gpu,

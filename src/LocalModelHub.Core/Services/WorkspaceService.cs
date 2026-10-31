@@ -20,6 +20,10 @@ public sealed class WorkspaceService
     private const int MaxPatchBytes = 1024 * 1024;
     private const int MaxPatchFiles = 8;
     private const int MaxPatchHunks = 200;
+    /// <summary>搜索索引的文件数上限；超过后结果会显式告知模型，而不是静默截断。</summary>
+    private const int MaxIndexFiles = 4000;
+    /// <summary>索引占用内存上限：超出预算的文件不进缓存，仍按次读盘参与搜索。</summary>
+    private const long MaxIndexBytes = 64 * 1024 * 1024;
 
     private static readonly string[] IgnoredDirectories =
     [
@@ -54,6 +58,12 @@ public sealed class WorkspaceService
 
     private string? _root;
 
+    // 检索索引：路径 → 「修改时间 + 大小 + 行内容」。目录只枚举一次，未变的文件不重复读盘。
+    private readonly object _indexLock = new();
+    private readonly Dictionary<string, IndexedFile> _index = new(StringComparer.OrdinalIgnoreCase);
+    private string? _indexRoot;
+    private long _indexBytes;
+
     public string? Root => _root;
 
     public bool IsConfigured => _root is not null && Directory.Exists(_root);
@@ -61,15 +71,24 @@ public sealed class WorkspaceService
     public void SetRoot(string? path)
     {
         _root = null;
-        if (string.IsNullOrWhiteSpace(path)) return;
-
-        try
+        if (!string.IsNullOrWhiteSpace(path))
         {
-            _root = Path.GetFullPath(path.Trim());
+            try
+            {
+                _root = Path.GetFullPath(path.Trim());
+            }
+            catch
+            {
+                _root = null;
+            }
         }
-        catch
+
+        // 换工作区时旧索引全部作废，避免把上一个目录的命中带进来。
+        lock (_indexLock)
         {
-            _root = null;
+            _index.Clear();
+            _indexBytes = 0;
+            _indexRoot = null;
         }
     }
 
@@ -107,19 +126,19 @@ public sealed class WorkspaceService
         if (info.Length > MaxReadBytes)
             return new(false, $"文件过大（{Formatters.Bytes(info.Length)}），上限 256 KB");
 
-        byte[] bytes;
+        string text;
         try
         {
-            bytes = File.ReadAllBytes(full);
+            var bytes = File.ReadAllBytes(full);
+            if (Array.IndexOf(bytes, (byte)0) >= 0) return new(false, "二进制文件不支持读取");
+            (text, _, _) = DecodeText(bytes);
         }
         catch (Exception ex)
         {
             return new(false, $"读取失败：{ex.Message}");
         }
 
-        if (Array.IndexOf(bytes, (byte)0) >= 0) return new(false, "二进制文件不支持读取");
-        var text = new UTF8Encoding(false, false).GetString(bytes);
-        var lines = text.Replace("\r\n", "\n").Split('\n');
+        var lines = text.Split('\n');
         var total = lines.Length;
 
         var from = startLine ?? 1;
@@ -175,8 +194,9 @@ public sealed class WorkspaceService
             : Math.Clamp(maxResults, 1, MaxSearchResults);
         var hits = new List<string>();
         var truncated = false;
+        var (files, indexTruncated) = SnapshotSourceFiles();
 
-        foreach (var file in EnumerateSourceFiles(8))
+        foreach (var (file, cachedLines) in files)
         {
             if (includePattern is not null &&
                 !System.IO.Enumeration.FileSystemName.MatchesSimpleExpression(
@@ -185,16 +205,8 @@ public sealed class WorkspaceService
                 continue;
             }
 
-            string[] lines;
-            try
-            {
-                if (new FileInfo(file).Length > MaxReadBytes) continue;
-                lines = File.ReadAllLines(file, new UTF8Encoding(false, false));
-            }
-            catch
-            {
-                continue;
-            }
+            var lines = cachedLines ?? TryReadLines(file);
+            if (lines is null) continue;
 
             for (var index = 0; index < lines.Length; index++)
             {
@@ -223,11 +235,37 @@ public sealed class WorkspaceService
             if (truncated) break;
         }
 
-        if (hits.Count == 0) return new(true, "没有匹配结果");
+        var notes = BuildSearchNotes(truncated ? $"（已达到 {limit} 条上限，可能还有更多匹配）" : null, indexTruncated);
+        if (hits.Count == 0)
+        {
+            return new(true, notes.Length == 0 ? "没有匹配结果" : $"没有匹配结果\n{notes}");
+        }
+
         var output = string.Join('\n', hits);
-        return new(true, truncated
-            ? $"{output}\n（已达到 {limit} 条上限，可能还有更多匹配）"
-            : output);
+        return new(true, notes.Length == 0 ? output : $"{output}\n{notes}");
+    }
+
+    /// <summary>搜索 / 符号查找的尾部提示：结果条数上限与文件扫描上限都要显式告知模型。</summary>
+    private static string BuildSearchNotes(string? resultLimitNote, bool scanTruncated)
+    {
+        var notes = new List<string>();
+        if (resultLimitNote is not null) notes.Add(resultLimitNote);
+        if (scanTruncated) notes.Add($"（已扫描 {MaxIndexFiles} 个文件，超过上限的结果未包含）");
+        return string.Join('\n', notes);
+    }
+
+    private static string[]? TryReadLines(string fullPath)
+    {
+        try
+        {
+            return new FileInfo(fullPath).Length > MaxReadBytes
+                ? null
+                : File.ReadAllLines(fullPath, new UTF8Encoding(false, false));
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static string FormatHit(string path, string[] lines, int index)
@@ -269,8 +307,9 @@ public sealed class WorkspaceService
         var limit = Math.Clamp(maxResults, 1, MaxSymbolResults);
         var hits = new List<string>();
         var truncated = false;
+        var (files, indexTruncated) = SnapshotSourceFiles();
 
-        foreach (var file in EnumerateSourceFiles(8))
+        foreach (var (file, cachedLines) in files)
         {
             if (includePattern is not null &&
                 !System.IO.Enumeration.FileSystemName.MatchesSimpleExpression(
@@ -279,16 +318,8 @@ public sealed class WorkspaceService
                 continue;
             }
 
-            string[] lines;
-            try
-            {
-                if (new FileInfo(file).Length > MaxReadBytes) continue;
-                lines = File.ReadAllLines(file, new UTF8Encoding(false, false));
-            }
-            catch
-            {
-                continue;
-            }
+            var lines = cachedLines ?? TryReadLines(file);
+            if (lines is null) continue;
 
             for (var index = 0; index < lines.Length; index++)
             {
@@ -308,11 +339,15 @@ public sealed class WorkspaceService
             if (truncated) break;
         }
 
-        if (hits.Count == 0) return new(true, $"没有找到包含「{needle}」的定义");
+        var notes = BuildSearchNotes(truncated ? $"（已达到 {limit} 条上限，可能还有更多定义）" : null, indexTruncated);
+        if (hits.Count == 0)
+        {
+            var empty = $"没有找到包含「{needle}」的定义";
+            return new(true, notes.Length == 0 ? empty : $"{empty}\n{notes}");
+        }
+
         var output = string.Join('\n', hits);
-        return new(true, truncated
-            ? $"{output}\n（已达到 {limit} 条上限，可能还有更多定义）"
-            : output);
+        return new(true, notes.Length == 0 ? output : $"{output}\n{notes}");
     }
 
     private static string? MatchSymbol(string line)
@@ -385,7 +420,11 @@ public sealed class WorkspaceService
         {
             var parent = Path.GetDirectoryName(full);
             if (parent is not null) Directory.CreateDirectory(parent);
-            File.WriteAllText(full, content, new UTF8Encoding(false));
+
+            // 覆盖已有文件时沿用它的行尾与 BOM；新建文件默认 LF、无 BOM
+            var (crlf, bom) = File.Exists(full) ? ProbeTextStyle(full) : (false, false);
+            SaveText(full, content, crlf, bom);
+            InvalidateIndex(full);
             return new(true, $"已写入 {Relative(full)}（{content.Length} 字符）");
         }
         catch (Exception ex)
@@ -406,24 +445,38 @@ public sealed class WorkspaceService
         if (info.Length > MaxReadBytes) return new(false, $"文件过大（{Formatters.Bytes(info.Length)}），上限 256 KB");
 
         string text;
+        bool crlf;
+        bool bom;
         try
         {
-            text = File.ReadAllText(full, new UTF8Encoding(false, false));
+            (text, crlf, bom) = LoadText(full);
         }
         catch (Exception ex)
         {
             return new(false, $"读取失败：{ex.Message}");
         }
 
-        var count = CountOccurrences(text, oldText);
-        if (count == 0) return new(false, $"未在 {Relative(full)} 中找到要替换的文本");
+        // 模型看到的是 read_file 的 LF 文本，匹配前把 old_text 也归一化为 LF
+        var normalizedOld = oldText.Replace("\r\n", "\n");
+        var count = CountOccurrences(text, normalizedOld);
+        if (count == 0)
+        {
+            var totalLines = text.Length == 0 ? 0 : text.Split('\n').Length;
+            var oldLines = normalizedOld.Split('\n').Length;
+            return new(false,
+                $"未在 {Relative(full)} 中找到要替换的文本" +
+                $"（文件行尾风格：{(crlf ? "CRLF" : "LF")}，共 {totalLines} 行；old_text 归一化后有 {oldLines} 行）。" +
+                "请确认空白、缩进与大小写完全一致，或先用 read_file 重新读取该文件。");
+        }
 
-        var updated = text.Replace(oldText, newText ?? "", StringComparison.Ordinal);
+        var normalizedNew = (newText ?? "").Replace("\r\n", "\n");
+        var updated = text.Replace(normalizedOld, normalizedNew, StringComparison.Ordinal);
         if (Encoding.UTF8.GetByteCount(updated) > MaxWriteBytes) return new(false, "替换后内容超过 512 KB 上限");
 
         try
         {
-            File.WriteAllText(full, updated, new UTF8Encoding(false));
+            SaveText(full, updated, crlf, bom);
+            InvalidateIndex(full);
             return new(true, $"已在 {Relative(full)} 中替换 {count} 处");
         }
         catch (Exception ex)
@@ -447,12 +500,14 @@ public sealed class WorkspaceService
         if (files.Count == 0) return new(false, "没有找到 --- / +++ 文件头");
         if (files.Count > MaxPatchFiles) return new(false, $"单次最多应用 {MaxPatchFiles} 个文件");
 
-        var pending = new List<(string FullPath, string Content)>();
+        var pending = new List<(string FullPath, string Content, bool Crlf, bool Bom)>();
         foreach (var file in files)
         {
             if (!TryResolve(file.Path, out var full, out var resolveError)) return new(false, resolveError);
 
             string original;
+            bool crlf = false;
+            bool bom = false;
             if (file.IsNew)
             {
                 if (File.Exists(full)) return new(false, $"新建文件已存在：{Relative(full)}");
@@ -467,7 +522,7 @@ public sealed class WorkspaceService
 
                 try
                 {
-                    original = File.ReadAllText(full, new UTF8Encoding(false, false));
+                    (original, crlf, bom) = LoadText(full);
                 }
                 catch (Exception ex)
                 {
@@ -479,16 +534,17 @@ public sealed class WorkspaceService
             if (Encoding.UTF8.GetByteCount(updated) > MaxWriteBytes)
                 return new(false, $"补丁应用后 {Relative(full)} 超过 512 KB 上限");
 
-            pending.Add((full, updated));
+            pending.Add((full, updated, crlf, bom));
         }
 
         try
         {
-            foreach (var (full, content) in pending)
+            foreach (var (full, content, crlf, bom) in pending)
             {
                 var parent = Path.GetDirectoryName(full);
                 if (parent is not null) Directory.CreateDirectory(parent);
-                File.WriteAllText(full, content, new UTF8Encoding(false));
+                SaveText(full, content, crlf, bom);
+                InvalidateIndex(full);
             }
         }
         catch (Exception ex)
@@ -963,14 +1019,113 @@ public sealed class WorkspaceService
         return value.StartsWith('.') ? "*" + value : "*." + value;
     }
 
-    /// <summary>遍历工作区源码文件：跳过忽略目录、符号链接、二进制扩展名，并限制数量。</summary>
-    private IEnumerable<string> EnumerateSourceFiles(int maxDepth)
+    /// <summary>
+    /// 搜索前同步索引并返回可搜索文件：路径按序稳定，未变的文件复用缓存行，
+    /// 变化或新增的文件按 mtime + 大小重读，删除的文件从索引移除。
+    /// 返回的 Lines 为 null 表示超过内存预算或读盘失败，调用方按次现读。
+    /// </summary>
+    private (List<(string FullPath, string[]? Lines)> Files, bool Truncated) SnapshotSourceFiles()
     {
-        if (!IsConfigured) yield break;
+        lock (_indexLock)
+        {
+            var root = _root!;
+            if (!string.Equals(_indexRoot, root, PathComparison))
+            {
+                _index.Clear();
+                _indexBytes = 0;
+                _indexRoot = root;
+            }
+
+            var listed = CollectSourceFiles(8, out var truncated);
+            // 路径排序保证同样的工作区每次返回一致的命中顺序。
+            listed.Sort((left, right) =>
+                StringComparer.OrdinalIgnoreCase.Compare(Relative(left), Relative(right)));
+
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var files = new List<(string, string[]?)>(listed.Count);
+
+            foreach (var fullPath in listed)
+            {
+                if (!seen.Add(fullPath)) continue;
+
+                FileInfo info;
+                try
+                {
+                    info = new FileInfo(fullPath);
+                }
+                catch
+                {
+                    files.Add((fullPath, null));
+                    continue;
+                }
+
+                if (!info.Exists || info.Length > MaxReadBytes) continue;
+
+                var cached = _index.TryGetValue(fullPath, out var entry) ? entry : null;
+                if (cached is not null &&
+                    cached.Length == info.Length &&
+                    cached.MtimeTicks == info.LastWriteTimeUtc.Ticks)
+                {
+                    files.Add((fullPath, cached.Lines));
+                    continue;
+                }
+
+                if (cached is not null) RemoveEntry(fullPath, cached);
+
+                if (_indexBytes + info.Length > MaxIndexBytes)
+                {
+                    // 超出内存预算：不缓存，本次搜索仍按次读盘。
+                    files.Add((fullPath, null));
+                    continue;
+                }
+
+                try
+                {
+                    var lines = File.ReadAllLines(fullPath, new UTF8Encoding(false, false));
+                    var indexed = new IndexedFile(info.Length, info.LastWriteTimeUtc.Ticks, lines);
+                    _index[fullPath] = indexed;
+                    _indexBytes += info.Length;
+                    files.Add((fullPath, lines));
+                }
+                catch
+                {
+                    files.Add((fullPath, null));
+                }
+            }
+
+            foreach (var stale in _index.Keys.Where(path => !seen.Contains(path)).ToList())
+            {
+                RemoveEntry(stale, _index[stale]);
+            }
+
+            return (files, truncated);
+        }
+    }
+
+    private void RemoveEntry(string fullPath, IndexedFile entry)
+    {
+        if (_index.Remove(fullPath)) _indexBytes -= entry.Length;
+    }
+
+    /// <summary>写盘成功后让对应文件失效，下一次搜索重新读取；新增文件无需处理。</summary>
+    private void InvalidateIndex(string? fullPath)
+    {
+        if (string.IsNullOrEmpty(fullPath)) return;
+        lock (_indexLock)
+        {
+            if (_index.TryGetValue(fullPath, out var entry)) RemoveEntry(fullPath, entry);
+        }
+    }
+
+    /// <summary>遍历工作区源码文件：跳过忽略目录、符号链接与二进制扩展名；超过上限时置 truncated。</summary>
+    private List<string> CollectSourceFiles(int maxDepth, out bool truncated)
+    {
+        var files = new List<string>();
+        truncated = false;
+        if (!IsConfigured) return files;
 
         var stack = new Stack<(string Directory, int Depth)>();
         stack.Push((_root!, 0));
-        var visited = 0;
 
         while (stack.Count > 0)
         {
@@ -998,17 +1153,69 @@ public sealed class WorkspaceService
                     continue;
                 }
 
-                if (++visited > 4000) yield break;
                 var extension = Path.GetExtension(entry);
                 if (BinaryExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase)) continue;
-                yield return entry;
+
+                if (files.Count >= MaxIndexFiles)
+                {
+                    truncated = true;
+                    return files;
+                }
+
+                files.Add(entry);
             }
         }
+
+        return files;
     }
 
+    private sealed record IndexedFile(long Length, long MtimeTicks, string[] Lines);
     private sealed record PatchLine(char Kind, string Text);
     private sealed record PatchHunk(int OldStart, int OldCount, int NewStart, int NewCount, List<PatchLine> Lines);
     private sealed record PatchFile(string Path, bool IsNew, List<PatchHunk> Hunks);
+
+    /// <summary>解码 UTF-8 文本，返回统一 LF 的正文、原文件是否 CRLF、是否带 BOM。</summary>
+    private static (string Text, bool Crlf, bool Bom) DecodeText(byte[] bytes)
+    {
+        var bom = bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;
+        var text = new UTF8Encoding(false, false)
+            .GetString(bytes, bom ? 3 : 0, bytes.Length - (bom ? 3 : 0));
+        var crlf = text.Contains("\r\n", StringComparison.Ordinal);
+        return (text.Replace("\r\n", "\n"), crlf, bom);
+    }
+
+    private static (string Text, bool Crlf, bool Bom) LoadText(string fullPath) =>
+        DecodeText(File.ReadAllBytes(fullPath));
+
+    /// <summary>按原文件的行尾与 BOM 风格写回，避免把 CRLF 仓库整体改成 LF。</summary>
+    private static void SaveText(string fullPath, string text, bool crlf, bool bom)
+    {
+        var normalized = text.Replace("\r\n", "\n");
+        if (crlf) normalized = normalized.Replace("\n", "\r\n");
+        File.WriteAllText(fullPath, normalized, new UTF8Encoding(bom));
+    }
+
+    private static (bool Crlf, bool Bom) ProbeTextStyle(string fullPath)
+    {
+        try
+        {
+            using var stream = File.OpenRead(fullPath);
+            var buffer = new byte[8192];
+            var read = stream.Read(buffer, 0, buffer.Length);
+            var bom = read >= 3 && buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF;
+            for (var index = bom ? 3 : 0; index + 1 < read; index++)
+            {
+                if (buffer[index] == (byte)'\r' && buffer[index + 1] == (byte)'\n') return (true, bom);
+            }
+
+            return (false, bom);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // 风格探测失败时按新建文件处理（LF、无 BOM），不影响内容写入
+            return (false, false);
+        }
+    }
 
     private static int CountOccurrences(string text, string value)
     {

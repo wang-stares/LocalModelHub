@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using LocalModelHub.Core.Models;
 using LocalModelHub.Core.Services;
 using Xunit;
@@ -141,5 +142,80 @@ public class AgentProtocolTests
         Assert.Contains("成功", ledger);
         Assert.DoesNotContain(new string('x', 200), ledger);
         Assert.True(ledger.Length < 1400);
+    }
+
+    [Fact]
+    public void BuildTextToolPrompt_lists_react_format_and_declared_tools()
+    {
+        var prompt = AgentProtocol.BuildTextToolPrompt(
+        [
+            new ToolDefinition(
+                "read_file", "读取工作区文件",
+                JsonNode.Parse("""{"type":"object","properties":{"path":{"type":"string"}}}""")!.AsObject())
+        ]);
+
+        Assert.Contains("Thought", prompt);
+        Assert.Contains("Action:", prompt);
+        Assert.Contains("Action Input", prompt);
+        Assert.Contains("Observation", prompt);
+        Assert.Contains("Final Answer", prompt);
+        Assert.Contains("一次只输出一个 Action", prompt);
+        Assert.Contains("read_file: 读取工作区文件", prompt);
+        Assert.Contains("参数 schema", prompt);
+    }
+
+    [Fact]
+    public void ParseTextToolCalls_reads_action_lines_and_multiline_json()
+    {
+        var text = """
+            Thought: 先读取真实内容
+            Action: read_file
+            Action Input: {
+              "path": "a.txt",
+              "start_line": 1
+            }
+            Thought: 再复核
+            """;
+
+        var calls = AgentProtocol.ParseTextToolCalls(text, ["read_file", "write_file"]);
+
+        Assert.Single(calls);
+        Assert.Equal("read_file", calls[0].Name);
+        Assert.Equal("text_1", calls[0].Id);
+        Assert.Contains("a.txt", calls[0].Arguments);
+        Assert.Contains("start_line", calls[0].Arguments);
+    }
+
+    [Fact]
+    public void ParseTextToolCalls_accepts_tool_call_block_and_rejects_unknown_tools()
+    {
+        var block = """<tool_call>{"name":"read_file","arguments":{"path":"a.txt"}}</tool_call>""";
+
+        var calls = AgentProtocol.ParseTextToolCalls(block, ["read_file"]);
+
+        Assert.Single(calls);
+        Assert.Equal("read_file", calls[0].Name);
+        Assert.Contains("a.txt", calls[0].Arguments);
+
+        // 未声明的工具不进执行层，避免模型臆造工具
+        Assert.Empty(AgentProtocol.ParseTextToolCalls("Action: delete_file\nAction Input: {}", ["read_file"]));
+        Assert.Empty(AgentProtocol.ParseTextToolCalls(null, ["read_file"]));
+        Assert.Empty(AgentProtocol.ParseTextToolCalls("Action: read_file", []));
+    }
+
+    [Fact]
+    public void ParseTextToolCalls_stops_at_six_calls()
+    {
+        var lines = Enumerable.Range(0, 9)
+            .SelectMany(index => new[]
+            {
+                "Action: read_file",
+                $$"""Action Input: {"path":"f{{index}}.txt"}"""
+            });
+        var calls = AgentProtocol.ParseTextToolCalls(string.Join('\n', lines), ["read_file"]);
+
+        Assert.Equal(6, calls.Count);
+        Assert.Contains("f5.txt", calls[5].Arguments);
+        Assert.DoesNotContain(calls, call => call.Arguments.Contains("f6.txt", StringComparison.Ordinal));
     }
 }

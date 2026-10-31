@@ -17,6 +17,9 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
     private readonly HttpClient _healthClient = new() { Timeout = TimeSpan.FromSeconds(5) };
     private readonly HttpClient _chatClient = new() { Timeout = Timeout.InfiniteTimeSpan };
     private readonly object _sync = new();
+
+    /// <summary>流式生成连续 60 秒没有新内容即判定服务假死。</summary>
+    private static readonly TimeSpan StreamIdleTimeout = TimeSpan.FromSeconds(60);
     private Process? _process;
     private string? _alias;
     private string? _apiKey;
@@ -46,8 +49,62 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
     public string? LoadedModelPath { get; private set; }
     public string? LoadedModelName { get; private set; }
     public string? RuntimeVariant { get; private set; }
+
+    /// <summary>服务端 /props 报告的实际上下文窗口；/props 不可用时退化为启动参数里的 ContextSize。</summary>
+    public int ContextTokens { get; private set; } = 8192;
+
+    /// <summary>最近一次 /props 结果（含 chat template），用于模型能力探测。</summary>
+    public ServerProps? Props { get; private set; }
+
     public string LogTail => string.Join(Environment.NewLine, _log.TakeLast(80));
     public string WebUiUrl => $"http://127.0.0.1:{Port}";
+
+    /// <summary>/props 中与上下文预算相关的字段。</summary>
+    public sealed record ServerProps(int NCtx, string ChatTemplate, int TotalSlots);
+
+    /// <summary>
+    /// 读取服务端真实 n_ctx。启动参数里的 -c 可能被 llama-server 按显存调整，
+    /// 只有 /props 的值才是实际可用的上下文窗口。
+    /// </summary>
+    public async Task<ServerProps?> GetPropsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"http://127.0.0.1:{Port}/props");
+            ApplyAuthorization(request);
+            using var response = await _healthClient.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode) return null;
+
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+            var root = document.RootElement;
+
+            var nCtx = 0;
+            if (root.TryGetProperty("default_generation_settings", out var settings) &&
+                settings.TryGetProperty("n_ctx", out var nested) && nested.TryGetInt32(out var nestedValue))
+            {
+                nCtx = nestedValue;
+            }
+            else if (root.TryGetProperty("n_ctx", out var direct) && direct.TryGetInt32(out var directValue))
+            {
+                nCtx = directValue;
+            }
+
+            var template = root.TryGetProperty("chat_template", out var t) ? t.GetString() ?? "" : "";
+            var slots = root.TryGetProperty("total_slots", out var s) && s.TryGetInt32(out var slotCount)
+                ? slotCount
+                : 1;
+            return nCtx > 0 ? new ServerProps(nCtx, template, slots) : null;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            // /props 在旧版本或非 llama.cpp 后端上可能不存在：调用方回退到启动参数
+            return null;
+        }
+    }
 
     public async Task StartAsync(
         string serverPath,
@@ -110,6 +167,7 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
             LoadedModelPath = modelPath;
             LoadedModelName = options.Alias;
             RuntimeVariant = Path.GetFileName(Path.GetDirectoryName(serverPath));
+            ContextTokens = options.ContextSize > 0 ? options.ContextSize : 8192;
         }
 
         StateChanged?.Invoke(this, EventArgs.Empty);
@@ -153,7 +211,11 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
                 using var response = await _healthClient.SendAsync(healthRequest, cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
-                    AppendLog("[就绪] 模型加载完成");
+                    // /health 200 不代表上下文已就绪；/props 拿不到时退回启动参数。
+                    var props = await GetPropsAsync(cancellationToken);
+                    Props = props;
+                    ContextTokens = props is { NCtx: > 0 } ? props.NCtx : options.ContextSize;
+                    AppendLog($"[就绪] 模型加载完成（上下文 {ContextTokens} token）");
                     StateChanged?.Invoke(this, EventArgs.Empty);
                     return;
                 }
@@ -212,6 +274,7 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
                 _apiKey = null;
                 LoadedModelPath = null;
                 LoadedModelName = null;
+                Props = null;
             }
 
             AppendLog("[已停止]");
@@ -320,6 +383,38 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
             : "f16";
     }
 
+    /// <summary>把内部超时与用户主动取消区分开：用户取消继续抛 OperationCanceledException。</summary>
+    private static async Task<T> WithTimeout<T>(Task<T> task, CancellationToken userToken, string message)
+    {
+        try
+        {
+            return await task;
+        }
+        catch (OperationCanceledException ex) when (!userToken.IsCancellationRequested)
+        {
+            throw new TimeoutException(message, ex);
+        }
+    }
+
+    /// <summary>ValueTask 版本（TextReader.ReadLineAsync(CancellationToken) 等 API 使用）。</summary>
+    private static async Task<T> WithTimeout<T>(ValueTask<T> task, CancellationToken userToken, string message)
+    {
+        try
+        {
+            return await task;
+        }
+        catch (OperationCanceledException ex) when (!userToken.IsCancellationRequested)
+        {
+            throw new TimeoutException(message, ex);
+        }
+    }
+
+    private static string TruncateBody(string? body)
+    {
+        var text = (body ?? "").Trim();
+        return text.Length <= 400 ? text : text[..400] + "…";
+    }
+
     public async IAsyncEnumerable<ChatChunk> ChatStreamAsync(
         IReadOnlyList<ChatMessage> messages,
         ChatOptions options,
@@ -344,19 +439,33 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
         ApplyAuthorization(request);
 
-        using var response = await _chatClient.SendAsync(
-            request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        // 流式场景按「无新内容」计时：首 token 之前或生成中途卡住超过 60 秒就中止，
+        // 避免服务假死时界面永久转圈。用户主动取消仍抛 OperationCanceledException。
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        linked.CancelAfter(StreamIdleTimeout);
+        var timeoutMessage =
+            $"生成超过 {StreamIdleTimeout.TotalSeconds:0} 秒没有新内容，已停止；模型可能卡住或显存不足。";
+
+        using var response = await WithTimeout(
+            _chatClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, linked.Token),
+            cancellationToken, timeoutMessage);
         if (!response.IsSuccessStatusCode)
         {
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new InvalidOperationException($"推理服务返回 {(int)response.StatusCode}：{body}");
+            var body = await WithTimeout(
+                response.Content.ReadAsStringAsync(linked.Token), cancellationToken, timeoutMessage);
+            throw new InvalidOperationException($"推理服务返回 {(int)response.StatusCode}：{TruncateBody(body)}");
         }
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        await using var stream = await WithTimeout(
+            response.Content.ReadAsStreamAsync(linked.Token), cancellationToken, timeoutMessage);
         using var reader = new StreamReader(stream);
-        while (!reader.EndOfStream)
+        while (true)
         {
-            var line = await reader.ReadLineAsync(cancellationToken);
+            var line = await WithTimeout(
+                reader.ReadLineAsync(linked.Token), cancellationToken, timeoutMessage);
+            if (line is null) break;
+
+            linked.CancelAfter(StreamIdleTimeout); // 收到新行后重新计时
             if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data:", StringComparison.Ordinal)) continue;
 
             var data = line[5..].Trim();
@@ -371,21 +480,55 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
     }
 
     /// <summary>非流式对话，可携带 tools；返回文本与工具调用（用于工作文件夹代理）。</summary>
+    public Task<ChatTurn> ChatAsync(
+        IReadOnlyList<ChatMessage> messages,
+        IReadOnlyList<ToolDefinition>? tools,
+        int maxTokens,
+        CancellationToken cancellationToken) =>
+        ChatAsync(messages, tools, maxTokens, new ChatRequestOptions(), cancellationToken);
+
+    /// <summary>
+    /// 带扩展选项的对话：OnDelta 非空时改为 SSE 流式读取并逐块回调正文，
+    /// JsonMode / JsonSchema 打开 llama.cpp 的约束解码（response_format）。
+    /// </summary>
     public async Task<ChatTurn> ChatAsync(
         IReadOnlyList<ChatMessage> messages,
         IReadOnlyList<ToolDefinition>? tools,
         int maxTokens,
+        ChatRequestOptions requestOptions,
         CancellationToken cancellationToken)
     {
         if (!IsRunning) throw new InvalidOperationException("推理服务尚未启动。");
 
+        var streaming = requestOptions.OnDelta is not null;
+        var payload = BuildChatPayload(messages, tools, maxTokens, requestOptions, streaming);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"http://127.0.0.1:{Port}/v1/chat/completions")
+        {
+            Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
+        };
+        if (streaming) request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+        ApplyAuthorization(request);
+
+        return streaming
+            ? await ChatStreamingCoreAsync(request, requestOptions, cancellationToken)
+            : await ChatBufferedCoreAsync(request, maxTokens, cancellationToken);
+    }
+
+    private Dictionary<string, object?> BuildChatPayload(
+        IReadOnlyList<ChatMessage> messages,
+        IReadOnlyList<ToolDefinition>? tools,
+        int maxTokens,
+        ChatRequestOptions requestOptions,
+        bool stream)
+    {
         var payload = new Dictionary<string, object?>
         {
             ["model"] = _alias ?? LoadedModelName ?? "local",
             ["messages"] = messages.Select(SerializeMessage).ToArray(),
-            ["stream"] = false,
-            ["temperature"] = 0.3,
-            ["top_p"] = 0.9,
+            ["stream"] = stream,
+            ["temperature"] = requestOptions.Temperature,
+            ["top_p"] = requestOptions.TopP,
             ["max_tokens"] = maxTokens
         };
 
@@ -404,17 +547,71 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
             payload["tool_choice"] = "auto";
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"http://127.0.0.1:{Port}/v1/chat/completions")
+        if (requestOptions.JsonMode || !string.IsNullOrWhiteSpace(requestOptions.JsonSchema))
         {
-            Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
-        };
-        ApplyAuthorization(request);
+            payload["response_format"] = BuildResponseFormat(requestOptions.JsonSchema);
+        }
 
-        using var response = await _chatClient.SendAsync(request, cancellationToken);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        return payload;
+    }
+
+    /// <summary>json_object 只约束「输出是 JSON」；json_schema 进一步约束字段与类型。</summary>
+    private static Dictionary<string, object?> BuildResponseFormat(string? jsonSchema)
+    {
+        if (string.IsNullOrWhiteSpace(jsonSchema))
         {
-            throw new InvalidOperationException($"推理服务返回 {(int)response.StatusCode}：{body}");
+            return new Dictionary<string, object?> { ["type"] = "json_object" };
+        }
+
+        JsonElement schema;
+        try
+        {
+            schema = JsonSerializer.Deserialize<JsonElement>(jsonSchema);
+        }
+        catch (JsonException)
+        {
+            return new Dictionary<string, object?> { ["type"] = "json_object" };
+        }
+
+        return new Dictionary<string, object?>
+        {
+            ["type"] = "json_schema",
+            ["json_schema"] = new Dictionary<string, object?>
+            {
+                ["name"] = "agent_verification",
+                ["strict"] = true,
+                ["schema"] = schema
+            }
+        };
+    }
+
+    private async Task<ChatTurn> ChatBufferedCoreAsync(
+        HttpRequestMessage request,
+        int maxTokens,
+        CancellationToken cancellationToken)
+    {
+        // 8B 模型约 20 tok/s：给足生成时间，但服务卡死时不能让调用方无限等待。
+        var timeout = TimeSpan.FromSeconds(Math.Clamp(maxTokens * 0.35, 30, 300));
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        linked.CancelAfter(timeout);
+        string body;
+        try
+        {
+            using var response = await _chatClient.SendAsync(request, linked.Token);
+            body = await response.Content.ReadAsStringAsync(linked.Token);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"推理服务返回 {(int)response.StatusCode}：{TruncateBody(body)}");
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            throw new TimeoutException(
+                $"推理超时（{timeout.TotalSeconds:0} 秒），模型可能卡住或显存不足。", ex);
         }
 
         using var document = JsonDocument.Parse(body);
@@ -457,6 +654,105 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
         }
 
         return turn;
+    }
+
+    private async Task<ChatTurn> ChatStreamingCoreAsync(
+        HttpRequestMessage request,
+        ChatRequestOptions requestOptions,
+        CancellationToken cancellationToken)
+    {
+        // 与 ChatStreamAsync 相同：按「无新内容」计时，避免服务假死时永久等待；
+        // 用户主动取消仍抛 OperationCanceledException，保证停止按钮立即生效。
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        linked.CancelAfter(StreamIdleTimeout);
+        var timeoutMessage =
+            $"生成超过 {StreamIdleTimeout.TotalSeconds:0} 秒没有新内容，已停止；模型可能卡住或显存不足。";
+
+        using var response = await WithTimeout(
+            _chatClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, linked.Token),
+            cancellationToken, timeoutMessage);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await WithTimeout(
+                response.Content.ReadAsStringAsync(CancellationToken.None), cancellationToken, timeoutMessage);
+            throw new InvalidOperationException($"推理服务返回 {(int)response.StatusCode}：{TruncateBody(body)}");
+        }
+
+        await using var stream = await WithTimeout(
+            response.Content.ReadAsStreamAsync(linked.Token), cancellationToken, timeoutMessage);
+        using var reader = new StreamReader(stream);
+        var turn = new ChatTurnAccumulator();
+        while (true)
+        {
+            var line = await WithTimeout(
+                reader.ReadLineAsync(linked.Token), cancellationToken, timeoutMessage);
+            if (line is null) break;
+
+            linked.CancelAfter(StreamIdleTimeout);
+            if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data:", StringComparison.Ordinal)) continue;
+
+            var data = line[5..].Trim();
+            if (data == "[DONE]") break;
+
+            var chunk = ChatStreamParser.Parse(data);
+            if (chunk is null) continue;
+
+            turn.Append(chunk);
+            if (chunk.Content is { Length: > 0 }) requestOptions.OnDelta?.Invoke(chunk.Content);
+        }
+
+        return turn.Build();
+    }
+
+    /// <summary>把流式片段拼回完整的 ChatTurn：正文、思考与按 index 合并的工具调用。</summary>
+    private sealed class ChatTurnAccumulator
+    {
+        private readonly StringBuilder _content = new();
+        private readonly StringBuilder _reasoning = new();
+        private readonly Dictionary<int, PendingCall> _calls = new();
+
+        public void Append(ChatChunk chunk)
+        {
+            if (!string.IsNullOrEmpty(chunk.Content)) _content.Append(chunk.Content);
+            if (!string.IsNullOrEmpty(chunk.Reasoning)) _reasoning.Append(chunk.Reasoning);
+            if (chunk.ToolCall is not { } delta) return;
+
+            if (!_calls.TryGetValue(delta.Index, out var call))
+            {
+                call = new PendingCall();
+                _calls[delta.Index] = call;
+            }
+
+            if (!string.IsNullOrEmpty(delta.Id)) call.Id = delta.Id;
+            if (!string.IsNullOrEmpty(delta.Name)) call.Name = delta.Name;
+            if (!string.IsNullOrEmpty(delta.Arguments)) call.Arguments.Append(delta.Arguments);
+        }
+
+        public ChatTurn Build()
+        {
+            var turn = new ChatTurn
+            {
+                Content = _content.ToString(),
+                Reasoning = _reasoning.ToString()
+            };
+
+            foreach (var pair in _calls.OrderBy(pair => pair.Key))
+            {
+                var call = pair.Value;
+                if (call.Name.Length == 0) continue;
+                var arguments = call.Arguments.Length == 0 ? "{}" : call.Arguments.ToString();
+                turn.ToolCalls.Add(new ToolCall(call.Id.Length > 0 ? call.Id : $"call_{pair.Key}", call.Name, arguments));
+            }
+
+            return turn;
+        }
+
+        private sealed class PendingCall
+        {
+            public string Id { get; set; } = "";
+            public string Name { get; set; } = "";
+            public StringBuilder Arguments { get; } = new();
+        }
     }
 
     private static object SerializeMessage(ChatMessage message)
@@ -541,13 +837,43 @@ public static class ChatStreamParser
 
             var content = ReadString(delta, "content");
             var reasoning = ReadString(delta, "reasoning_content") ?? ReadString(delta, "reasoning");
-            if (string.IsNullOrEmpty(content) && string.IsNullOrEmpty(reasoning)) return null;
-            return new ChatChunk(content, reasoning);
+            var toolCall = ReadToolCallDelta(delta);
+            if (string.IsNullOrEmpty(content) && string.IsNullOrEmpty(reasoning) && toolCall is null) return null;
+            return new ChatChunk(content, reasoning, toolCall);
         }
         catch (JsonException)
         {
             return null;
         }
+    }
+
+    /// <summary>解析流式工具调用片段（delta.tool_calls）：index 缺省按 0，arguments 可能是分片字符串。</summary>
+    private static ToolCallDelta? ReadToolCallDelta(JsonElement delta)
+    {
+        if (!delta.TryGetProperty("tool_calls", out var calls) || calls.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        foreach (var call in calls.EnumerateArray())
+        {
+            var index = call.TryGetProperty("index", out var indexElement) && indexElement.TryGetInt32(out var value)
+                ? value
+                : 0;
+            var id = ReadString(call, "id");
+            string? name = null;
+            string? arguments = null;
+            if (call.TryGetProperty("function", out var function) && function.ValueKind == JsonValueKind.Object)
+            {
+                name = ReadString(function, "name");
+                arguments = ReadString(function, "arguments");
+            }
+
+            if (name is null && arguments is null && id is null) continue;
+            return new ToolCallDelta(index, id, name, arguments);
+        }
+
+        return null;
     }
 
     private static string? ReadString(JsonElement element, string name) =>

@@ -1,3 +1,4 @@
+using System.Text;
 using LocalModelHub.Core.Services;
 using Xunit;
 
@@ -322,6 +323,120 @@ public sealed class WorkspaceServiceTests : IDisposable
         Assert.False(result.Success);
         Assert.Contains("行数", result.Text);
         Assert.Equal("alpha\nbeta\ngamma", File.ReadAllText(Path.Combine(_root, "a.txt")));
+    }
+
+    [Fact]
+    public void ReplaceInFile_matches_lf_text_in_crlf_file_and_keeps_crlf()
+    {
+        var path = Path.Combine(_root, "crlf.cs");
+        File.WriteAllText(path, "line1\r\nline2\r\nline3\r\nline4\r\n");
+
+        var result = _service.ReplaceInFile("crlf.cs", "line2\nline3", "LINE2\nLINE3");
+
+        Assert.True(result.Success);
+        Assert.Equal("line1\r\nLINE2\r\nLINE3\r\nline4\r\n", File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void ReplaceInFile_preserves_utf8_bom()
+    {
+        var path = Path.Combine(_root, "bom.txt");
+        File.WriteAllText(path, "alpha\nbeta", new UTF8Encoding(true));
+
+        var result = _service.ReplaceInFile("bom.txt", "alpha", "gamma");
+
+        Assert.True(result.Success);
+        Assert.Equal(new byte[] { 0xEF, 0xBB, 0xBF }, File.ReadAllBytes(path).Take(3).ToArray());
+        Assert.Equal("gamma\nbeta", File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void ReplaceInFile_reports_line_ending_style_when_text_is_missing()
+    {
+        var path = Path.Combine(_root, "crlf-miss.txt");
+        File.WriteAllText(path, "line1\r\nline2\r\nline3\r\n");
+
+        var result = _service.ReplaceInFile("crlf-miss.txt", "missing", "x");
+
+        Assert.False(result.Success);
+        Assert.Contains("CRLF", result.Text);
+        Assert.Contains("old_text 归一化后有 1 行", result.Text);
+    }
+
+    [Fact]
+    public void WriteFile_preserves_crlf_style_of_existing_file()
+    {
+        var path = Path.Combine(_root, "keep-crlf.txt");
+        File.WriteAllText(path, "old1\r\nold2\r\n");
+
+        var result = _service.WriteFile("keep-crlf.txt", "new1\nnew2");
+
+        Assert.True(result.Success);
+        Assert.Equal("new1\r\nnew2", File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void ApplyPatch_keeps_crlf_file_style()
+    {
+        var path = Path.Combine(_root, "crlf-patch.txt");
+        File.WriteAllText(path, "one\r\ntwo\r\n");
+
+        var patch = """
+            --- a/crlf-patch.txt
+            +++ b/crlf-patch.txt
+            @@ -1,2 +1,2 @@
+             one
+            -two
+            +three
+            """;
+
+        var result = _service.ApplyPatch(patch);
+
+        Assert.True(result.Success);
+        Assert.Equal("one\r\nthree\r\n", File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void Search_sees_external_changes_after_index_warmup()
+    {
+        _service.WriteFile("notes.txt", "alpha");
+        Assert.Contains("notes.txt:1", _service.Search("alpha", null).Text);
+
+        // 模拟其它进程（编辑器 / run_command）改写文件：大小与修改时间都会变化
+        var path = Path.Combine(_root, "notes.txt");
+        File.WriteAllText(path, "beta content, longer than the previous line");
+
+        Assert.Equal("没有匹配结果", _service.Search("alpha", null).Text);
+        Assert.Contains("notes.txt:1", _service.Search("beta", null).Text);
+    }
+
+    [Fact]
+    public void Search_reflects_write_file_immediately_after_index_warmup()
+    {
+        _service.WriteFile("a.cs", "old");
+        Assert.Contains("a.cs:1", _service.Search("old", null).Text);
+
+        _service.WriteFile("a.cs", "new value");
+
+        Assert.Contains("a.cs:1", _service.Search("new", null).Text);
+        Assert.Equal("没有匹配结果", _service.Search("old", null).Text);
+    }
+
+    [Fact]
+    public void Search_reports_scan_limit_when_workspace_exceeds_index_cap()
+    {
+        var folder = Path.Combine(_root, "many");
+        Directory.CreateDirectory(folder);
+        for (var index = 0; index <= 4000; index++)
+        {
+            File.WriteAllText(Path.Combine(folder, $"f{index}.txt"), "zzz");
+        }
+
+        var result = _service.Search("needle", null);
+
+        Assert.True(result.Success);
+        Assert.Contains("没有匹配结果", result.Text);
+        Assert.Contains("已扫描 4000 个文件", result.Text);
     }
 
     public void Dispose()

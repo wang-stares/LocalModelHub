@@ -10,3 +10,7 @@ TestResults/
 .vs/
 *.user
 *.suo
+
+# 本地 .NET SDK（CI 自举安装，不纳入仓库）
+.dotnet/
+

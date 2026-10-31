@@ -129,6 +129,62 @@ public sealed class WorkspaceAgentLifecycleTests : IDisposable
     }
 
     [Fact]
+    public async Task Read_after_write_with_same_arguments_is_not_blocked()
+    {
+        var act = 0;
+        _chat.Handler = call =>
+        {
+            if (call.MaxTokens == 512) return Text("1. 读取 a.txt\n2. 多轮修改并复核");
+            if (call.MaxTokens == 700) return Text("""{"pass": true, "summary": "完成"}""");
+
+            return act++ switch
+            {
+                0 => Tool("read_file", """{"path":"a.txt"}"""),
+                1 => Tool("write_file", """{"path":"a.txt","content":"v1"}"""),
+                2 => Tool("read_file", """{"path":"a.txt"}"""),
+                3 => Tool("replace_in_file", """{"path":"a.txt","old_text":"v1","new_text":"v2"}"""),
+                4 => Tool("read_file", """{"path":"a.txt"}"""),
+                5 => Tool("replace_in_file", """{"path":"a.txt","old_text":"v2","new_text":"v3"}"""),
+                6 => Tool("read_file", """{"path":"a.txt"}"""),
+                _ => Text("完成：a.txt 已更新为 v3")
+            };
+        };
+
+        var result = await Agent(AgentMode.Goal).RunAsync(
+            [ChatMessage.User("把 a.txt 更新为 v3")], null, null, CancellationToken.None);
+
+        Assert.Equal("v3", File.ReadAllText(Path.Combine(_root, "a.txt")));
+        Assert.Equal(4, result.Activities.Count(activity => activity.Name == "read_file"));
+        Assert.DoesNotContain(result.Activities, activity => activity.Summary.Contains("重复调用已拦截"));
+    }
+
+    [Fact]
+    public async Task Duplicate_write_with_same_arguments_is_blocked()
+    {
+        var act = 0;
+        _chat.Handler = call =>
+        {
+            if (call.MaxTokens == 512) return Text("1. 读取 a.txt\n2. 写入并验收");
+            if (call.MaxTokens == 700) return Text("""{"pass": true, "summary": "完成"}""");
+
+            return act++ switch
+            {
+                0 => Tool("read_file", """{"path":"a.txt"}"""),
+                1 => Tool("write_file", """{"path":"a.txt","content":"v1"}"""),
+                2 => Tool("write_file", """{"path":"a.txt","content":"v1"}"""),
+                _ => Text("完成：a.txt 已写入 v1")
+            };
+        };
+
+        var result = await Agent(AgentMode.Goal).RunAsync(
+            [ChatMessage.User("把 a.txt 写成 v1")], null, null, CancellationToken.None);
+
+        Assert.Equal("v1", File.ReadAllText(Path.Combine(_root, "a.txt")));
+        Assert.Contains(result.Activities, activity => activity.Summary.Contains("重复写操作已拦截"));
+        Assert.True(result.Trajectory!.FailedCalls >= 1);
+    }
+
+    [Fact]
     public async Task Failed_verification_triggers_repair_and_recheck()
     {
         var act = 0;
@@ -234,6 +290,57 @@ public sealed class WorkspaceAgentLifecycleTests : IDisposable
         Assert.Equal("verify", check.Name);
         Assert.Contains("风险", check.Summary);
         Assert.Contains("验收", check.Summary);
+    }
+
+    [Fact]
+    public async Task Timeout_is_retried_once_without_failing_the_turn()
+    {
+        var calls = 0;
+        _chat.Handler = _ =>
+        {
+            if (calls++ == 0) throw new TimeoutException("推理超时（30 秒）");
+            return Text("完成");
+        };
+
+        var result = await Agent(AgentMode.Plan).RunAsync(
+            [ChatMessage.User("确认项目结构")], null, null, CancellationToken.None);
+
+        Assert.Equal("完成", result.Text);
+        Assert.Contains(result.Activities, activity => activity.Name == "retry");
+    }
+
+    [Fact]
+    public async Task Context_overflow_compacts_history_and_retries()
+    {
+        var calls = 0;
+        _chat.Handler = _ =>
+        {
+            if (calls++ == 0)
+            {
+                throw new InvalidOperationException("推理服务返回 400：the request exceeds the available context size");
+            }
+
+            return Text("已压缩后完成");
+        };
+
+        var result = await Agent(AgentMode.Plan).RunAsync(
+            [ChatMessage.User("总结项目")], null, null, CancellationToken.None);
+
+        Assert.Equal("已压缩后完成", result.Text);
+        Assert.Contains(result.Activities, activity =>
+            activity.Name == "budget" && activity.Summary.Contains("上下文超限"));
+    }
+
+    [Fact]
+    public async Task User_cancellation_is_not_swallowed_by_retry_logic()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        _chat.Handler = _ => throw new OperationCanceledException(cancellation.Token);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            Agent(AgentMode.Chat).RunAsync(
+                [ChatMessage.User("取消测试")], null, null, cancellation.Token));
     }
 
     private WorkspaceAgent Agent(

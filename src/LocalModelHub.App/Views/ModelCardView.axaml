@@ -49,6 +49,11 @@
                 ToolTip.Tip="来源：内置清单 / HuggingFace / 魔搭 ModelScope / Ollama 官方库 / 远程 API">
           <TextBlock Text="{Binding SourceBadgeText}"/>
         </Border>
+        <Border Classes="badge local"
+                IsVisible="{Binding ShowToolModeBadge}"
+                ToolTip.Tip="{Binding ToolModeBadgeTip}">
+          <TextBlock Text="{Binding ToolModeBadgeText}"/>
+        </Border>
         <TextBlock Text="{Binding SpeedText}"
                    Classes="caption"
                    VerticalAlignment="Center"

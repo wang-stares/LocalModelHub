@@ -68,6 +68,22 @@ public sealed class RecommendationOptions
     public int ContextTokens { get; set; } = 8192;
     public double UsableRamRatio { get; set; } = 0.8;
 
+    /// <summary>K cache 量化类型（f16 / q8_0 / q4_0 等），直接决定每个元素的字节数。</summary>
+    public string KvCacheTypeK { get; set; } = "f16";
+
+    /// <summary>V cache 量化类型；关闭 FlashAttention 时 llama.cpp 会拒绝量化 V，评估按 f16 处理。</summary>
+    public string KvCacheTypeV { get; set; } = "f16";
+
+    /// <summary>显式指定的 GPU 卸载层数；-1 表示由 llama.cpp 自动决定。</summary>
+    public int GpuLayers { get; set; } = -1;
+
+    public bool FlashAttention { get; set; } = true;
+
+    public int ParallelSlots { get; set; } = 1;
+
+    /// <summary>当前运行时后端（cuda / vulkan / cpu），仅用于展示与诊断。</summary>
+    public string Backend { get; set; } = "cuda";
+
     /// <summary>CPU 推理时的内存带宽（GB/s）；DDR4 双通道约 51，DDR5 双通道约 89。</summary>
     public double CpuMemoryBandwidthGBps { get; set; } = 51;
 

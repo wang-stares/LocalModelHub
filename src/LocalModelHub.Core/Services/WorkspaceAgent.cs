@@ -64,7 +64,11 @@ public sealed class WorkspaceAgent
     private readonly bool _allowMemoryWrites;
     private readonly bool _allowCommands;
     private readonly ICommandRunner _commands;
+    private readonly bool _textToolProtocol;
+    private readonly bool _selfVerify;
 
+    /// <param name="textToolProtocol">模型不支持原生 tool_calls 时改走 Thought / Action / Action Input 文本协议。</param>
+    /// <param name="selfVerify">是否在执行后自检；多 Agent 协作时由外层 Reviewer 负责，传 false 避免双重评审。</param>
     public WorkspaceAgent(
         IChatCompletion server,
         WorkspaceService workspace,
@@ -72,7 +76,9 @@ public sealed class WorkspaceAgent
         AgentMode mode,
         bool allowMemoryWrites,
         bool allowCommands = false,
-        ICommandRunner? commands = null)
+        ICommandRunner? commands = null,
+        bool textToolProtocol = false,
+        bool selfVerify = true)
     {
         _server = server;
         _workspace = workspace;
@@ -81,6 +87,8 @@ public sealed class WorkspaceAgent
         _allowMemoryWrites = allowMemoryWrites;
         _allowCommands = allowCommands;
         _commands = commands ?? new CommandService();
+        _textToolProtocol = textToolProtocol;
+        _selfVerify = selfVerify;
     }
 
     /// <summary>各模式可用的工具名，便于测试与展示。</summary>
@@ -95,7 +103,8 @@ public sealed class WorkspaceAgent
         string? memoryContext,
         Action<ToolActivity>? onActivity,
         CancellationToken cancellationToken,
-        AgentPlan? initialPlan = null)
+        AgentPlan? initialPlan = null,
+        Action<string>? onDelta = null)
     {
         if (!_workspace.IsConfigured) throw new InvalidOperationException("请先设置工作文件夹。");
 
@@ -119,10 +128,30 @@ public sealed class WorkspaceAgent
             ?.Content.Trim() ?? "";
 
         var tools = ToolsFor(_mode, _allowMemoryWrites, _allowCommands);
+        var toolNames = tools.Select(tool => tool.Name).ToArray();
+
+        var contextTokens = _server.ContextTokens > 0 ? _server.ContextTokens : 8192;
+        // 单条工具结果最多占上下文的 1/8（8k 上下文约 1000 token），超出时保留头尾并给出续读指令。
+        var maxObservationTokens = Math.Max(400, contextTokens / 8);
         var answer = new StringBuilder();
         var activities = new List<ToolActivity>();
         var steps = new List<AgentStep>();
-        var seenCalls = new HashSet<string>(StringComparer.Ordinal);
+
+        // 文本协议：告诉模型工具清单与调用格式，同时不再发送 tools 字段（模板不支持会返回空 tool_calls）。
+        if (_textToolProtocol && tools.Count > 0)
+        {
+            // 替换已加入 messages 的 system 消息：ChatMessage 是 record 副本，只改局部字符串模型是收不到的。
+            messages[0] = ChatMessage.System(
+                systemPrompt + "\n\n" + AgentProtocol.BuildTextToolPrompt(tools));
+            tools = [];
+            var protocol = new ToolActivity("protocol", "文本协议 · 模型未启用原生工具调用");
+            activities.Add(protocol);
+            onActivity?.Invoke(protocol);
+        }
+        // 写操作强去重（整个运行期内不再重复执行）；只读调用单独缓存，写成功后失效，
+        // 否则「写后复核」的 read_file 会被误判为重复调用。
+        var seenWrites = new HashSet<string>(StringComparer.Ordinal);
+        var seenReads = new HashSet<string>(StringComparer.Ordinal);
         // 已成功读取的文件：修改既有文件前必须命中，避免小模型不看原文直接覆盖。
         var readPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -157,8 +186,9 @@ public sealed class WorkspaceAgent
         actUsed += await ActAsync();
 
         // 3）验收：只依据工具轨迹判断；未通过时给一次修复机会，再重新验收。
+        // 多 Agent 协作时外层 Reviewer 负责评审，这里跳过自检，避免两套口径互相矛盾。
         AgentVerification? verification = null;
-        if (_mode == AgentMode.Goal && actUsed > 0)
+        if (_mode == AgentMode.Goal && actUsed > 0 && _selfVerify)
         {
             verification = await VerifyAsync(request, plan, steps, answer.ToString(), cancellationToken);
             if (!verification.Passed && verification.Verified && actBudget - actUsed > 0)
@@ -217,40 +247,98 @@ public sealed class WorkspaceAgent
         {
             var used = 0;
             var roundOffset = actUsed;
+            var overflowRetries = 0;
+            var timeoutRetries = 0;
             while (used < actBudget - actUsed)
             {
-                var turn = await _server.ChatAsync(messages, tools, MaxTokens, cancellationToken);
+                ContextBudget.Compact(messages, contextTokens, MaxTokens);
 
-                if (!string.IsNullOrWhiteSpace(turn.Content))
+                ChatTurn turn;
+                try
                 {
-                    if (answer.Length > 0) answer.AppendLine();
-                    answer.Append(turn.Content.Trim());
+                    // 流式：工具轮次的正文也会实时回传，最终回答由调用方覆盖为完整文本。
+                    turn = await _server.ChatAsync(
+                        messages, tools, MaxTokens, new ChatRequestOptions(OnDelta: onDelta), cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    switch (AgentFailure.Classify(ex))
+                    {
+                        case FailureKind.ContextOverflow when overflowRetries < 2:
+                            overflowRetries++;
+                            ContextBudget.Compact(messages, contextTokens, MaxTokens, aggressive: true);
+                            Report("budget", $"上下文超限 · 已压缩历史后重试（{overflowRetries}/2）");
+                            continue; // 不消耗轮次
+                        case FailureKind.Timeout when timeoutRetries < 1:
+                            timeoutRetries++;
+                            Report("retry", "推理超时 · 重试一次");
+                            continue; // 不消耗轮次
+                        case FailureKind.ServerDown:
+                            throw new InvalidOperationException("推理服务无响应，请重新启动模型后重试。", ex);
+                        default:
+                            throw;
+                    }
                 }
 
-                if (turn.ToolCalls.Count == 0) break;
+                // 文本协议：模型把工具调用写在正文里，解析成 ToolCall 后按同一执行路径处理；
+                // 工具轮次的正文不进入最终回答，避免 "Action: ..." 混进给用户看的结论。
+                if (_textToolProtocol && turn.ToolCalls.Count == 0 && turn.Content.Length > 0)
+                {
+                    turn.ToolCalls.AddRange(AgentProtocol.ParseTextToolCalls(turn.Content, toolNames));
+                }
 
-                messages.Add(new ChatMessage("assistant", turn.Content) { ToolCalls = turn.ToolCalls });
+                var isFinalRound = turn.ToolCalls.Count == 0;
+                if (!string.IsNullOrWhiteSpace(turn.Content) && (isFinalRound || !_textToolProtocol))
+                {
+                    var text = _textToolProtocol ? StripFinalAnswerMarker(turn.Content) : turn.Content.Trim();
+                    if (text.Length > 0)
+                    {
+                        if (answer.Length > 0) answer.AppendLine();
+                        answer.Append(text);
+                    }
+                }
+
+                if (isFinalRound) break;
+
+                messages.Add(_textToolProtocol
+                    ? new ChatMessage("assistant", turn.Content)
+                    : new ChatMessage("assistant", turn.Content) { ToolCalls = turn.ToolCalls });
                 var thought = FirstLine(turn.Content, 120);
 
                 foreach (var call in turn.ToolCalls)
                 {
-                    var (result, summary, success) = await ExecuteAsync(call, seenCalls, readPaths, cancellationToken);
-                    messages.Add(new ChatMessage("tool", result) { ToolCallId = call.Id });
+                    var (result, summary, success) = await ExecuteAsync(
+                        call, seenWrites, seenReads, readPaths, cancellationToken);
+                    var (readPath, readStartLine) = ReadWindow(call);
+                    var observation = ContextBudget.TrimObservation(
+                        result, maxObservationTokens, readPath, readStartLine);
+                    messages.Add(_textToolProtocol
+                        ? ChatMessage.User($"Observation: {observation}")
+                        : new ChatMessage("tool", observation) { ToolCallId = call.Id });
 
                     // 参数保留完整 JSON：评估器要靠 path 判断「读了再改」，截断会让证据核对失效。
                     steps.Add(new AgentStep(
                         AgentStage.Act, roundOffset + used + 1, thought, call.Name, call.Arguments ?? "{}",
                         Truncate(result, MaxObservationChars), success));
 
-                    var activity = new ToolActivity(call.Name, summary);
-                    activities.Add(activity);
-                    onActivity?.Invoke(activity);
+                    Report(call.Name, summary);
                 }
 
                 used++;
             }
 
             return used;
+        }
+
+        void Report(string name, string summary)
+        {
+            var activity = new ToolActivity(name, summary);
+            activities.Add(activity);
+            onActivity?.Invoke(activity);
         }
     }
 
@@ -272,6 +360,7 @@ public sealed class WorkspaceAgent
                 ChatMessage.System(AgentProtocol.BuildPlanSystemPrompt()),
                 ChatMessage.User(AgentProtocol.BuildPlanRequest(request))
             };
+            ContextBudget.Compact(planMessages, _server.ContextTokens, PlanTokens);
             var turn = await _server.ChatAsync(planMessages, null, PlanTokens, cancellationToken);
             var plan = AgentProtocol.ParsePlan(turn.Content);
 
@@ -319,8 +408,29 @@ public sealed class WorkspaceAgent
                 ChatMessage.User(AgentProtocol.BuildVerifyPrompt(request, plan, steps) +
                                  $"\n\n当前回答：\n{Truncate(answer, 2000)}")
             };
-            var turn = await _server.ChatAsync(verifyMessages, null, VerifyTokens, cancellationToken);
-            return AgentProtocol.ParseVerification(turn.Content);
+            // 约束解码：要求后端只输出 JSON 对象，减少「找第一个 { 到最后一个 }」的兜底解析。
+            var turn = await _server.ChatAsync(
+                verifyMessages, null, VerifyTokens,
+                new ChatRequestOptions(JsonMode: true, JsonSchema: AgentProtocol.VerificationJsonSchema),
+                cancellationToken);
+            var verification = AgentProtocol.ParseVerification(turn.Content);
+            if (verification.Source != "text") return verification;
+
+            // 后端不支持 json_schema（或模型不守约束）时，用缩小版 schema 重问一次；
+            // 仍解析不出 JSON 就保留文本兜底结论，不额外增加第三次调用。
+            var retry = await _server.ChatAsync(
+                [
+                    ChatMessage.System($"{AgentProtocol.VerifyMarker} 只输出 JSON 对象，不要输出解释或代码块。"),
+                    ChatMessage.User(AgentProtocol.BuildCompactVerifyPrompt(request, verification))
+                ],
+                null, VerifyTokens,
+                new ChatRequestOptions(
+                    JsonMode: true,
+                    JsonSchema: AgentProtocol.CompactVerificationJsonSchema,
+                    Temperature: 0.1),
+                cancellationToken);
+            var retried = AgentProtocol.ParseVerification(retry.Content);
+            return retried.Source == "json" ? retried : verification;
         }
         catch (OperationCanceledException)
         {
@@ -359,7 +469,8 @@ public sealed class WorkspaceAgent
 
     private async Task<(string Result, string Summary, bool Success)> ExecuteAsync(
         ToolCall call,
-        HashSet<string> seenCalls,
+        HashSet<string> seenWrites,
+        HashSet<string> seenReads,
         HashSet<string> readPaths,
         CancellationToken cancellationToken)
     {
@@ -367,9 +478,20 @@ public sealed class WorkspaceAgent
         try
         {
             var key = CallKey(call);
-            if (!seenCalls.Add(key))
+            if (IsWriteTool(call.Name))
             {
-                return ("错误：相同调用已执行过，请更换参数或先读取最新内容。", "重复调用已拦截", false);
+                if (!seenWrites.Add(key))
+                {
+                    return ("错误：该写操作（相同参数）本轮已执行过，未重复写入。" +
+                            "若需继续修改，请先 read_file 获取最新内容再生成新的补丁。",
+                        "重复写操作已拦截", false);
+                }
+            }
+            else if (!seenReads.Add(key))
+            {
+                return ("错误：相同只读调用本轮已执行过（结果未变化）。" +
+                        "请改用不同的 path / start_line / include 参数，或先完成写入后再复核。",
+                    "重复调用已拦截", false);
             }
 
             using var document = JsonDocument.Parse(string.IsNullOrWhiteSpace(call.Arguments) ? "{}" : call.Arguments);
@@ -402,6 +524,8 @@ public sealed class WorkspaceAgent
                 }
 
                 var run = await _commands.RunAsync(command, _workspace.Root!, cancellationToken);
+                // 命令可能改动工作区（格式化 / 代码生成），让只读缓存失效
+                seenReads.Clear();
                 var commandSummary = $"{FirstLine(command, 50)} · 退出码 {run.ExitCode}";
                 return run.Success
                     ? (run.Output, commandSummary, true)
@@ -436,7 +560,11 @@ public sealed class WorkspaceAgent
                 _ => new WorkspaceResult(false, $"未知工具：{call.Name}")
             };
 
-            if (result.Success) TrackReadState(call.Name, root, path, readPaths);
+            if (result.Success)
+            {
+                TrackReadState(call.Name, root, path, readPaths);
+                if (IsFileWriteTool(call.Name)) seenReads.Clear();
+            }
 
             var summary = call.Name switch
             {
@@ -523,6 +651,12 @@ public sealed class WorkspaceAgent
         }
     }
 
+    private static bool IsWriteTool(string name) =>
+        name is "write_file" or "replace_in_file" or "apply_patch" or "run_command" or "remember";
+
+    private static bool IsFileWriteTool(string name) =>
+        name is "write_file" or "replace_in_file" or "apply_patch";
+
     /// <summary>规范化调用参数，用于拦截小模型原地打转的重复调用。</summary>
     private static string CallKey(ToolCall call)
     {
@@ -608,10 +742,41 @@ public sealed class WorkspaceAgent
         return null;
     }
 
+    /// <summary>read_file 的续读位置；其它工具返回的文本没有行号语义。</summary>
+    private static (string? Path, int StartLine) ReadWindow(ToolCall call)
+    {
+        if (call.Name != "read_file") return (null, 0);
+        try
+        {
+            using var document = JsonDocument.Parse(string.IsNullOrWhiteSpace(call.Arguments) ? "{}" : call.Arguments);
+            return (GetString(document.RootElement, "path"), GetInt(document.RootElement, "start_line") ?? 1);
+        }
+        catch (JsonException)
+        {
+            return (null, 0);
+        }
+    }
+
     private static string FirstLine(string? text, int limit = 90)
     {
         var line = (text ?? "").Split('\n', 2)[0].Trim();
         return line.Length <= limit ? line : line[..limit] + "…";
+    }
+
+    /// <summary>文本协议最终回答可能带 "Final Answer:" 前缀，去掉后才是给用户看的正文。</summary>
+    private static string StripFinalAnswerMarker(string content)
+    {
+        var trimmed = content.Trim();
+        var markers = new[] { "Final Answer:", "Final Answer：", "最终回答:", "最终回答：" };
+        foreach (var marker in markers)
+        {
+            var index = trimmed.LastIndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (index < 0) continue;
+            var tail = trimmed[(index + marker.Length)..].Trim();
+            if (tail.Length > 0) return tail;
+        }
+
+        return trimmed;
     }
 
     private static string Truncate(string? text, int limit)

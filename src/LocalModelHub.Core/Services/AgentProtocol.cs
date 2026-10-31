@@ -23,6 +23,16 @@ public static class AgentProtocol
     private const int MaxLedgerChars = 1400;
     private const int MaxIssueLines = 4;
 
+    /// <summary>约束解码用 JSON Schema：验收输出只允许这 4 个字段。</summary>
+    public const string VerificationJsonSchema = """
+        {"type":"object","properties":{"pass":{"type":"boolean"},"summary":{"type":"string"},"issues":{"type":"array","items":{"type":"string"}},"evidence":{"type":"array","items":{"type":"string"}}},"required":["pass","summary","issues"]}
+        """;
+
+    /// <summary>首次仍解析失败时的缩小版 schema：只要求结论与问题清单。</summary>
+    public const string CompactVerificationJsonSchema = """
+        {"type":"object","properties":{"pass":{"type":"boolean"},"summary":{"type":"string"},"issues":{"type":"array","items":{"type":"string"}}},"required":["pass","summary","issues"]}
+        """;
+
     private static readonly Regex StepLinePattern = new(
         @"^\s*(?:[-*•·]\s*|\(?\d+\)?[.、)）．:：]\s*|第\s*\d+\s*步[：:.]?\s*|步骤\s*\d+\s*[：:.]?\s*)(.*)$",
         RegexOptions.Compiled);
@@ -38,6 +48,188 @@ public static class AgentProtocol
     private static readonly Regex IssueLinePattern = new(
         @"问题|缺失|遗漏|未完成|未通过|失败|缺少",
         RegexOptions.Compiled);
+
+    /// <summary>
+    /// 文本工具协议的系统提示：模型不支持原生 tool_calls 时，
+    /// 用 ReAct 风格的 Thought / Action / Action Input 固定调用格式，工具结果以 Observation 回填。
+    /// </summary>
+    public static string BuildTextToolPrompt(IReadOnlyList<ToolDefinition> tools)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("【工具调用协议｜文本模式】当前模型未启用原生 tool_calls，请严格按下列格式调用工具：");
+        builder.AppendLine("Thought: 简短说明下一步要做什么");
+        builder.AppendLine("Action: 工具名");
+        builder.AppendLine("Action Input: 单行合法 JSON 参数");
+        builder.AppendLine("然后等待 Observation。收到 Observation 后继续下一轮；任务完成时输出 Final Answer: 最终回答。");
+        builder.AppendLine("一次只输出一个 Action；没有可调用工具时直接输出 Final Answer。");
+        builder.AppendLine("可用工具：");
+        foreach (var tool in tools)
+        {
+            builder.AppendLine($"- {tool.Name}: {tool.Description}");
+            var schema = tool.Parameters.ToJsonString();
+            if (schema.Length > 260) schema = schema[..260] + "…";
+            builder.AppendLine($"  参数 schema：{schema}");
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    /// <summary>
+    /// 解析文本协议里的工具调用：支持 Action / Action Input 两行格式与 &lt;tool_call&gt; JSON 块，
+    /// 只接受声明过的工具名，避免模型臆造工具进入执行层。
+    /// </summary>
+    public static IReadOnlyList<ToolCall> ParseTextToolCalls(
+        string? text,
+        IReadOnlyCollection<string> allowedToolNames,
+        string idPrefix = "text")
+    {
+        if (string.IsNullOrWhiteSpace(text) || allowedToolNames.Count == 0) return [];
+
+        var allowed = allowedToolNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var calls = new List<ToolCall>();
+        var lines = text.Replace("\r\n", "\n").Split('\n');
+
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var line = lines[index];
+
+            var block = ToolCallBlockPattern.Match(line);
+            if (block.Success)
+            {
+                var fromBlock = TryParseToolCallJson(block.Groups[1].Value, allowed);
+                if (fromBlock is not null) calls.Add(fromBlock);
+                continue;
+            }
+
+            var action = ActionLinePattern.Match(line);
+            if (!action.Success) continue;
+
+            var name = action.Groups[1].Value.Trim();
+            if (!allowed.Contains(name)) continue;
+
+            var input = "";
+            var cursor = index + 1;
+            while (cursor < lines.Length && lines[cursor].Trim().Length == 0) cursor++;
+            if (cursor < lines.Length)
+            {
+                var inputMatch = ActionInputLinePattern.Match(lines[cursor]);
+                if (inputMatch.Success)
+                {
+                    var fragment = inputMatch.Groups[1].Value.Trim();
+                    if (fragment.StartsWith('{'))
+                    {
+                        input = ReadJsonObject(lines, cursor, fragment, out var consumed);
+                        cursor = consumed;
+                    }
+                    else
+                    {
+                        input = fragment;
+                    }
+                }
+            }
+
+            if (input.Length == 0) input = "{}";
+            calls.Add(new ToolCall($"{idPrefix}_{calls.Count + 1}", name, input));
+            index = Math.Max(index, cursor);
+            if (calls.Count >= MaxTextToolCalls) break;
+        }
+
+        return calls;
+    }
+
+    private const int MaxTextToolCalls = 6;
+
+    private static readonly Regex ActionLinePattern = new(
+        @"^\s*(?:Action|行动|工具)\s*[:：]\s*([A-Za-z_][A-Za-z0-9_\-]*)\s*$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private static readonly Regex ActionInputLinePattern = new(
+        @"^\s*(?:Action\s*Input|ActionInput|输入|参数)\s*[:：]\s*(.*)$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private static readonly Regex ToolCallBlockPattern = new(
+        @"^<tool_call>\s*(\{.*\})\s*</tool_call>",
+        RegexOptions.Compiled);
+
+    /// <summary>从 Action Input 行起读取一个平衡的 JSON 对象（字符串内的花括号不计数）。</summary>
+    private static string ReadJsonObject(string[] lines, int startLine, string firstFragment, out int lastLine)
+    {
+        lastLine = startLine;
+        var builder = new StringBuilder(firstFragment);
+        var depth = 0;
+        var inString = false;
+        var escaped = false;
+
+        void Scan(string text)
+        {
+            foreach (var ch in text)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                    continue;
+                }
+
+                if (ch == '\\' && inString)
+                {
+                    escaped = true;
+                    continue;
+                }
+
+                if (ch == '"')
+                {
+                    inString = !inString;
+                    continue;
+                }
+
+                if (inString) continue;
+                if (ch == '{') depth++;
+                else if (ch == '}') depth--;
+            }
+        }
+
+        Scan(firstFragment);
+        var current = startLine;
+        while (depth > 0 && current + 1 < lines.Length)
+        {
+            current++;
+            var next = lines[current].Trim();
+            builder.Append('\n').Append(next);
+            Scan(next);
+        }
+
+        lastLine = current;
+        return builder.ToString().Trim();
+    }
+
+    /// <summary>解析 &lt;tool_call&gt;{"name": ..., "arguments": ...}&lt;/tool_call&gt; 这类常见小模型格式。</summary>
+    private static ToolCall? TryParseToolCallJson(string json, IReadOnlyCollection<string> allowed)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+            var name = ReadString(root, "name");
+            if (name.Length == 0) name = ReadString(root, "tool");
+            if (name.Length == 0 || !allowed.Contains(name)) return null;
+
+            var arguments = "";
+            foreach (var key in new[] { "arguments", "parameters", "input", "args" })
+            {
+                if (!root.TryGetProperty(key, out var element)) continue;
+                arguments = element.ValueKind == JsonValueKind.String
+                    ? element.GetString() ?? ""
+                    : element.GetRawText();
+                break;
+            }
+
+            return new ToolCall("text_block_1", name, arguments.Length == 0 ? "{}" : arguments);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>规划角色的系统提示：只出计划，不调用工具，避免和执行阶段抢预算。</summary>
     public static string BuildPlanSystemPrompt() => $"""
@@ -116,6 +308,21 @@ public static class AgentProtocol
         builder.AppendLine("只输出 JSON，不要输出其它文字：");
         builder.AppendLine("""{"pass": true/false, "summary": "一句话结论", "issues": ["具体问题"], "evidence": ["文件名或工具调用"]}""");
         return builder.ToString().TrimEnd();
+    }
+
+    /// <summary>约束解码未生效、模型输出不是 JSON 时的一次性重问：缩小 schema，只保留结论与问题。</summary>
+    public static string BuildCompactVerifyPrompt(string request, AgentVerification draft)
+    {
+        var issues = draft.Issues.Count > 0
+            ? string.Join('；', draft.Issues)
+            : "（无）";
+        return $$"""
+            {{VerifyMarker}} 上一次验收输出不是合法 JSON。请只依据已给出的工具轨迹结论重新作答，不要补充解释。
+            原始请求：{{(request ?? "").Trim()}}
+            上次判断：{{draft.Summary}}
+            已知问题：{{issues}}
+            只输出 JSON：{"pass": true/false, "summary": "一句话结论", "issues": ["具体问题"]}
+            """;
     }
 
     /// <summary>修复提示：只针对验收列出的问题，避免模型推倒重来。</summary>

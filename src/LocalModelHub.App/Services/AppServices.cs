@@ -43,6 +43,26 @@ public sealed class AppServices
     /// <summary>最近一次 CPU 基准测试，用于让推荐引擎使用实测内存带宽。</summary>
     public BenchmarkResult? LastBenchmark { get; set; }
 
+    private ModelProfile? _activeProfile;
+
+    /// <summary>当前已加载模型的能力画像；为空表示还没探测或不支持探测。</summary>
+    public ModelProfile? ActiveProfile
+    {
+        get => _activeProfile;
+        set
+        {
+            if (_activeProfile == value) return;
+            _activeProfile = value;
+            ProfileChanged?.Invoke();
+        }
+    }
+
+    /// <summary>能力画像变化（模型加载完成 / 失败回退）：供模型卡片刷新工具调用标注。</summary>
+    public event Action? ProfileChanged;
+
+    /// <summary>模型不支持原生 tool_calls 时，Agent 改走文本协议。</summary>
+    public bool TextToolProtocol => ActiveProfile is { SupportsNativeTools: false };
+
     /// <summary>统一构造推荐参数：上下文跟随设置，带宽与算力有实测就用实测值，显存扣掉其它程序当前占用。</summary>
     public RecommendationOptions RecommendationOptions()
     {
@@ -51,6 +71,7 @@ public sealed class AppServices
             ? GpuMemory.ReservedVramGb(gpu.Gpu.Name)
             : 0;
 
+        var approvedKv = string.IsNullOrWhiteSpace(Settings.KvCacheType) ? "f16" : Settings.KvCacheType.Trim();
         return new RecommendationOptions
         {
             ContextTokens = Math.Max(2048, Settings.ContextSize),
@@ -58,7 +79,13 @@ public sealed class AppServices
             CpuMemoryBandwidthGBps = LastBenchmark is { MemoryBandwidthGBps: > 10 } measured
                 ? measured.MemoryBandwidthGBps
                 : 51,
-            CpuGflops = LastBenchmark is { CpuGflops: > 0 } compute ? compute.CpuGflops : 0
+            CpuGflops = LastBenchmark is { CpuGflops: > 0 } compute ? compute.CpuGflops : 0,
+            KvCacheTypeK = approvedKv,
+            KvCacheTypeV = approvedKv,
+            // llama.cpp 的 --flash-attn 只接受 on/off/auto；只有显式 off 才按不支持量化 V 处理。
+            FlashAttention = !Settings.FlashAttention.Equals("off", StringComparison.OrdinalIgnoreCase),
+            ParallelSlots = Math.Max(1, Settings.ParallelSlots),
+            Backend = Settings.RuntimeVariant
         };
     }
 
@@ -95,6 +122,16 @@ public sealed class AppServices
 
     public event Action? LibraryUpdated;
     public event Action? CatalogChanged;
+
+    /// <summary>评估输入（量化、上下文、KV、显卡占用）变化后广播，界面据此重算排序与结论。</summary>
+    public event Action<string>? EvaluationInvalidated;
+
+    /// <summary>预算快照已过期：重新采样内存 / 显存占用，再通知所有依赖评估的页面刷新。</summary>
+    public void InvalidateEvaluation(string reason)
+    {
+        RefreshBudgetSnapshot();
+        EvaluationInvalidated?.Invoke(reason);
+    }
 
     private ModelCatalog _builtinCatalog = new();
 

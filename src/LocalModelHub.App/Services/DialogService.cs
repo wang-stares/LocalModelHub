@@ -6,6 +6,13 @@ using Avalonia.Media;
 
 namespace LocalModelHub.App.Services;
 
+public enum ConfirmChoice
+{
+    Cancel = 0,
+    Confirm = 1,
+    Alternative = 2
+}
+
 public static class DialogService
 {
     private const double MessageWidth = 460;
@@ -28,6 +35,48 @@ public static class DialogService
 
         await window.ShowDialog(owner);
         return result;
+    }
+
+    /// <summary>三选一确认框：主操作、可选的破坏性操作、取消（例如「移入回收站 / 彻底删除」）。</summary>
+    public static async Task<ConfirmChoice> ConfirmWithAlternativeAsync(
+        string title,
+        string message,
+        string confirmText,
+        string alternativeText,
+        string cancelText = "取消")
+    {
+        var owner = App.MainWindow;
+        if (owner is null) return ConfirmChoice.Cancel;
+
+        var choice = ConfirmChoice.Cancel;
+        var window = CreateWindow(title, message, out var buttons);
+
+        var confirmButton = buttons[0];
+        var cancelButton = buttons[1];
+        confirmButton.Content = confirmText;
+        cancelButton.Content = cancelText;
+
+        var alternativeButton = new Button
+        {
+            Content = alternativeText,
+            Background = Brush("#3A1D24"),
+            Foreground = Brush("#FCA5A5"),
+            Padding = new Avalonia.Thickness(18, 8),
+            CornerRadius = new Avalonia.CornerRadius(8)
+        };
+
+        // 取消 → 彻底删除 → 主操作（危险动作为红色，主操作保持强调色）
+        if (cancelButton.Parent is StackPanel row)
+        {
+            row.Children.Insert(1, alternativeButton);
+        }
+
+        confirmButton.Click += (_, _) => { choice = ConfirmChoice.Confirm; window.Close(); };
+        alternativeButton.Click += (_, _) => { choice = ConfirmChoice.Alternative; window.Close(); };
+        cancelButton.Click += (_, _) => window.Close();
+
+        await window.ShowDialog(owner);
+        return choice;
     }
 
     public static async Task AlertAsync(string title, string message)

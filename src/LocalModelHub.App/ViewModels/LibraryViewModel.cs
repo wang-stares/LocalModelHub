@@ -32,7 +32,8 @@ public sealed partial class LibraryItemViewModel : ObservableObject
     public DownloadedModel Model { get; }
     public string Title => Model.DisplayName;
     public string Initial => Title.Length <= 2 ? Title : Title[..2];
-    public string Detail => $"{Model.QuantLabel} · {Model.SizeText} · {Model.Developer ?? "本地导入"}";
+    public string Detail => $"{Model.QuantLabel} · {Model.SizeText} · {Model.Developer ?? "本地导入"}"
+        + (string.IsNullOrWhiteSpace(Model.SelectionNote) ? "" : $" · {Model.SelectionNote}");
     public string PathText => Model.PrimaryPath;
     public string OriginText => Model.Entry?.CountryLabel ?? "本地";
     public bool IsChinese => Model.Entry?.IsChinese ?? false;
@@ -198,26 +199,60 @@ public sealed partial class LibraryViewModel : ObservableObject
 
     private async Task DeleteAsync(LibraryItemViewModel item)
     {
-        var confirmed = await DialogService.ConfirmAsync(
-            "删除模型",
-            $"将从磁盘删除 {item.Title}（{item.Model.SizeText}），此操作不可撤销。",
-            "删除");
-        if (!confirmed) return;
+        var plan = _services.Library.PlanDelete(item.Model);
+        if (plan.Files.Count == 0)
+        {
+            await DialogService.AlertAsync(
+                "模型文件已不存在",
+                $"磁盘上已找不到 {item.Title} 的模型文件，列表已刷新。\n路径：{item.Model.FolderPath}");
+            Refresh();
+            return;
+        }
+
+        var names = string.Join("、", plan.Files.Take(3).Select(Path.GetFileName));
+        var more = plan.Files.Count > 3 ? $" 等 {plan.Files.Count} 个文件" : "";
+        var keepText = plan.RemainingSiblingFiles > 0
+            ? $"\n同目录还有 {plan.RemainingSiblingFiles} 个其它文件，将保留不动。"
+            : "";
+
+        var message =
+            $"将删除 {item.Title}（{item.Model.QuantLabel}）：\n" +
+            $"· {plan.Files.Count} 个文件，共 {Formatters.Bytes(plan.TotalBytes)}{more}\n" +
+            $"· {names}{keepText}\n\n" +
+            "「移入回收站」可随时恢复；「彻底删除」不进入回收站，无法恢复。";
+
+        var choice = await DialogService.ConfirmWithAlternativeAsync(
+            "删除模型", message, "移入回收站", "彻底删除");
+        if (choice == ConfirmChoice.Cancel) return;
 
         if (item.IsRunning)
         {
             await _services.Server.StopAsync();
         }
 
-        var result = _services.Library.Delete(item.Model);
+        var result = _services.Library.Delete(item.Model, useRecycleBin: choice == ConfirmChoice.Confirm);
         Refresh();
 
         if (!result.Success)
         {
             await DialogService.AlertAsync(
                 "删除未完成",
-                $"{result.Error}\n\n模型文件仍保留在：{item.Model.FolderPath}\n如果 llama-server 或其它程序正在读取该文件，请先停止服务后重试。");
+                $"{result.Error}\n\n模型文件仍保留在：{item.Model.FolderPath}\n" +
+                "如果 llama-server 或其它程序正在读取这些文件，请先停止服务后重试。");
+            return;
         }
+
+        string freeText = "";
+        if (DownloadService.TryCheckFreeSpace(_services.Settings.ModelsDirectory, 0, out var available))
+        {
+            freeText = $"，当前磁盘可用 {Formatters.Bytes(available)}";
+        }
+
+        var action = result.UsedRecycleBin ? "已移入回收站" : "已彻底删除";
+        await DialogService.AlertAsync(
+            "删除完成",
+            $"删除 {result.DeletedFiles} 个文件，释放 {Formatters.Bytes(result.ReleasedBytes)}{freeText}。\n{action}。" +
+            (result.RemainingSiblingFiles > 0 ? $"\n同目录保留 {result.RemainingSiblingFiles} 个其它文件。" : ""));
     }
 
     private void Reveal(LibraryItemViewModel item) => ModelLauncher.OpenFolder(item.Model.FolderPath);

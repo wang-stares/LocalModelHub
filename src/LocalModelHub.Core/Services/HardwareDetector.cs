@@ -9,6 +9,9 @@ using Microsoft.Win32;
 /// <summary>Windows 硬件探测：WMI + 注册表 + kernel32，不依赖第三方组件。</summary>
 public sealed class HardwareDetector
 {
+    /// <summary>WMI AdapterRAM 是 uint32；接近 4 GiB 的值是截断哨兵，按“未知”处理。</summary>
+    private const long WmiAdapterRamSentinelBytes = 4_200_000_000L;
+
     public HardwareProfile Detect(IProgress<string>? progress = null, string? storagePath = null)
     {
         if (!OperatingSystem.IsWindows())
@@ -70,19 +73,41 @@ public sealed class HardwareDetector
         return new CpuInfo("未知处理器", Math.Max(1, Environment.ProcessorCount / 2), Environment.ProcessorCount, 0, 0);
     }
 
+    /// <summary>
+    /// 显存三级探测：NVIDIA 用 nvidia-smi 的总显存修正；其它卡优先注册表 qwMemorySize（64 位）；
+    /// WMI AdapterRAM 是 uint32，超过 ~4.2 GB 的值视为截断哨兵，不再当作真实容量。
+    /// </summary>
     private static List<GpuInfo> ReadGpus()
     {
         var gpus = ReadGpusFromRegistry();
         if (gpus.Count == 0) gpus = ReadGpusFromWmi();
 
         // 过滤 Microsoft Basic Render Driver 等软件适配器
-        return gpus
+        var normalized = gpus
             .Where(g => g.Name.Length > 0 &&
                         !g.Name.Contains("Microsoft Basic", StringComparison.OrdinalIgnoreCase) &&
                         !g.Name.Contains("Remote Display", StringComparison.OrdinalIgnoreCase))
             .GroupBy(g => g.Name)
             .Select(g => g.First())
             .ToList();
+
+        for (var index = 0; index < normalized.Count; index++)
+        {
+            var gpu = normalized[index];
+            if (gpu.Vendor != "NVIDIA") continue;
+
+            var reported = GpuMemoryProbe.QueryTotalBytes(gpu.Name);
+            if (reported > 0)
+            {
+                normalized[index] = gpu with
+                {
+                    DedicatedVideoMemoryBytes = reported,
+                    VramEstimated = false
+                };
+            }
+        }
+
+        return normalized;
     }
 
     private static List<GpuInfo> ReadGpusFromRegistry()
@@ -139,12 +164,14 @@ public sealed class HardwareDetector
                     var name = (item["Name"] as string)?.Trim();
                     if (string.IsNullOrWhiteSpace(name)) continue;
                     var ram = Convert.ToInt64(item["AdapterRAM"] ?? 0L);
+                    // AdapterRAM 是 uint32，≥4.2 GB 的值（如 4293918720）是溢出/截断哨兵，不能当作真实容量
+                    var trusted = ram is > 0 and < WmiAdapterRamSentinelBytes;
                     var pnp = item["PNPDeviceID"] as string ?? "";
                     var vendor = pnp.Contains("VEN_10DE") ? GpuInfo.VendorNvidia
                         : pnp.Contains("VEN_1002") ? GpuInfo.VendorAmd
                         : pnp.Contains("VEN_8086") ? GpuInfo.VendorIntel
                         : InferVendorId(name);
-                    result.Add(new GpuInfo(name, vendor, ram, 0));
+                    result.Add(new GpuInfo(name, vendor, trusted ? ram : 0, 0, VramEstimated: !trusted));
                 }
             }
         }

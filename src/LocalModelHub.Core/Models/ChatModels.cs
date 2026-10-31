@@ -35,8 +35,25 @@ public sealed class ChatTurn
     public List<ToolCall> ToolCalls { get; } = [];
 }
 
-/// <summary>流式增量：正文与思考过程分开，便于 UI 折叠展示。</summary>
-public sealed record ChatChunk(string? Content = null, string? Reasoning = null);
+/// <summary>流式增量：正文与思考过程分开，便于 UI 折叠展示；工具调用按片段流式返回。</summary>
+public sealed record ChatChunk(
+    string? Content = null,
+    string? Reasoning = null,
+    ToolCallDelta? ToolCall = null);
+
+/// <summary>OpenAI 流式协议里的工具调用片段：同一 index 的分片需要拼接 name / arguments。</summary>
+public sealed record ToolCallDelta(int Index, string? Id = null, string? Name = null, string? Arguments = null);
+
+/// <summary>
+/// Agent 单轮请求的扩展选项：流式增量回调与约束解码。
+/// OnDelta 为空时保持非流式行为，既有调用点无需改动。
+/// </summary>
+public sealed record ChatRequestOptions(
+    Action<string>? OnDelta = null,
+    bool JsonMode = false,
+    string? JsonSchema = null,
+    double Temperature = 0.3,
+    double TopP = 0.9);
 
 public sealed record ToolActivity(string Name, string Summary);
 
@@ -71,6 +88,13 @@ public sealed class DownloadedModel
     public required string FolderPath { get; init; }
     public required string PrimaryPath { get; init; }
     public required long TotalBytes { get; init; }
+
+    /// <summary>本模型实际占用的文件绝对路径清单，删除时只动这些文件。</summary>
+    public IReadOnlyList<string> Files { get; init; } = [];
+
+    /// <summary>主文件无法按量化 / 分片唯一判定时的说明，例如「自动选择，可手动切换」。</summary>
+    public string? SelectionNote { get; init; }
+
     public DateTime AddedAt { get; init; }
     public string? Developer { get; init; }
     public double ParametersB { get; init; }

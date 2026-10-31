@@ -655,6 +655,7 @@ public sealed partial class ChatViewModel : ObservableObject
         "plan" => "计划",
         "planner" => "规划",
         "verify" => "自检",
+        "protocol" => "协议",
         "review" => "评审",
         "repair" => "修复",
         "localize" => "定位",
@@ -703,6 +704,13 @@ public sealed partial class ChatViewModel : ObservableObject
                     ScrollRequested?.Invoke();
                 }
 
+                // Agent 模式也逐 token 回传：工具轮次的正文先实时显示，最终回答在结束时整体覆盖。
+                void OnDelta(string delta)
+                {
+                    assistant.Append(delta);
+                    ScrollRequested?.Invoke();
+                }
+
                 string resultText;
                 IReadOnlyList<ToolActivity> resultActivities;
                 if (agentMode.Value == AgentMode.Goal && MultiAgentEnabled)
@@ -712,9 +720,10 @@ public sealed partial class ChatViewModel : ObservableObject
                         _services.Workspace,
                         _services.Memory,
                         _services.Settings.MemoryAllowModelWrites,
-                        _services.Settings.AgentAllowCommands);
+                        _services.Settings.AgentAllowCommands,
+                        textToolProtocol: _services.TextToolProtocol);
                     var multi = await coordinator.RunAsync(
-                        history, contextAdditions, OnActivity, _cancellation.Token);
+                        history, contextAdditions, OnActivity, _cancellation.Token, OnDelta);
                     resultText = multi.Text;
                     resultActivities = multi.Coder?.Activities ?? [];
                     if (resultActivities.Count == 0)
@@ -732,8 +741,10 @@ public sealed partial class ChatViewModel : ObservableObject
                         _services.Memory,
                         agentMode.Value,
                         _services.Settings.MemoryAllowModelWrites,
-                        _services.Settings.AgentAllowCommands);
-                    var result = await agent.RunAsync(history, contextAdditions, OnActivity, _cancellation.Token);
+                        _services.Settings.AgentAllowCommands,
+                        textToolProtocol: _services.TextToolProtocol);
+                    var result = await agent.RunAsync(
+                        history, contextAdditions, OnActivity, _cancellation.Token, onDelta: OnDelta);
                     resultText = result.Text;
                     resultActivities = result.Activities;
 

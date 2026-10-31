@@ -672,6 +672,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         try
         {
             var result = _services.Backup.Import(path);
+            _services.InvalidateEvaluation("import");
             await DialogService.AlertAsync("导入成功",
                 $"{Describe(result)}\n请重启应用以使用导入的数据。");
         }
