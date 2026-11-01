@@ -263,6 +263,9 @@
     <DataTemplate DataType="vm:SettingsViewModel">
       <views:SettingsView/>
     </DataTemplate>
+    <DataTemplate DataType="vm:PhoneViewModel">
+      <views:PhoneView/>
+    </DataTemplate>
     <DataTemplate DataType="vm:ModelCardViewModel">
       <views:ModelCardView/>
     </DataTemplate>
@@ -320,6 +323,9 @@
       <Setter Property="Margin" Value="0,10,0,2"/>
     </Style>
     <Style Selector="TextBlock.mono">
+      <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, monospace"/>
+    </Style>
+    <Style Selector="TextBox.mono">
       <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, monospace"/>
     </Style>
     <Style Selector="TextBlock.eyebrow">

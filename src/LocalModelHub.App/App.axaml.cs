@@ -53,6 +53,7 @@ public partial class App : Application
             {
                 try
                 {
+                    AppServices.Current.Shutdown();
                     AppServices.Current.SettingsService.Save();
                 }
                 catch

@@ -1,0 +1,239 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LocalModelHub.App.ViewModels"
+             xmlns:models="using:LocalModelHub.Core.Models"
+             x:Class="LocalModelHub.App.Views.PhoneView"
+             x:DataType="vm:PhoneViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.msgIn">
+      <Setter Property="HorizontalAlignment" Value="Left"/>
+      <Setter Property="Background" Value="{DynamicResource InputBg}"/>
+      <Setter Property="CornerRadius" Value="14,14,14,4"/>
+    </Style>
+    <Style Selector="Border.msgOut">
+      <Setter Property="HorizontalAlignment" Value="Right"/>
+      <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
+      <Setter Property="CornerRadius" Value="14,14,14,4"/>
+    </Style>
+  </UserControl.Styles>
+
+  <ScrollViewer Classes="page" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="20,8,32,24" MaxWidth="1040" HorizontalAlignment="Stretch" Spacing="14">
+
+      <!-- 手机配对 -->
+      <Border Classes="card" Padding="24,22">
+        <StackPanel Spacing="16">
+          <StackPanel Spacing="2">
+            <TextBlock Text="手机配对" Classes="h3"/>
+            <TextBlock Text="手机与电脑连同一个 Wi-Fi，扫码即可收发消息；消息只在两台设备之间传递，不经过云端。"
+                       Classes="caption"
+                       TextWrapping="Wrap"/>
+          </StackPanel>
+
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="24">
+            <Border Width="216" Height="216" CornerRadius="18" Background="{DynamicResource InputBg}" Padding="8">
+              <Grid>
+                <Image Source="{Binding PairQr}" Stretch="Uniform" IsVisible="{Binding IsBridgeRunning}"/>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6"
+                            IsVisible="{Binding !IsBridgeRunning}">
+                  <TextBlock Text="&#xE8C8;" FontSize="34" HorizontalAlignment="Center"
+                             Foreground="{DynamicResource TextMuted}"/>
+                  <TextBlock Text="开启后显示二维码" Classes="caption" TextAlignment="Center" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <StackPanel Grid.Column="1" Spacing="12" VerticalAlignment="Center">
+              <StackPanel Spacing="4">
+                <TextBlock Text="配对状态" Classes="eyebrow"/>
+                <TextBlock Text="{Binding BridgeStatus}" Classes="muted" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding BridgeStateHint}" Classes="caption" TextWrapping="Wrap"/>
+              </StackPanel>
+
+              <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="12">
+                <CheckBox Content="开启手机桥" IsChecked="{Binding BridgeEnabled, Mode=TwoWay}" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="端口" Classes="muted" VerticalAlignment="Center"/>
+                  <NumericUpDown Width="128"
+                                 Minimum="1024"
+                                 Maximum="65535"
+                                 Increment="1"
+                                 FormatString="0"
+                                 Value="{Binding BridgePort, Mode=TwoWay}"/>
+                </StackPanel>
+                <Button Grid.Column="2" Classes="ghost" Content="应用" Command="{Binding ApplyBridgeSettingsCommand}"/>
+              </Grid>
+
+              <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <TextBlock Text="{Binding PairUrl}"
+                           Classes="mono"
+                           FontSize="12"
+                           TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Classes="ghost" Content="复制链接" Command="{Binding CopyPairLinkCommand}"/>
+                <Button Grid.Column="2" Classes="ghost" Content="重置配对码" Command="{Binding RegeneratePairingCommand}"/>
+              </Grid>
+
+              <CheckBox Content="手机消息到达时，自动用当前本地模型回复"
+                        IsChecked="{Binding AutoReply, Mode=TwoWay}"/>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Classes="ghost" Content="复制入站 Webhook" Command="{Binding CopyWebhookCommand}"/>
+              </StackPanel>
+              <TextBlock Text="{Binding CopyStatus}"
+                         Classes="caption"
+                         Foreground="{DynamicResource Success}"
+                         IsVisible="{Binding HasCopyStatus}"
+                         TextWrapping="Wrap"/>
+            </StackPanel>
+          </Grid>
+
+        </StackPanel>
+      </Border>
+
+      <!-- 消息会话 -->
+      <Border Classes="card" Padding="24,22">
+        <StackPanel Spacing="14">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="消息" Classes="h3" VerticalAlignment="Center"/>
+                <Border Classes="badge" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding MessageCountText}"/>
+                </Border>
+              </StackPanel>
+              <TextBlock Text="手机发来的消息会出现在这里；在下方输入回复即可送回手机。"
+                         Classes="caption"
+                         TextWrapping="Wrap"/>
+            </StackPanel>
+            <Button Grid.Column="1" Classes="ghost" Content="清空" Command="{Binding ClearMessagesCommand}" VerticalAlignment="Center"/>
+          </Grid>
+
+          <Border Background="{DynamicResource InputBg}" CornerRadius="14" Padding="12">
+            <ScrollViewer x:Name="MessageScroll" Height="300" VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding Messages}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:BridgeMessage">
+                    <Border Classes="msg"
+                            Classes.msgIn="{Binding IsInbound}"
+                            Classes.msgOut="{Binding !IsInbound}"
+                            Padding="12,9"
+                            Margin="0,4"
+                            MaxWidth="560">
+                      <StackPanel Spacing="4">
+                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding AtText}" Classes="caption" FontSize="11" HorizontalAlignment="Right"/>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Border>
+
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <TextBox AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     Height="64"
+                     Watermark="输入要发送到手机的消息…"
+                     Text="{Binding ReplyText, Mode=TwoWay}"/>
+            <Button Grid.Column="1"
+                    Classes="primary"
+                    Content="发送"
+                    Command="{Binding SendReplyCommand}"
+                    MinWidth="96"
+                    VerticalAlignment="Stretch"/>
+          </Grid>
+          <TextBlock Text="{Binding SendStatus}"
+                     Classes="caption"
+                     Foreground="{DynamicResource Accent}"
+                     IsVisible="{Binding HasSendStatus}"
+                     TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
+
+      <!-- 微信 / OpenClaw -->
+      <Border Classes="card" Padding="24,22">
+        <StackPanel Spacing="14">
+          <StackPanel Spacing="2">
+            <TextBlock Text="微信 / OpenClaw" Classes="h3"/>
+            <TextBlock Text="OpenClaw 负责微信登录与收发；星坞把本地模型以 OpenAI 兼容接口提供给它，也可以把电脑上的消息通过 OpenClaw CLI 或企业微信群机器人推送到微信。"
+                       Classes="caption"
+                       TextWrapping="Wrap"/>
+          </StackPanel>
+
+          <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto">
+            <TextBlock Text="消息发送方式" Classes="muted" VerticalAlignment="Center"/>
+            <ComboBox Grid.Column="1"
+                      Width="280"
+                      HorizontalAlignment="Left"
+                      ItemsSource="{Binding WeChatModeOptions}"
+                      SelectedIndex="{Binding WeChatModeIndex, Mode=TwoWay}"/>
+            <TextBlock Grid.Row="1"
+                       Grid.Column="1"
+                       Text="OpenClaw CLI：本机已登录微信时直接发送；企业微信群机器人：无需登录，只能发到群。"
+                       Classes="caption"
+                       TextWrapping="Wrap"
+                       Margin="0,6,0,0"/>
+          </Grid>
+
+          <StackPanel Spacing="10" IsVisible="{Binding IsWeChatOpenClaw}">
+            <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto">
+              <TextBlock Text="OpenClaw 路径" Classes="muted" VerticalAlignment="Center"/>
+              <TextBox Grid.Column="1" Text="{Binding OpenClawCliPath, Mode=TwoWay}" Watermark="openclaw 或 C:\...\openclaw.cmd"/>
+              <TextBlock Grid.Row="1" Text="渠道" Classes="muted" VerticalAlignment="Center" Margin="0,8,0,0"/>
+              <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OpenClawChannel, Mode=TwoWay}" Watermark="openclaw-weixin" Margin="0,8,0,0"/>
+              <TextBlock Grid.Row="2" Text="接收对象" Classes="muted" VerticalAlignment="Center" Margin="0,8,0,0"/>
+              <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding OpenClawTarget, Mode=TwoWay}" Watermark="微信联系人或会话 ID" Margin="0,8,0,0"/>
+            </Grid>
+          </StackPanel>
+
+          <Grid ColumnDefinitions="170,*" IsVisible="{Binding IsWeChatWebhook}">
+            <TextBlock Text="群机器人 Webhook" Classes="muted" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1" Text="{Binding WeComWebhook, Mode=TwoWay}" Watermark="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…"/>
+          </Grid>
+
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Classes="ghost" Content="保存微信设置" Command="{Binding SaveWeChatSettingsCommand}"/>
+            <Button Classes="ghost" Content="发送测试" Command="{Binding SendTestToWeChatCommand}"/>
+          </StackPanel>
+          <TextBlock Text="{Binding WeChatStatus}"
+                     Classes="caption"
+                     Foreground="{DynamicResource Accent}"
+                     IsVisible="{Binding HasWeChatStatus}"
+                     TextWrapping="Wrap"/>
+
+          <Border Height="1" Background="{DynamicResource StrokeSubtle}"/>
+
+          <StackPanel Spacing="6">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="微信通道安装" Classes="muted" VerticalAlignment="Center"/>
+              <Button Grid.Column="1" Classes="ghost" Content="复制命令" Command="{Binding CopySetupCommandsCommand}"/>
+            </Grid>
+            <Border Background="{DynamicResource InputBg}" CornerRadius="12" Padding="12">
+              <TextBlock Text="{Binding WeChatSetupText}" Classes="mono" FontSize="12" TextWrapping="Wrap"/>
+            </Border>
+            <TextBlock Text="先安装腾讯官方微信插件并扫码登录，再把下面的模型配置合并到 ~/.openclaw/openclaw.json，最后 openclaw gateway restart。"
+                       Classes="caption"
+                       TextWrapping="Wrap"/>
+          </StackPanel>
+
+          <Border Height="1" Background="{DynamicResource StrokeSubtle}"/>
+
+          <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+              <TextBlock Text="OpenClaw 模型配置" Classes="muted" VerticalAlignment="Center"/>
+              <Button Grid.Column="1" Classes="ghost" Content="生成" Command="{Binding GenerateConfigCommand}"/>
+              <Button Grid.Column="2" Classes="ghost" Content="复制" Command="{Binding CopyConfigCommand}"/>
+            </Grid>
+            <TextBox Text="{Binding ConfigPreview}" Classes="mono" FontSize="12"
+                     AcceptsReturn="True" IsReadOnly="True" TextWrapping="NoWrap" Height="150"/>
+            <TextBlock Text="{Binding ConfigStatus}" Classes="caption" TextWrapping="Wrap"/>
+            <TextBlock Text="配置生成时使用当前运行端口；本地模型未启动时会写入占位模型名 local-model，启动模型后重新生成即可。"
+                       Classes="caption"
+                       TextWrapping="Wrap"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

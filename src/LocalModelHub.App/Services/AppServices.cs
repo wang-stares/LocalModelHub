@@ -31,6 +31,12 @@ public sealed class AppServices
     public ChatSessionStore ChatSessions { get; } = new();
     public KnowledgeService Knowledge { get; } = new();
 
+    /// <summary>手机消息桥：局域网扫码收发消息，也作为 OpenClaw / 微信的入站 Webhook。</summary>
+    public PhoneBridgeService PhoneBridge { get; } = new();
+
+    /// <summary>电脑 → 微信（OpenClaw CLI / 企业微信群机器人）。</summary>
+    public WeChatRelayService WeChatRelay { get; } = new();
+
     /// <summary>可复用技能库：任务完成后自动沉淀，对话时按需注入。</summary>
     public SkillService Skills { get; } = new();
     public IdleSleepService IdleSleep { get; } = new();
@@ -227,6 +233,13 @@ public sealed class AppServices
         Initialized = true;
 
         SettingsService.Load();
+        if (string.IsNullOrWhiteSpace(Settings.PhoneBridgeToken))
+        {
+            Settings.PhoneBridgeToken = PhoneBridgeService.NewToken();
+            SettingsService.Save();
+        }
+
+        PhoneBridge.Configure(Settings.PhoneBridgeEnabled, Settings.PhoneBridgePort, Settings.PhoneBridgeToken);
         _builtinCatalog = CatalogService.LoadEmbedded();
         RemoteCatalog = new RemoteCatalogService(preferHfMirror: Settings.UseHfMirror);
         _remoteCache = RemoteCatalog.LoadCache();
@@ -362,5 +375,12 @@ public sealed class AppServices
     {
         if (RemoteCatalog is null) return;
         RemoteCatalog.PreferHfMirror = Settings.UseHfMirror;
+    }
+
+    /// <summary>退出时停止监听并释放 HTTP 客户端，避免端口残留占用。</summary>
+    public void Shutdown()
+    {
+        PhoneBridge.Stop();
+        WeChatRelay.Dispose();
     }
 }

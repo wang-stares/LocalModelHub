@@ -122,6 +122,25 @@ public sealed class AppSettings
     public string RemoteApiKey { get; set; } = "";
     public string? LastModelPath { get; set; }
 
+    // —— 手机 / 微信桥 ——
+    /// <summary>启动时自动开启局域网手机桥（扫码收发消息）。</summary>
+    public bool PhoneBridgeEnabled { get; set; }
+    public int PhoneBridgePort { get; set; } = 18790;
+    /// <summary>配对码；为空时首次启动自动生成并写入设置。</summary>
+    public string PhoneBridgeToken { get; set; } = "";
+    /// <summary>手机消息到达时，若本地模型已启动则自动生成回复。</summary>
+    public bool PhoneAutoReply { get; set; } = true;
+    /// <summary>微信发送方式：none | openclaw | webhook。</summary>
+    public string WeChatSendMode { get; set; } = "none";
+    /// <summary>OpenClaw CLI 路径；npm 全局安装可填 openclaw 或 openclaw.cmd。</summary>
+    public string OpenClawCliPath { get; set; } = "openclaw";
+    /// <summary>OpenClaw 渠道 ID；微信插件固定为 openclaw-weixin。</summary>
+    public string OpenClawChannel { get; set; } = "openclaw-weixin";
+    /// <summary>OpenClaw 发送目标（微信联系人或会话 ID）。</summary>
+    public string OpenClawTarget { get; set; } = "";
+    /// <summary>企业微信群机器人 Webhook；填写后可直接把电脑消息推到微信群。</summary>
+    public string WeComWebhook { get; set; } = "";
+
     // —— Agent 资源预算（P2-6）：默认值与旧常量一致，可在设置页「高级」调整 ——
     /// <summary>Plan 模式的工具轮次上限。</summary>
     public int AgentPlanRounds { get; set; } = AgentTuningLimits.DefaultPlanRounds;

@@ -23,7 +23,7 @@
         <ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
 
-      <!-- 侧边栏：五个工作区，二级内容不再挂在导航树里 -->
+      <!-- 侧边栏：六个工作区，二级内容不再挂在导航树里 -->
       <Border Grid.Column="0"
               Background="{DynamicResource NavBg}"
               BorderBrush="{DynamicResource MicaStroke}"
@@ -91,6 +91,13 @@
                 <StackPanel Orientation="Horizontal" Spacing="11">
                   <TextBlock Classes="navGlyph" Text="&#xE8F1;"/>
                   <TextBlock Text="知识" VerticalAlignment="Center" IsVisible="{Binding IsNavExpanded}"/>
+                </StackPanel>
+              </Button>
+
+              <Button Classes="nav" Classes.active="{Binding IsPhoneActive}" Command="{Binding OpenRouteCommand}" CommandParameter="phone" ToolTip.Tip="手机：手机收发消息、微信与 OpenClaw 接入" HorizontalContentAlignment="{Binding NavAlignment}">
+                <StackPanel Orientation="Horizontal" Spacing="11">
+                  <TextBlock Classes="navGlyph" Text="&#xE717;"/>
+                  <TextBlock Text="手机" VerticalAlignment="Center" IsVisible="{Binding IsNavExpanded}"/>
                 </StackPanel>
               </Button>
 

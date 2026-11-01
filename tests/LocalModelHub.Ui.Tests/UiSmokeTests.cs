@@ -51,7 +51,7 @@ public class UiSmokeTests
             Application.Current!.RequestedThemeVariant = variant;
             Dispatcher.UIThread.RunJobs();
 
-            for (var index = 0; index < 5; index++)
+            for (var index = 0; index < 6; index++)
             {
                 viewModel.NavigateCommand.Execute(index.ToString());
                 SettleAnimation();
@@ -710,7 +710,7 @@ public class UiSmokeTests
     }
 
     [AvaloniaFact]
-    public void Navigation_opens_five_workspaces_and_page_tabs_stay_inside_pages()
+    public void Navigation_opens_six_workspaces_and_page_tabs_stay_inside_pages()
     {
         AppServices.Current.Initialize();
 
@@ -731,7 +731,8 @@ public class UiSmokeTests
             ("models", 1, "模型库", typeof(ModelsViewModel)),
             ("chat", 2, "对话", typeof(ChatViewModel)),
             ("knowledge", 3, "知识", typeof(KnowledgeMemoryViewModel)),
-            ("settings", 4, "设置", typeof(SettingsViewModel))
+            ("settings", 4, "设置", typeof(SettingsViewModel)),
+            ("phone", 5, "手机", typeof(PhoneViewModel))
         };
 
         foreach (var item in cases)
@@ -767,7 +768,7 @@ public class UiSmokeTests
         Assert.True(viewModel.IsSkillsActive);
         Assert.False(viewModel.IsMemoryActive);
 
-        // 五个工作区高亮互斥
+        // 六个工作区高亮互斥
         viewModel.OpenRouteCommand.Execute("dashboard");
         Assert.True(viewModel.IsDashboardActive);
         Assert.False(viewModel.IsModelsActive);
@@ -776,6 +777,11 @@ public class UiSmokeTests
         viewModel.OpenRouteCommand.Execute("knowledge");
         Assert.True(viewModel.IsKnowledgeActive);
         Assert.False(viewModel.IsChatActive);
+
+        viewModel.OpenRouteCommand.Execute("phone");
+        Assert.True(viewModel.IsPhoneActive);
+        Assert.False(viewModel.IsSettingsActive);
+        Assert.IsType<PhoneViewModel>(viewModel.CurrentPage);
 
         window.Close();
     }

@@ -14,7 +14,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private sealed record RouteInfo(int Page, int Tab, string Title, string Subtitle);
 
     /// <summary>
-    /// 导航路由表：五个工作区，页面内的二级内容用页内分段控件承载，不再占用侧边栏。
+    /// 导航路由表：六个工作区，页面内的二级内容用页内分段控件承载，不再占用侧边栏。
     /// 带点的键是页内标签别名，供页内控件与代码统一入口使用。
     /// </summary>
     private static readonly Dictionary<string, RouteInfo> Routes = new()
@@ -23,6 +23,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ["models"] = new(1, 0, "模型库", "已下载、为你推荐与模型商店"),
         ["chat"] = new(2, 0, "对话", "与本地模型对话，所有内容都留在本机"),
         ["knowledge"] = new(3, 0, "知识", "知识库、长期记忆与技能"),
+        ["phone"] = new(5, 0, "手机", "手机收发消息，微信与 OpenClaw 接入"),
         ["settings"] = new(4, 0, "设置", "外观、下载源、推理参数与 API 接入"),
 
         ["models.installed"] = new(1, 0, "", ""),
@@ -52,6 +53,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Models = new ModelsViewModel(Library, Recommend, Store);
         Chat = new ChatViewModel();
         KnowledgePage = new KnowledgeViewModel();
+        Phone = new PhoneViewModel();
         SettingsPage = new SettingsViewModel();
         SettingsPage.RecommendationSettingsChanged += () => _services.InvalidateEvaluation("settings");
         MemoryPage = new MemoryViewModel();
@@ -122,6 +124,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public ChatViewModel Chat { get; }
     public KnowledgeMemoryViewModel KnowledgeMemory { get; }
     public KnowledgeViewModel KnowledgePage { get; }
+    public PhoneViewModel Phone { get; }
     public SettingsViewModel SettingsPage { get; }
     public MemoryViewModel MemoryPage { get; }
     public SkillsViewModel SkillsPage { get; }
@@ -139,12 +142,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string _serverSummary = "推理服务未运行";
     [ObservableProperty] private string _loadedModelName = "未加载模型";
 
-    // 一级工作区：工作台 / 模型库 / 对话 / 知识 / 设置。二级内容全部收进页面内的分段控件。
+    // 一级工作区：工作台 / 模型库 / 对话 / 知识 / 设置 / 手机。二级内容全部收进页面内的分段控件。
     public bool IsDashboardActive => PageIndex == 0;
     public bool IsModelsActive => PageIndex == 1;
     public bool IsChatActive => PageIndex == 2;
     public bool IsKnowledgeActive => PageIndex == 3;
     public bool IsSettingsActive => PageIndex == 4;
+    public bool IsPhoneActive => PageIndex == 5;
 
     public bool IsLibraryActive => PageIndex == 1 && Models.TabIndex == 0;
     public bool IsRecommendActive => PageIndex == 1 && Models.TabIndex == 1;
@@ -188,7 +192,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             1 => Models,
             2 => Chat,
             3 => KnowledgeMemory,
-            _ => SettingsPage
+            4 => SettingsPage,
+            _ => Phone
         };
 
         SyncRoute();
@@ -221,7 +226,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             1 => "models",
             2 => "chat",
             3 => "knowledge",
-            _ => "settings"
+            4 => "settings",
+            _ => "phone"
         };
 
         if (Routes.TryGetValue(CurrentRouteKey, out var route))
@@ -240,6 +246,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(IsChatActive));
         OnPropertyChanged(nameof(IsKnowledgeActive));
         OnPropertyChanged(nameof(IsSettingsActive));
+        OnPropertyChanged(nameof(IsPhoneActive));
         OnPropertyChanged(nameof(IsLibraryActive));
         OnPropertyChanged(nameof(IsRecommendActive));
         OnPropertyChanged(nameof(IsStoreActive));
@@ -251,7 +258,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void Navigate(string? index)
     {
-        if (int.TryParse(index, out var value) && value is >= 0 and < 5)
+        if (int.TryParse(index, out var value) && value is >= 0 and < 6)
         {
             PageIndex = value;
         }
