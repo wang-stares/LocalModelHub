@@ -3,10 +3,10 @@
              xmlns:vm="using:LocalModelHub.App.ViewModels"
              x:Class="LocalModelHub.App.Views.KnowledgeView"
              x:DataType="vm:KnowledgeViewModel">
-  <ScrollViewer VerticalScrollBarVisibility="Auto">
-    <StackPanel Margin="30,0,30,30" Spacing="16" MaxWidth="940" HorizontalAlignment="Left">
+  <ScrollViewer Classes="page" VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="32,12,32,32" Spacing="16" MaxWidth="1120" HorizontalAlignment="Center">
 
-      <Border Classes="card" CornerRadius="20" Padding="20">
+      <Border Classes="card" CornerRadius="18" Padding="20">
         <StackPanel Spacing="14">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Spacing="2">
@@ -32,11 +32,16 @@
           <CheckBox Content="对话时自动检索知识库并注入相关片段"
                     IsChecked="{Binding KnowledgeEnabled, Mode=TwoWay}"/>
 
-          <TextBlock Text="支持 Markdown、文本与常见代码文件（单文件 ≤ 2 MB），内容只保存在本机；使用 BM25 关键词检索，不需要额外模型或网络。"
+          <CheckBox Content="混合检索：关键词 + 本地模型向量（失败时自动回退）"
+                    IsChecked="{Binding HybridSearch, Mode=TwoWay}"/>
+
+          <TextBlock Text="支持 Markdown、文本与常见代码文件（单文件 ≤ 2 MB），内容只保存在本机；默认使用 BM25 关键词检索，不需要额外模型或网络。开启混合检索后会调用本地推理服务的 /v1/embeddings。"
                      Classes="caption"
                      TextWrapping="Wrap"/>
 
-          <ProgressBar Height="4" IsIndeterminate="{Binding IsImporting}" IsVisible="{Binding IsImporting}"/>
+          <Border ClipToBounds="True" Height="4" IsVisible="{Binding IsImporting}">
+            <ProgressBar Height="4" IsIndeterminate="{Binding IsImporting}"/>
+          </Border>
           <TextBlock Text="{Binding ImportStatus}" Classes="caption" TextWrapping="Wrap"/>
         </StackPanel>
       </Border>
@@ -44,7 +49,7 @@
       <ItemsControl ItemsSource="{Binding Documents}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:KnowledgeDocumentItemViewModel">
-            <Border Classes="card cardHover" Padding="16" Margin="0,0,0,10" CornerRadius="16">
+            <Border Classes="card cardHover" Padding="16" Margin="0,0,0,10" CornerRadius="18">
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Spacing="4">
                   <TextBlock Text="{Binding Title}" Classes="h3"/>
@@ -65,7 +70,7 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
-      <Border Classes="card" Padding="36" CornerRadius="20" IsVisible="{Binding IsEmpty}">
+      <Border Classes="card" Padding="36" CornerRadius="18" IsVisible="{Binding IsEmpty}">
         <StackPanel Spacing="7" HorizontalAlignment="Center">
           <TextBlock Text="还没有知识库文档" Classes="h3" HorizontalAlignment="Center"/>
           <TextBlock Text="导入项目 README、设计文档或代码文件后，对话会自动检索相关片段并标注来源。"
@@ -76,7 +81,7 @@
         </StackPanel>
       </Border>
 
-      <Border Classes="card" CornerRadius="20" Padding="20">
+      <Border Classes="card" CornerRadius="18" Padding="20">
         <StackPanel Spacing="12">
           <StackPanel Spacing="2">
             <TextBlock Text="检索测试" Classes="h3"/>

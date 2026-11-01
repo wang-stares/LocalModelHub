@@ -4,15 +4,16 @@ using LocalModelHub.App.Services;
 
 namespace LocalModelHub.App.ViewModels;
 
-/// <summary>「我的模型」页面：同一条目下切换已下载模型与按适配度排序的推荐。</summary>
+/// <summary>模型库：已下载 / 为你推荐 / 商店三段页内标签，共享同一套硬件评估结果。</summary>
 public sealed partial class ModelsViewModel : ObservableObject
 {
     private readonly AppServices _services = AppServices.Current;
 
-    public ModelsViewModel(LibraryViewModel library, RecommendViewModel recommend)
+    public ModelsViewModel(LibraryViewModel library, RecommendViewModel recommend, StoreViewModel store)
     {
         Library = library;
         Recommend = recommend;
+        Store = store;
         _services.LibraryUpdated += () => Dispatcher.UIThread.Post(RefreshCounts);
         _services.CatalogChanged += () => Dispatcher.UIThread.Post(RefreshCounts);
         RefreshCounts();
@@ -20,26 +21,33 @@ public sealed partial class ModelsViewModel : ObservableObject
 
     public LibraryViewModel Library { get; }
     public RecommendViewModel Recommend { get; }
+    public StoreViewModel Store { get; }
 
     [ObservableProperty] private int _tabIndex;
     [ObservableProperty] private string _installedTabText = "已下载";
     [ObservableProperty] private string _recommendTabText = "为你推荐";
-
-    public string[] Tabs => [InstalledTabText, RecommendTabText];
+    [ObservableProperty] private string _storeTabText = "商店";
+    public string[] Tabs => [InstalledTabText, RecommendTabText, StoreTabText];
 
     public bool IsInstalledTab => TabIndex == 0;
     public bool IsRecommendTab => TabIndex == 1;
+    public bool IsStoreTab => TabIndex == 2;
 
-    public string TabHint => TabIndex == 0
-        ? "点击「启动模型」加载到推理服务；「停止服务」释放显存与内存。删除会移除磁盘上的模型文件。"
-        : "按这台电脑的显存与内存排序；点击卡片上的按钮即可下载，下载完成后到「已下载」标签启动。";
+    public string TabHint => TabIndex switch
+    {
+        0 => "启动推理服务、查看进度与磁盘占用。删除会移除磁盘上的模型文件。",
+        1 => "按这台电脑的显存与内存排序，下载完成后回到「已下载」启动。",
+        _ => "从 HuggingFace、魔搭与 Ollama 同步开源模型，一键下载到本机。"
+    };
 
     partial void OnTabIndexChanged(int value)
     {
         OnPropertyChanged(nameof(IsInstalledTab));
         OnPropertyChanged(nameof(IsRecommendTab));
+        OnPropertyChanged(nameof(IsStoreTab));
         OnPropertyChanged(nameof(TabHint));
         if (value == 1) Recommend.RefreshCount();
+        else if (value == 2) Store.Refresh();
         else Library.RefreshRunning();
     }
 

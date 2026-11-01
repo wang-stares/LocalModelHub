@@ -31,4 +31,7 @@ public interface IChatCompletion
 
     /// <summary>当前已加载模型的能力画像；未探测或后端不支持时返回 null。</summary>
     ModelProfile? ModelProfile => null;
+
+    /// <summary>当前模型名（用于按模型覆盖提示词）；未知时返回 null，退回默认提示词。</summary>
+    string? ModelName => null;
 }

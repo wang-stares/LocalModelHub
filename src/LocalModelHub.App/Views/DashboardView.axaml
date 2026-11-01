@@ -1,207 +1,227 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LocalModelHub.App.ViewModels"
-             xmlns:views="using:LocalModelHub.App.Views"
              x:Class="LocalModelHub.App.Views.DashboardView"
              x:DataType="vm:DashboardViewModel">
-  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-    <StackPanel Margin="30,0,30,30" Spacing="18">
+  <ScrollViewer Classes="page" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="32,10,32,36" Spacing="0">
 
-      <Grid ColumnDefinitions="392,18,*">
-        <Border Classes="card" Padding="22" CornerRadius="20">
-          <StackPanel Spacing="16">
-            <Grid ColumnDefinitions="*,Auto">
-              <StackPanel Spacing="2">
-                <TextBlock Classes="h3" Text="性能评分"/>
-                <TextBlock Classes="caption" Text="CPU · 内存 · 显卡 · 存储综合评估"/>
-              </StackPanel>
-              <Border Grid.Column="1" Classes="badge pill">
+      <!-- 结论带：整行只回答一个问题——这台电脑能跑多大的模型 -->
+      <Border Classes="card hero" Padding="26,22" CornerRadius="22">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Spacing="9" Margin="0,0,24,0">
+            <Grid ColumnDefinitions="Auto,*">
+              <TextBlock Text="本机能力" Classes="eyebrow" VerticalAlignment="Center"/>
+              <Border Grid.Column="1" Classes="badge pill" Classes.accent="{Binding HasDetection}" Margin="10,0,0,0" HorizontalAlignment="Left">
                 <TextBlock Text="{Binding DetectedAtText}"/>
               </Border>
             </Grid>
+            <TextBlock Text="{Binding CapabilityHeadline}" Classes="display" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding CapabilityBottleneck}"
+                       Classes="caption"
+                       Foreground="{DynamicResource AccentInk}"
+                       TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding CapabilityContext}"
+                       Classes="muted"
+                       TextWrapping="Wrap"
+                       LineHeight="18"/>
+          </StackPanel>
 
-            <Grid ColumnDefinitions="Auto,*,Auto">
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="{Binding ScoreTotal}" Classes="score"/>
-                <TextBlock Text="/ 100"
-                           Classes="muted"
-                           FontSize="12"
-                           VerticalAlignment="Bottom"
-                           Margin="0,0,0,12"/>
-              </StackPanel>
-              <Border Grid.Column="2" Classes="badge pill accent" VerticalAlignment="Center">
-                <TextBlock Text="{Binding ScoreTier}"/>
-              </Border>
-            </Grid>
-
-            <TextBlock Text="{Binding ScoreSummary}" Classes="muted" TextWrapping="Wrap" LineHeight="19"/>
-
-            <StackPanel Spacing="10" Margin="0,2,0,2">
-              <Grid ColumnDefinitions="44,*,Auto">
-                <TextBlock Text="CPU" Classes="caption" VerticalAlignment="Center"/>
-                <ProgressBar Grid.Column="1" Value="{Binding CpuPercent}" Maximum="100" Height="6" Margin="8,0"/>
-                <TextBlock Grid.Column="2" Text="{Binding CpuPointsText}" Classes="caption" VerticalAlignment="Center"/>
-              </Grid>
-              <Grid ColumnDefinitions="44,*,Auto">
-                <TextBlock Text="内存" Classes="caption" VerticalAlignment="Center"/>
-                <ProgressBar Grid.Column="1" Value="{Binding MemoryPercent}" Maximum="100" Height="6" Margin="8,0"/>
-                <TextBlock Grid.Column="2" Text="{Binding MemoryPointsText}" Classes="caption" VerticalAlignment="Center"/>
-              </Grid>
-              <Grid ColumnDefinitions="44,*,Auto">
-                <TextBlock Text="显卡" Classes="caption" VerticalAlignment="Center"/>
-                <ProgressBar Grid.Column="1" Value="{Binding GpuPercent}" Maximum="100" Height="6" Margin="8,0"/>
-                <TextBlock Grid.Column="2" Text="{Binding GpuPointsText}" Classes="caption" VerticalAlignment="Center"/>
-              </Grid>
-              <Grid ColumnDefinitions="44,*,Auto">
-                <TextBlock Text="存储" Classes="caption" VerticalAlignment="Center"/>
-                <ProgressBar Grid.Column="1" Value="{Binding StoragePercent}" Maximum="100" Height="6" Margin="8,0"/>
-                <TextBlock Grid.Column="2" Text="{Binding StoragePointsText}" Classes="caption" VerticalAlignment="Center"/>
-              </Grid>
+          <StackPanel Grid.Column="1" Spacing="8" MinWidth="176" VerticalAlignment="Top">
+            <StackPanel Orientation="Horizontal" Spacing="3" HorizontalAlignment="Right">
+              <TextBlock Text="{Binding ScoreTotal}" Classes="score"/>
+              <TextBlock Text="/ 100"
+                         Classes="muted"
+                         FontSize="12"
+                         VerticalAlignment="Bottom"
+                         Margin="0,0,0,12"/>
             </StackPanel>
-
+            <Border Classes="badge pill accent" HorizontalAlignment="Right">
+              <TextBlock Text="{Binding ScoreTier}"/>
+            </Border>
+            <TextBlock Text="{Binding ConfidenceText}" Classes="caption" HorizontalAlignment="Right"/>
             <Button Classes="primary"
-                    Content="一键检测电脑性能"
+                    Content="一键检测"
                     Command="{Binding DetectCommand}"
                     IsEnabled="{Binding !IsDetecting}"
                     HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Margin="0,4,0,0"/>
+            <TextBlock Text="{Binding DetectStatus}" Classes="caption" HorizontalAlignment="Right" TextWrapping="Wrap"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- 指标带：CPU / GPU / 内存 / 磁盘同处一条，竖线分隔，不再是四张并列卡片 -->
+      <Border Classes="card flat" Padding="0,18" Margin="0,16,0,0">
+        <Grid ColumnDefinitions="*,1,*,1,*,1,*">
+          <StackPanel Margin="18,0,16,0" Spacing="6">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Border Classes="tile cpu"><TextBlock Text="CPU"/></Border>
+              <TextBlock Text="处理器" Classes="eyebrow" VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock Text="{Binding CpuTitle}" Classes="h3" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="{Binding CpuDetail}" Classes="caption" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"/>
+            <Border ClipToBounds="True" Height="3" Margin="0,3,0,0"><ProgressBar Value="{Binding CpuPercent}" Maximum="100" Height="3"/></Border>
+            <TextBlock Text="{Binding CpuPointsText}" Classes="caption"/>
+          </StackPanel>
+          <Border Grid.Column="1" Background="{DynamicResource StrokeSubtle}" Margin="0,2"/>
+
+          <StackPanel Grid.Column="2" Margin="18,0,16,0" Spacing="6">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Border Classes="tile gpu"><TextBlock Text="GPU"/></Border>
+              <TextBlock Text="显卡" Classes="eyebrow" VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock Text="{Binding GpuTitle}" Classes="h3" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="{Binding GpuDetail}" Classes="caption" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"/>
+            <Border ClipToBounds="True" Height="3" Margin="0,3,0,0"><ProgressBar Value="{Binding GpuPercent}" Maximum="100" Height="3"/></Border>
+            <TextBlock Text="{Binding GpuPointsText}" Classes="caption"/>
+          </StackPanel>
+          <Border Grid.Column="3" Background="{DynamicResource StrokeSubtle}" Margin="0,2"/>
+
+          <StackPanel Grid.Column="4" Margin="18,0,16,0" Spacing="6">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Border Classes="tile ram"><TextBlock Text="RAM"/></Border>
+              <TextBlock Text="内存" Classes="eyebrow" VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock Text="{Binding RamTitle}" Classes="h3" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="{Binding RamDetail}" Classes="caption" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"/>
+            <Border ClipToBounds="True" Height="3" Margin="0,3,0,0"><ProgressBar Value="{Binding MemoryPercent}" Maximum="100" Height="3"/></Border>
+            <TextBlock Text="{Binding MemoryPointsText}" Classes="caption"/>
+          </StackPanel>
+          <Border Grid.Column="5" Background="{DynamicResource StrokeSubtle}" Margin="0,2"/>
+
+          <StackPanel Grid.Column="6" Margin="18,0,18,0" Spacing="6">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Border Classes="tile disk"><TextBlock Text="DISK"/></Border>
+              <TextBlock Text="存储" Classes="eyebrow" VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock Text="{Binding DiskTitle}" Classes="h3" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="{Binding DiskDetail}" Classes="caption" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"/>
+            <Border ClipToBounds="True" Height="3" Margin="0,3,0,0"><ProgressBar Value="{Binding StoragePercent}" Maximum="100" Height="3"/></Border>
+            <TextBlock Text="{Binding StoragePointsText}" Classes="caption"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- 主行动 + 推荐表：左边看清单，右边一键启动，二者同一层级 -->
+      <Grid ColumnDefinitions="*,16,320" Margin="0,20,0,0">
+        <StackPanel Spacing="0">
+          <Grid ColumnDefinitions="*,Auto" Margin="2,0,2,10">
+            <StackPanel Spacing="2">
+              <TextBlock Text="推荐模型" Classes="eyebrow"/>
+              <TextBlock Text="{Binding RecommendHeader}" Classes="h2"/>
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Classes="ghost"
+                    Content="查看全部"
+                    Command="{Binding ViewAllRecommendationsCommand}"
+                    VerticalAlignment="Center"/>
+          </Grid>
+
+          <Border Classes="card flat" Padding="0">
+            <StackPanel>
+            <Border Padding="16,8" Background="{DynamicResource CardSunkenBg}">
+            <Grid ColumnDefinitions="2.4*,1.6*,Auto">
+              <TextBlock Text="模型 · 适配" Classes="eyebrow"/>
+              <TextBlock Grid.Column="1" Text="参数 · 体积 · 速度" Classes="eyebrow"/>
+              <TextBlock Grid.Column="2" Text="操作" Classes="eyebrow"/>
+            </Grid>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding TopCards}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ModelCardViewModel">
+                  <Border BorderBrush="{DynamicResource StrokeSubtle}" BorderThickness="0,0,0,1" Padding="16,10">
+                    <Grid ColumnDefinitions="2.4*,1.6*,Auto">
+                      <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center" ColumnSpacing="8">
+                        <Border Classes="fitDot"
+                                Classes.fitPerfect="{Binding IsFitPerfect}"
+                                Classes.fitGood="{Binding IsFitGood}"
+                                Classes.fitPlayable="{Binding IsFitPlayable}"
+                                Classes.fitTight="{Binding IsFitTight}"
+                                Classes.fitBad="{Binding IsFitBad}"
+                                ToolTip.Tip="{Binding FitTip}"/>
+                        <StackPanel Grid.Column="1" Spacing="1">
+                          <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Text="{Binding Developer}" Classes="caption" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                      </Grid>
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding TableMetaText}"
+                                   Classes="caption"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding SpeedText}"
+                                   Classes="caption"
+                                   TextTrimming="CharacterEllipsis"/>
+                      </StackPanel>
+                      <Button Grid.Column="2"
+                              Classes="primary"
+                              Content="{Binding ActionText}"
+                              Command="{Binding PrimaryCommand}"
+                              IsEnabled="{Binding CanAct}"
+                              MinWidth="92"
+                              HorizontalContentAlignment="Center"
+                              VerticalAlignment="Center"
+                              Margin="8,0,0,0"/>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <Border Grid.Column="2" Classes="card" Padding="20,18" VerticalAlignment="Top">
+          <StackPanel Spacing="12">
+            <TextBlock Text="下一步" Classes="eyebrow"/>
+            <TextBlock Text="{Binding BestCard.Title}"
+                       Classes="h2"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding HasBestCard}"/>
+            <TextBlock Text="{Binding BestCard.FitDetail}"
+                       Classes="muted"
+                       TextWrapping="Wrap"
+                       LineHeight="18"
+                       IsVisible="{Binding HasBestCard}"/>
+            <Button Classes="primary"
+                    Content="{Binding BestCard.ActionText}"
+                    Command="{Binding BestCard.PrimaryCommand}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    IsVisible="{Binding HasBestCard}"/>
+            <Button Classes="ghost"
+                    Content="查看全部推荐"
+                    Command="{Binding ViewAllRecommendationsCommand}"
+                    HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"/>
 
-            <StackPanel IsVisible="{Binding IsDetecting}" Spacing="7">
-              <ProgressBar IsIndeterminate="True" Height="4"/>
-              <TextBlock Text="{Binding DetectStatus}" Classes="caption" TextWrapping="Wrap"/>
-            </StackPanel>
+            <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="0,4"/>
 
-            <TextBlock Text="{Binding BenchmarkText}" Classes="caption" TextWrapping="Wrap" LineHeight="16"/>
+            <TextBlock Text="使用流程" Classes="eyebrow"/>
+            <TextBlock Text="1  检测硬件，判断能承载的模型规模&#x0a;2  下载 GGUF 量化模型&#x0a;3  一键启动并进入对话"
+                       Classes="caption"
+                       LineHeight="20"
+                       TextWrapping="Wrap"/>
           </StackPanel>
         </Border>
-
-        <Grid Grid.Column="2" RowDefinitions="*,14,*" ColumnDefinitions="*,14,*">
-          <Border Classes="card" Padding="18" CornerRadius="18">
-            <StackPanel Spacing="8">
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Border Classes="tile cpu">
-                  <TextBlock Text="CPU"/>
-                </Border>
-                <TextBlock Text="处理器" Classes="caption" VerticalAlignment="Center"/>
-              </StackPanel>
-              <TextBlock Text="{Binding CpuTitle}"
-                         Classes="h3"
-                         TextWrapping="Wrap"
-                         MaxLines="2"
-                         TextTrimming="CharacterEllipsis"/>
-              <TextBlock Text="{Binding CpuDetail}"
-                         Classes="muted"
-                         TextWrapping="Wrap"
-                         MaxLines="3"
-                         TextTrimming="CharacterEllipsis"/>
-            </StackPanel>
-          </Border>
-
-          <Border Grid.Column="2" Classes="card" Padding="18" CornerRadius="18">
-            <StackPanel Spacing="8">
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Border Classes="tile gpu">
-                  <TextBlock Text="GPU"/>
-                </Border>
-                <TextBlock Text="显卡" Classes="caption" VerticalAlignment="Center"/>
-              </StackPanel>
-              <TextBlock Text="{Binding GpuTitle}"
-                         Classes="h3"
-                         TextWrapping="Wrap"
-                         MaxLines="2"
-                         TextTrimming="CharacterEllipsis"/>
-              <TextBlock Text="{Binding GpuDetail}"
-                         Classes="muted"
-                         TextWrapping="Wrap"
-                         MaxLines="3"
-                         TextTrimming="CharacterEllipsis"/>
-            </StackPanel>
-          </Border>
-
-          <Border Grid.Row="2" Classes="card" Padding="18" CornerRadius="18">
-            <StackPanel Spacing="8">
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Border Classes="tile ram">
-                  <TextBlock Text="RAM"/>
-                </Border>
-                <TextBlock Text="内存" Classes="caption" VerticalAlignment="Center"/>
-              </StackPanel>
-              <TextBlock Text="{Binding RamTitle}" Classes="h3"/>
-              <TextBlock Text="{Binding RamDetail}"
-                         Classes="muted"
-                         TextWrapping="Wrap"
-                         MaxLines="3"
-                         TextTrimming="CharacterEllipsis"/>
-            </StackPanel>
-          </Border>
-
-          <Border Grid.Row="2" Grid.Column="2" Classes="card" Padding="18" CornerRadius="18">
-            <StackPanel Spacing="8">
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Border Classes="tile disk">
-                  <TextBlock Text="DISK"/>
-                </Border>
-                <TextBlock Text="存储" Classes="caption" VerticalAlignment="Center"/>
-              </StackPanel>
-              <TextBlock Text="{Binding DiskTitle}" Classes="h3"/>
-              <TextBlock Text="{Binding DiskDetail}"
-                         Classes="muted"
-                         TextWrapping="Wrap"
-                         MaxLines="3"
-                         TextTrimming="CharacterEllipsis"/>
-            </StackPanel>
-          </Border>
-        </Grid>
       </Grid>
 
-      <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0">
-        <TextBlock Text="{Binding RecommendHeader}" Classes="h2"/>
-        <Button Grid.Column="1"
-                Classes="ghost"
-                Content="查看全部推荐"
-                Command="{Binding ViewAllRecommendationsCommand}"
-                VerticalAlignment="Center"/>
-      </Grid>
-
-      <ItemsControl ItemsSource="{Binding TopCards}">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate>
-            <WrapPanel Orientation="Horizontal"/>
-          </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:ModelCardViewModel">
-            <views:ModelCardView Width="306" Margin="0,0,16,16"/>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-
-      <Border Classes="card" Padding="20" CornerRadius="20">
-        <StackPanel Spacing="12">
-          <TextBlock Text="使用流程" Classes="h3"/>
-          <Grid ColumnDefinitions="*,18,*,18,*">
-            <StackPanel Spacing="5">
-              <Border Classes="badge pill accent" HorizontalAlignment="Left">
-                <TextBlock Text="1"/>
-              </Border>
-              <TextBlock Text="检测硬件" FontWeight="SemiBold" FontSize="12.5"/>
-              <TextBlock Text="读取 CPU、显卡、内存与磁盘，估算可承载的模型规模。" Classes="caption" TextWrapping="Wrap"/>
-            </StackPanel>
-            <StackPanel Grid.Column="2" Spacing="5">
-              <Border Classes="badge pill accent" HorizontalAlignment="Left">
-                <TextBlock Text="2"/>
-              </Border>
-              <TextBlock Text="下载模型" FontWeight="SemiBold" FontSize="12.5"/>
-              <TextBlock Text="从模型商店选择国内外开源模型（GGUF 量化版），可断点续传。" Classes="caption" TextWrapping="Wrap"/>
-            </StackPanel>
-            <StackPanel Grid.Column="4" Spacing="5">
-              <Border Classes="badge pill accent" HorizontalAlignment="Left">
-                <TextBlock Text="3"/>
-              </Border>
-              <TextBlock Text="一键启动" FontWeight="SemiBold" FontSize="12.5"/>
-              <TextBlock Text="自动安装推理运行时、规划 GPU 层数，随即进入对话页面。" Classes="caption" TextWrapping="Wrap"/>
-            </StackPanel>
-          </Grid>
+      <!-- 口径说明：评分来源与实测信息压成一条脚注，不与正文抢注意力 -->
+      <Border Margin="0,18,0,0"
+              Padding="0,12,0,0"
+              BorderBrush="{DynamicResource StrokeSubtle}"
+              BorderThickness="0,1,0,0">
+        <StackPanel Spacing="3">
+          <TextBlock Text="{Binding ScoreSummary}" Classes="caption" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding BenchmarkText}" Classes="caption" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding SourcesText}" Classes="caption" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding ScoreChangeNote}"
+                     Classes="caption"
+                     Foreground="{DynamicResource AccentInk}"
+                     IsVisible="{Binding HasScoreChangeNote}"
+                     TextWrapping="Wrap"/>
         </StackPanel>
       </Border>
     </StackPanel>

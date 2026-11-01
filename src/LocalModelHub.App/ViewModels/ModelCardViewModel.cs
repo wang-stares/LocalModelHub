@@ -53,6 +53,11 @@ public sealed partial class ModelCardViewModel : ObservableObject, IDisposable
             ? $"{Model.ParamsLabel} · {ContextText}{ContextAdvice}"
             : $"{Model.ParamsLabel} · {ContextText} · {SelectedQuant.Label} {Formatters.Bytes(SelectedQuant.TotalBytes)}{ContextAdvice}";
 
+    /// <summary>表格行用的紧凑参数行：只保留参数量与体积，量化与适配细节放进状态点提示。</summary>
+    public string TableMetaText => IsRemote
+        ? $"远程 API · {Model.ApiBaseUrl}"
+        : $"{Model.ParamsLabel} · {Formatters.Bytes(SelectedQuant.TotalBytes)}";
+
     /// <summary>显存/内存吃紧时把建议上下文放进信息行，避免「模型能跑但上下文开太大」。</summary>
     private string ContextAdvice
     {
@@ -144,6 +149,7 @@ public sealed partial class ModelCardViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(SelectedQuant));
         OnPropertyChanged(nameof(MetaText));
+        OnPropertyChanged(nameof(TableMetaText));
         OnPropertyChanged(nameof(QuantTip));
         OnPropertyChanged(nameof(HasRecommendedQuant));
         RefreshInstalled();
@@ -246,7 +252,7 @@ public sealed partial class ModelCardViewModel : ObservableObject, IDisposable
 
     public string SpeedTip => _recommendation is null
         ? "预计生成速度 tok/s：每秒大约生成多少个 token。1 个汉字约等于 1–2 个 token，低于 1 时基本不可用。"
-        : $"预计生成 {_recommendation.SpeedLabel}；{_recommendation.PrefillLabel}（512 字提示）。1 个汉字约等于 1–2 个 token。";
+        : $"预计生成 {(_recommendation.Speed?.Label ?? _recommendation.SpeedLabel)}；{_recommendation.PrefillLabel}（512 字提示）。1 个汉字约等于 1–2 个 token。";
     public string MetaTip => "依次是参数量、上下文窗口（能一次读入的文本长度）与模型体积；参数越多通常越聪明，但需要的内存也越多。「建议 XK」表示该硬件预算内可稳定运行的最大上下文。";
     public string DescriptionTip => "下载量来自模型社区，代表热度与成熟度，不代表它在这台电脑上的运行速度。";
 
@@ -277,6 +283,38 @@ public sealed partial class ModelCardViewModel : ObservableObject, IDisposable
     public bool IsFitTight => _recommendation?.Fit == FitLevel.Tight;
     public bool IsFitBad => _recommendation?.Fit == FitLevel.Insufficient;
     public string SpeedText => _recommendation?.SpeedLabel ?? "";
+
+    /// <summary>推荐置信度与结构化理由（P1-21）：让卡片能回答「这个结论有多可靠」。</summary>
+    public string ConfidenceBadgeText => _recommendation is null
+        ? ""
+        : $"置信度 {_recommendation.ConfidenceText}";
+
+    public string ConfidenceTip => _recommendation is null
+        ? ""
+        : $"{_recommendation.ConfidenceDetail}\n{string.Join('\n', _recommendation.Reasons)}"
+          + (_recommendation.Scenarios.Count > 0 ? $"\n适合：{_recommendation.ScenariosText}" : "");
+
+    /// <summary>同模型多量化并排对比（体积 / 速度 / 质量 / 结论）。</summary>
+    public bool HasAlternatives => _recommendation?.HasAlternatives == true;
+
+    public string AlternativesText => _recommendation is null
+        ? ""
+        : string.Join('\n', _recommendation.Alternatives.Take(5).Select(item =>
+            $"{item.Label} · {item.SizeGb:0.#} GB · {item.SpeedText} · {item.QualityStars} · {item.FitText} · {item.Conclusion}"));
+
+    /// <summary>可直接复制的启动参数；模型路径由启动器自行拼接。</summary>
+    public bool HasLaunchCommand => _recommendation?.Launch is not null;
+
+    public string LaunchCommand => _recommendation?.LaunchCommand ?? "";
+
+    [RelayCommand]
+    private async Task CopyLaunchCommandAsync()
+    {
+        if (_recommendation?.Launch is not { } launch) return;
+        var clipboard = App.MainWindow?.Clipboard;
+        if (clipboard is null) return;
+        await clipboard.SetTextAsync(launch.CommandLine);
+    }
 
     [ObservableProperty] private bool _isDownloading;
     [ObservableProperty] private double _progress;
@@ -407,6 +445,7 @@ public sealed partial class ModelCardViewModel : ObservableObject, IDisposable
 
         OnPropertyChanged(nameof(QuantOptions));
         OnPropertyChanged(nameof(MetaText));
+        OnPropertyChanged(nameof(TableMetaText));
         OnPropertyChanged(nameof(FitLabel));
         OnPropertyChanged(nameof(FitDetail));
         OnPropertyChanged(nameof(FitTip));
@@ -420,6 +459,12 @@ public sealed partial class ModelCardViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(SpeedText));
         OnPropertyChanged(nameof(SpeedTip));
         OnPropertyChanged(nameof(SortScore));
+        OnPropertyChanged(nameof(ConfidenceBadgeText));
+        OnPropertyChanged(nameof(ConfidenceTip));
+        OnPropertyChanged(nameof(HasAlternatives));
+        OnPropertyChanged(nameof(AlternativesText));
+        OnPropertyChanged(nameof(HasLaunchCommand));
+        OnPropertyChanged(nameof(LaunchCommand));
     }
 
     /// <summary>由主窗口在库变更后统一刷新，避免每张卡片各自订阅全局事件。</summary>

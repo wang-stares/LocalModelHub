@@ -54,6 +54,24 @@ public sealed partial class DashboardViewModel : ObservableObject
     [ObservableProperty] private string _detectStatus = "";
     [ObservableProperty] private bool _hasDetection;
 
+    /// <summary>主结论：能跑多大的模型（P1-20）。</summary>
+    [ObservableProperty] private string _capabilityHeadline = "点一下就能知道这台电脑适合运行多大的本地模型。";
+    [ObservableProperty] private string _capabilityBottleneck = "";
+    [ObservableProperty] private string _capabilityHint = "";
+    [ObservableProperty] private string _capabilityContext = "";
+    [ObservableProperty] private string _confidenceText = "";
+    [ObservableProperty] private string _scoreChangeNote = "";
+    [ObservableProperty] private bool _hasScoreChangeNote;
+
+    partial void OnScoreChangeNoteChanged(string value) =>
+        HasScoreChangeNote = !string.IsNullOrWhiteSpace(value);
+
+    [ObservableProperty] private string _cpuMeaning = "";
+    [ObservableProperty] private string _memoryMeaning = "";
+    [ObservableProperty] private string _gpuMeaning = "";
+    [ObservableProperty] private string _storageMeaning = "";
+    [ObservableProperty] private string _sourcesText = "";
+
     public void Initialize() => _ = QuickDetectAsync();
 
     [RelayCommand]
@@ -62,6 +80,8 @@ public sealed partial class DashboardViewModel : ObservableObject
         if (IsDetecting) return;
         IsDetecting = true;
         DetectStatus = "正在读取硬件信息…";
+        var previousTotal = _services.Performance.Total;
+        var hadDetection = HasDetection;
         try
         {
             // 检测前采样一次：检测期间可能有程序释放 / 占用内存，沿用旧快照会让结论失真。
@@ -73,7 +93,14 @@ public sealed partial class DashboardViewModel : ObservableObject
             DetectStatus = "正在运行 CPU 基准测试…";
             var benchmark = await Task.Run(() => _services.Benchmark.Run(progress, l3CacheKb: hardware.Cpu.L3CacheKb));
             _services.LastBenchmark = benchmark;
-            _services.Performance = _services.Scorer.Score(hardware, benchmark);
+            // 实测结果落盘：重启后同一台机器沿用同一口径，换设备 / 跨大版本自动失效。
+            _services.SaveMeasuredProfile(hardware, benchmark);
+            _services.Performance = _services.ScoreHardware(hardware, benchmark, _services.BenchmarkMeasuredAt);
+
+            var diff = _services.Performance.Total - previousTotal;
+            ScoreChangeNote = hadDetection && Math.Abs(diff) > 5
+                ? $"本次与上次相差 {diff:+#;-#;0} 分，可能受系统负载影响；建议关闭后台程序后重测。"
+                : "";
 
             BenchmarkText = $"实测 CPU {benchmark.CpuGflops:0.#} GFLOPS · 内存带宽 {benchmark.MemoryBandwidthGBps:0.#} GB/s · 用时 {benchmark.Duration.TotalSeconds:0.0}s"
                 + (benchmark.LowConfidence ? $" · {benchmark.QualityText}（波动 {benchmark.StdevRatio:P0}）" : "");
@@ -83,6 +110,7 @@ public sealed partial class DashboardViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            AppLog.Error("detect", "硬件检测失败", ex);
             DetectStatus = $"检测失败：{ex.Message}";
         }
         finally
@@ -107,7 +135,17 @@ public sealed partial class DashboardViewModel : ObservableObject
         }
 
         while (TopCards.Count > suitable.Count) TopCards.RemoveAt(TopCards.Count - 1);
+
+        BestCard = suitable.FirstOrDefault();
     }
+
+    /// <summary>工作台主行动：启动排在第一位的模型，不需要先进模型库。</summary>
+    [ObservableProperty] private ModelCardViewModel? _bestCard;
+
+    public bool HasBestCard => BestCard is not null;
+
+    partial void OnBestCardChanged(ModelCardViewModel? value) =>
+        OnPropertyChanged(nameof(HasBestCard));
 
     /// <summary>预算快照刷新后只更新内存 / 显存一行，不重置评分与检测状态。</summary>
     public void RefreshBudget()
@@ -136,7 +174,14 @@ public sealed partial class DashboardViewModel : ObservableObject
             _services.RefreshBudgetSnapshot();
             var hardware = await Task.Run(() => _services.HardwareDetector.Detect(null, _services.Settings.ModelsDirectory));
             _services.Hardware = hardware;
-            _services.Performance = _services.Scorer.Score(hardware);
+
+            // 启动只读指纹并复用上次实测，不再用另一套「无基准」口径重算出不同的分数。
+            var reused = _services.LoadMeasuredProfile(hardware);
+            _services.Performance = _services.ScoreHardware(hardware, _services.LastBenchmark, _services.BenchmarkMeasuredAt);
+            BenchmarkText = reused && _services.LastBenchmark is { } measured
+                ? $"沿用上次实测：CPU {measured.CpuGflops:0.#} GFLOPS · 内存带宽 {measured.MemoryBandwidthGBps:0.#} GB/s"
+                  + (_services.BenchmarkMeasuredAt is { } at ? $" · 采样于 {at:MM-dd HH:mm}" : "")
+                : "尚未实测：当前分数为规格估算，点「一键检测」获得实测口径。";
             Refresh();
             DetectionCompleted?.Invoke(this, EventArgs.Empty);
         }
@@ -156,6 +201,10 @@ public sealed partial class DashboardViewModel : ObservableObject
         ScoreTier = detected ? score.Tier : "未检测";
         ScoreSummary = detected ? score.Summary : "点一下就能知道这台电脑适合运行多大的本地模型。";
         HasDetection = detected;
+        if (_services.HardwareChanged)
+        {
+            ScoreChangeNote = _services.HardwareChangeNote;
+        }
 
         CpuPercent = Math.Clamp(score.CpuPoints / PerformanceScoreScale.Cpu * 100, 0, 100);
         MemoryPercent = Math.Clamp(score.MemoryPoints / PerformanceScoreScale.Memory * 100, 0, 100);
@@ -165,6 +214,23 @@ public sealed partial class DashboardViewModel : ObservableObject
         MemoryPointsText = $"{score.MemoryPoints:0.#} / {PerformanceScoreScale.Memory:0}";
         GpuPointsText = $"{score.GpuPoints:0.#} / {PerformanceScoreScale.Gpu:0}";
         StoragePointsText = $"{score.StoragePoints:0.#} / {PerformanceScoreScale.Storage:0}";
+
+        // 能力画像优先于总分：先说「能跑多大」，四个子分只作为解释。
+        var capability = detected ? score.Capability : null;
+        CapabilityHeadline = capability?.Headline ?? "点一下就能知道这台电脑适合运行多大的本地模型。";
+        CapabilityBottleneck = capability is null ? "" : capability.BottleneckText;
+        CapabilityHint = capability?.UpgradeHint ?? "";
+        CapabilityContext = capability is null ? "" : capability.ContextText;
+        ConfidenceText = detected
+            ? $"{score.ConfidenceText} · {score.Confidence:P0}"
+            : "";
+
+        CpuMeaning = ComponentMeaning(score, "CPU");
+        MemoryMeaning = ComponentMeaning(score, "内存");
+        GpuMeaning = ComponentMeaning(score, "显卡");
+        StorageMeaning = ComponentMeaning(score, "存储");
+        SourcesText = string.Join(" · ",
+            score.Components.Select(component => $"{component.Name} {component.SourceText}"));
 
         if (detected)
         {
@@ -206,7 +272,9 @@ public sealed partial class DashboardViewModel : ObservableObject
                 DiskDetail = "未能读取磁盘信息";
             }
 
-            DetectedAtText = $"检测于 {hw.DetectedAt:HH:mm}";
+            DetectedAtText = _services.BenchmarkMeasuredAt is { } measured
+                ? $"实测于 {measured:MM-dd HH:mm}"
+                : $"检测于 {hw.DetectedAt:HH:mm} · 未实测";
             RecommendHeader = "最适合这台电脑的模型";
         }
         else
@@ -222,5 +290,13 @@ public sealed partial class DashboardViewModel : ObservableObject
             DetectedAtText = "尚未检测";
             RecommendHeader = "热门模型";
         }
+    }
+
+    private static string ComponentMeaning(PerformanceScore score, string name)
+    {
+        var component = score.Components.FirstOrDefault(item => item.Name == name);
+        return component is null
+            ? ""
+            : $"{component.Metric}\n{component.Meaning}\n来源：{component.SourceText}";
     }
 }

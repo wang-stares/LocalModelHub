@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Catalog\catalog.json" />
+    <EmbeddedResource Include="Prompts\*.md" />
   </ItemGroup>
 
 </Project>

@@ -23,6 +23,7 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
     private Process? _process;
     private string? _alias;
     private string? _apiKey;
+    private string? _apiKeyFile;
     private volatile bool _stopRequested;
 
     public event EventHandler? StateChanged;
@@ -49,6 +50,9 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
     public string? LoadedModelPath { get; private set; }
     public string? LoadedModelName { get; private set; }
     public string? RuntimeVariant { get; private set; }
+
+    /// <summary>供 <see cref="IChatCompletion.ModelName"/> 使用：按模型覆盖提示词时取实际加载的模型名。</summary>
+    string? IChatCompletion.ModelName => LoadedModelName;
 
     /// <summary>服务端 /props 报告的实际上下文窗口；/props 不可用时退化为启动参数里的 ContextSize。</summary>
     public int ContextTokens { get; private set; } = 8192;
@@ -118,7 +122,23 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
         if (!File.Exists(serverPath)) throw new FileNotFoundException("未找到 llama-server.exe", serverPath);
         if (!File.Exists(modelPath)) throw new FileNotFoundException("未找到模型文件", modelPath);
 
-        var arguments = BuildArguments(modelPath, options);
+        // API Key 不再走命令行（进程列表可见）：写入仅当前用户可读的临时文件，退出时删除。
+        string? apiKeyFile = null;
+        if (!string.IsNullOrWhiteSpace(options.ApiKey))
+        {
+            try
+            {
+                apiKeyFile = CreateApiKeyFile(options.ApiKey);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                AppendLog($"[错误] 无法创建 API Key 临时文件：{ex.Message}");
+                throw new InvalidOperationException(
+                    $"无法创建 API Key 临时文件（{ex.Message}）。请检查用户配置目录的写入权限后重试。", ex);
+            }
+        }
+
+        var arguments = BuildArguments(modelPath, options, apiKeyFile);
 
         var startInfo = new ProcessStartInfo
         {
@@ -149,6 +169,7 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
         catch (Exception ex) when (ex is Win32Exception or FileNotFoundException or InvalidOperationException)
         {
             AppendLog($"[错误] 无法启动进程：{ex.Message}");
+            DeleteApiKeyFile(apiKeyFile);
             process.Dispose();
             throw new InvalidOperationException(
                 $"无法启动 llama-server（{ex.Message}）。请确认运行时与系统架构、CPU 指令集匹配，或在“设置”中指定可用的 llama-server.exe。",
@@ -163,6 +184,7 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
             _process = process;
             _alias = options.Alias;
             _apiKey = options.ApiKey;
+            _apiKeyFile = apiKeyFile;
             Port = options.Port;
             LoadedModelPath = modelPath;
             LoadedModelName = options.Alias;
@@ -171,6 +193,7 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
         }
 
         StateChanged?.Invoke(this, EventArgs.Empty);
+        AppLog.Info("server", $"等待服务就绪：端口 {options.Port} · 最长 180 s");
 
         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(180);
         while (DateTime.UtcNow < deadline)
@@ -233,6 +256,7 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
         }
 
         await StopCoreAsync();
+        AppLog.Error("server", $"模型加载超时（180 秒）：{LogTail}");
         throw new TimeoutException($"模型加载超时（180 秒）。\n{LogTail}");
     }
 
@@ -268,15 +292,19 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
         finally
         {
             process.Dispose();
+            string? keyFile;
             lock (_sync)
             {
                 _alias = null;
                 _apiKey = null;
+                keyFile = _apiKeyFile;
+                _apiKeyFile = null;
                 LoadedModelPath = null;
                 LoadedModelName = null;
                 Props = null;
             }
 
+            DeleteApiKeyFile(keyFile);
             AppendLog("[已停止]");
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -328,7 +356,12 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
     };
 
     /// <summary>拼装 llama-server 启动参数；对来自设置的枚举值做白名单校验，避免拼出非法参数。</summary>
-    public static string BuildArguments(string modelPath, LaunchOptions options)
+    public static string BuildArguments(string modelPath, LaunchOptions options) =>
+        BuildArguments(modelPath, options, null);
+
+    /// <inheritdoc cref="BuildArguments(string, LaunchOptions)"/>
+    /// <param name="apiKeyFile">API Key 临时文件路径；提供后使用 --api-key-file，避免密钥出现在进程列表。</param>
+    public static string BuildArguments(string modelPath, LaunchOptions options, string? apiKeyFile)
     {
         var builder = new StringBuilder();
         builder.Append($"-m \"{modelPath}\" --host {options.Host} --port {options.Port} -c {options.ContextSize}");
@@ -364,9 +397,64 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
         if (options.EnableMetrics) builder.Append(" --metrics");
         if (options.Threads > 0) builder.Append($" -t {options.Threads}");
         builder.Append($" --alias \"{options.Alias}\"");
-        if (!string.IsNullOrWhiteSpace(options.ApiKey)) builder.Append($" --api-key \"{options.ApiKey}\"");
+        // 只通过文件传递密钥：--api-key 会把明文暴露在进程列表与命令行历史里。
+        if (!string.IsNullOrWhiteSpace(apiKeyFile))
+        {
+            builder.Append($" --api-key-file \"{apiKeyFile}\"");
+        }
 
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// 把 API Key 写入临时文件：Unix 上权限 600，Windows 放在当前用户的 LocalApplicationData 且设为隐藏。
+    /// 文件由 <see cref="DeleteApiKeyFile"/> 在服务停止时删除。
+    /// </summary>
+    public static string CreateApiKeyFile(string apiKey)
+    {
+        var directory = Path.Combine(AppPaths.RootDirectory, "secrets");
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, $"api-key-{Guid.NewGuid():N}.txt");
+        File.WriteAllText(path, apiKey.Trim(), new UTF8Encoding(false));
+
+        if (OperatingSystem.IsWindows())
+        {
+            try
+            {
+                File.SetAttributes(path, FileAttributes.Hidden);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[LlamaServer] 设置密钥文件隐藏属性失败：{ex.Message}");
+            }
+        }
+        else
+        {
+            try
+            {
+                File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[LlamaServer] 设置密钥文件权限失败：{ex.Message}");
+            }
+        }
+
+        return path;
+    }
+
+    /// <summary>删除启动用的 API Key 临时文件；已删除或路径为空时静默返回。</summary>
+    public static void DeleteApiKeyFile(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[LlamaServer] 删除密钥文件失败：{ex.Message}");
+        }
     }
 
     private static string Normalize(string? value, string[] allowed, string fallback)
@@ -510,9 +598,27 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
         if (streaming) request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
         ApplyAuthorization(request);
 
-        return streaming
-            ? await ChatStreamingCoreAsync(request, requestOptions, cancellationToken)
-            : await ChatBufferedCoreAsync(request, maxTokens, cancellationToken);
+        var watch = Stopwatch.StartNew();
+        try
+        {
+            var turn = streaming
+                ? await ChatStreamingCoreAsync(request, requestOptions, cancellationToken)
+                : await ChatBufferedCoreAsync(request, maxTokens, cancellationToken);
+            watch.Stop();
+            AppLog.Info("llm",
+                $"{messages.Count} 条消息 · tools={tools?.Count ?? 0} · max_tokens={maxTokens}" +
+                $" · {watch.ElapsedMilliseconds} ms · 输出 {turn.Content.Length} 字 · tool_calls={turn.ToolCalls.Count}");
+            return turn;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("llm", $"请求失败（{watch.ElapsedMilliseconds} ms）", ex);
+            throw;
+        }
     }
 
     private Dictionary<string, object?> BuildChatPayload(
@@ -793,8 +899,11 @@ public sealed class LlamaServerService : IDisposable, IChatCompletion
     private void AppendLog(string? line)
     {
         if (string.IsNullOrWhiteSpace(line)) return;
-        _log.Enqueue(line);
+        var text = line.Trim();
+        _log.Enqueue(text);
         while (_log.Count > 500) _log.TryDequeue(out _);
+        // 同时写持久化日志（启动参数脱敏、保留 7 天），出问题时可复盘。
+        AppLog.Info("server", text);
     }
 
     public void Dispose()

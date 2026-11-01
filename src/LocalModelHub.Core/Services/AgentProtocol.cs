@@ -232,11 +232,8 @@ public static class AgentProtocol
     }
 
     /// <summary>规划角色的系统提示：只出计划，不调用工具，避免和执行阶段抢预算。</summary>
-    public static string BuildPlanSystemPrompt() => $"""
-        {PlanMarker} 你是规划角色（Planner）。
-        只输出可执行计划，不调用工具、不写代码、不复述模型能力。
-        计划中的每一步必须能在工作文件夹里通过读取或修改文件完成。
-        """;
+    public static string BuildPlanSystemPrompt(string? model = null) =>
+        PromptLibrary.Default.Render(PromptLibrary.Planner, model, ("plan_marker", PlanMarker));
 
     /// <summary>规划请求：把用户任务转换成编号计划。</summary>
     public static string BuildPlanRequest(string request) => $"""

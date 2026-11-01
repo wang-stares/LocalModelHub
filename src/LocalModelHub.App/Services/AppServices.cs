@@ -1,5 +1,6 @@
 using LocalModelHub.Core.Models;
 using LocalModelHub.Core.Services;
+using LocalModelHub.Core.Services.Abstractions;
 
 namespace LocalModelHub.App.Services;
 
@@ -7,6 +8,9 @@ namespace LocalModelHub.App.Services;
 public sealed class AppServices
 {
     public static AppServices Current { get; } = new();
+
+    /// <summary>显式服务注册表（接口化 DI）；强类型属性保留为过渡门面。</summary>
+    public ServiceRegistry Services { get; } = new();
 
     public SettingsService SettingsService { get; } = new();
     public AppSettings Settings => SettingsService.Settings;
@@ -42,6 +46,82 @@ public sealed class AppServices
 
     /// <summary>最近一次 CPU 基准测试，用于让推荐引擎使用实测内存带宽。</summary>
     public BenchmarkResult? LastBenchmark { get; set; }
+
+    /// <summary>最近一次实测的采样时间（本地时间）；没有实测时为空。</summary>
+    public DateTime? BenchmarkMeasuredAt { get; private set; }
+
+    /// <summary>实测档案的硬件指纹与当前机器不一致（换内存 / 换显卡）：提示重新检测。</summary>
+    public bool HardwareChanged { get; private set; }
+
+    public string HardwareChangeNote =>
+        HardwareChanged ? "配置已变化：与上次实测的硬件指纹不一致，建议重新检测。" : "";
+
+    /// <summary>当前硬件与本机实测档案的指纹；用于实测结果复用与配置导入时判断是否换了设备。</summary>
+    public string HardwareFingerprint(HardwareProfile? hardware = null)
+    {
+        var hw = hardware ?? Hardware;
+        // 尚未检测时返回空指纹：既不误判为「换了设备」，也不会把空配置写进实测档案。
+        if (hw.DetectedAt == DateTime.MinValue) return "";
+        return MeasuredProfileStore.Fingerprint(hw, GpuDatabase.GetBestGpu(hw));
+    }
+
+    /// <summary>
+    /// 检测到硬件后先尝试复用本机实测结果：同一台机器重启不再退回默认带宽，
+    /// 分数与上次一致；没有档案或指纹不匹配时才按估算口径评分。
+    /// </summary>
+    public bool LoadMeasuredProfile(HardwareProfile hardware)
+    {
+        var fingerprint = HardwareFingerprint(hardware);
+        var profile = MeasuredProfileStore.TryLoad(fingerprint);
+        if (profile is null)
+        {
+            // 档案存在但硬件指纹不同 → 换了硬件；同一硬件只是版本 / 过期 → 不算配置变化。
+            var previous = MeasuredProfileStore.ReadLatest();
+            var hardwareKey = MeasuredProfileStore.HardwareFingerprint(hardware, GpuDatabase.GetBestGpu(hardware));
+            HardwareChanged = previous is { HardwareFingerprint.Length: > 0 } &&
+                              !previous.HardwareFingerprint.Equals(hardwareKey, StringComparison.Ordinal);
+            LastBenchmark = null;
+            BenchmarkMeasuredAt = null;
+            return false;
+        }
+
+        HardwareChanged = false;
+        LastBenchmark = new BenchmarkResult(
+            profile.CpuGflops, profile.MemoryBandwidthGBps, TimeSpan.Zero, profile.StdevRatio);
+        BenchmarkMeasuredAt = profile.MeasuredAt.Kind == DateTimeKind.Utc
+            ? profile.MeasuredAt.ToLocalTime()
+            : profile.MeasuredAt;
+        return true;
+    }
+
+    /// <summary>用户点「检测」跑完基准后落盘，换设备 / 跨大版本时自动失效。</summary>
+    public void SaveMeasuredProfile(HardwareProfile hardware, BenchmarkResult benchmark)
+    {
+        var measuredAt = DateTime.UtcNow;
+        var hardwareKey = MeasuredProfileStore.HardwareFingerprint(hardware, GpuDatabase.GetBestGpu(hardware));
+        MeasuredProfileStore.Save(new MeasuredProfile(
+            HardwareFingerprint(hardware),
+            benchmark.CpuGflops,
+            benchmark.MemoryBandwidthGBps,
+            benchmark.StdevRatio,
+            measuredAt,
+            MeasuredProfileStore.AppMajorVersion)
+        {
+            HardwareFingerprint = hardwareKey
+        });
+        BenchmarkMeasuredAt = measuredAt.ToLocalTime();
+        HardwareChanged = false;
+    }
+
+    /// <summary>按稳定输入评分，并把采样时间写进结果，界面据此显示「实测于 X」而不是「刚刚」。</summary>
+    public PerformanceScore ScoreHardware(
+        HardwareProfile hardware,
+        BenchmarkResult? benchmark,
+        DateTime? measuredAt = null)
+    {
+        var score = Scorer.Score(hardware, benchmark);
+        return score with { ScoredAt = measuredAt ?? hardware.DetectedAt };
+    }
 
     private ModelProfile? _activeProfile;
 
@@ -84,6 +164,7 @@ public sealed class AppServices
             KvCacheTypeV = approvedKv,
             // llama.cpp 的 --flash-attn 只接受 on/off/auto；只有显式 off 才按不支持量化 V 处理。
             FlashAttention = !Settings.FlashAttention.Equals("off", StringComparison.OrdinalIgnoreCase),
+            CpuMoeLayers = Math.Max(0, Settings.CpuMoeLayers),
             ParallelSlots = Math.Max(1, Settings.ParallelSlots),
             Backend = Settings.RuntimeVariant
         };
@@ -115,6 +196,7 @@ public sealed class AppServices
     public RuntimeManager Runtime { get; private set; } = null!;
     public DownloadCenter Downloads { get; private set; } = null!;
     public ModelLauncher Launcher { get; private set; } = null!;
+    public AgentRunner AgentRunner { get; private set; } = null!;
 
     public HardwareProfile Hardware { get; set; } = HardwareProfile.Empty;
     public PerformanceScore Performance { get; set; } = new(0, 0, 0, 0, 0, "入门", "尚未检测", null);
@@ -148,15 +230,29 @@ public sealed class AppServices
         _remoteCache = RemoteCatalog.LoadCache();
         ReloadCatalog();
         Workspace.SetRoot(Settings.WorkspaceDirectory);
+        var tuning = AgentTuningLimits.Normalize(Settings);
+        Workspace.DefaultReadLines = tuning.ReadLines;
+        Workspace.MaxReadWindow = tuning.MaxReadWindow;
         Memory.Load();
         Skills.Load();
         ChatSessions.Load();
         Knowledge.Load();
+        // 混合检索只在设置开启时生效；地址实时读取，服务重启后无需重建客户端。
+        Knowledge.Embeddings = new LlamaEmbeddingClient(
+            () => Server.IsRunning ? $"http://127.0.0.1:{Server.Port}" : null,
+            () => Settings.ApiKey,
+            () => Server.LoadedModelName);
         Library = new ModelLibraryService(SettingsService);
         DownloadManager = new ModelDownloadManager(DownloadService, SettingsService, Library);
         Runtime = new RuntimeManager(DownloadService, SettingsService);
         Downloads = new DownloadCenter(DownloadManager, Library);
         Launcher = new ModelLauncher();
+        AgentRunner = new AgentRunner(
+            Server, Workspace, Memory, tuning: () => AgentTuning.FromSettings(Settings));
+        Services.Register<IChatCompletion>(Server);
+        Services.Register<IWorkspace>(Workspace);
+        Services.Register<IMemoryStore>(Memory);
+        Services.Register<IAgentRunner>(AgentRunner);
         Performance = Scorer.Score(Hardware);
         Library.Changed += RefreshLibrary;
         RefreshLibrary();
@@ -164,6 +260,24 @@ public sealed class AppServices
         LastLaunchedModel = string.IsNullOrWhiteSpace(Settings.LastModelPath)
             ? null
             : FindInstalledByPath(Settings.LastModelPath);
+        LogRuntimeStorage();
+    }
+
+    /// <summary>启动时统计推理引擎占用，旧版本堆积时在日志里给出可清理的提示。</summary>
+    private void LogRuntimeStorage()
+    {
+        try
+        {
+            var report = Runtime.ScanStorage();
+            var obsolete = report.Obsolete;
+            AppLog.Info("runtime",
+                $"运行时占用 {Formatters.Bytes(report.TotalBytes)}（{report.Entries.Count} 个版本）" +
+                (obsolete.Count == 0 ? "" : $" · 可清理 {obsolete.Count} 个，约 {Formatters.Bytes(report.ObsoleteBytes)}"));
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("runtime", "统计运行时占用失败", ex);
+        }
     }
 
     public void RefreshLibrary()

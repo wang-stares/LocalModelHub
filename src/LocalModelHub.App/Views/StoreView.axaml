@@ -5,11 +5,12 @@
              x:Class="LocalModelHub.App.Views.StoreView"
              x:DataType="vm:StoreViewModel">
   <Grid RowDefinitions="Auto,*">
-    <StackPanel Margin="30,0,30,14" Spacing="9">
-      <Border Classes="card" Padding="12" CornerRadius="16">
+    <StackPanel Margin="32,14,32,10" Spacing="9">
+      <Border Classes="card flat" Padding="15,12">
         <StackPanel Spacing="9">
-          <Grid ColumnDefinitions="Auto,*,Auto">
-            <Border Classes="segmentHost">
+          <Grid ColumnDefinitions="38,*">
+            <TextBlock Text="来源" Classes="eyebrow" VerticalAlignment="Center"/>
+            <Border Grid.Column="1" Classes="segmentHost" HorizontalAlignment="Left">
               <ListBox Classes="segments"
                        ItemsSource="{Binding SourceFilters}"
                        SelectedIndex="{Binding SourceIndex, Mode=TwoWay}">
@@ -20,10 +21,10 @@
                 </ListBox.ItemsPanel>
               </ListBox>
             </Border>
-            <TextBlock Grid.Column="2" Text="{Binding CountText}" Classes="muted" VerticalAlignment="Center" Margin="12,0,4,0"/>
           </Grid>
-          <Grid ColumnDefinitions="Auto,*">
-            <Border Classes="segmentHost">
+          <Grid ColumnDefinitions="38,*">
+            <TextBlock Text="地区" Classes="eyebrow" VerticalAlignment="Center"/>
+            <Border Grid.Column="1" Classes="segmentHost" HorizontalAlignment="Left">
               <ListBox Classes="segments"
                        ItemsSource="{Binding OriginFilters}"
                        SelectedIndex="{Binding OriginIndex, Mode=TwoWay}">
@@ -35,8 +36,9 @@
               </ListBox>
             </Border>
           </Grid>
-          <Grid ColumnDefinitions="Auto,*">
-            <Border Classes="segmentHost">
+          <Grid ColumnDefinitions="38,*">
+            <TextBlock Text="能力" Classes="eyebrow" VerticalAlignment="Center"/>
+            <Border Grid.Column="1" Classes="segmentHost" HorizontalAlignment="Left">
               <ListBox Classes="segments"
                        ItemsSource="{Binding CapabilityFilters}"
                        SelectedIndex="{Binding CapabilityIndex, Mode=TwoWay}">
@@ -48,42 +50,50 @@
               </ListBox>
             </Border>
           </Grid>
+
+          <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="0,1"/>
+
           <Grid ColumnDefinitions="Auto,*,Auto">
             <TextBox Classes="search"
-                     Width="260"
+                     Width="280"
                      Watermark="搜索模型 / 厂商 / 标签"
                      Text="{Binding SearchText, Mode=TwoWay}"/>
-            <TextBlock Grid.Column="1"
-                       Text="{Binding ImportStatus}"
-                       Classes="caption"
-                       VerticalAlignment="Center"
-                       Margin="12,0,12,0"
-                       TextTrimming="CharacterEllipsis"/>
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-              <Button Classes="ghost" Command="{Binding SyncCommand}" IsEnabled="{Binding !IsSyncing}">
-                <StackPanel Orientation="Horizontal" Spacing="7">
-                  <Path Classes="icon" Data="{StaticResource IconSpark}" Width="15" Height="15"/>
-                  <TextBlock Text="从源同步" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="12,0">
+              <TextBlock Text="{Binding CountText}" Classes="caption"/>
+              <TextBlock Text="{Binding ImportStatus}"
+                         Classes="caption"
+                         TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7">
+              <Button Classes="ghost" Command="{Binding SyncCommand}" IsEnabled="{Binding !IsSyncing}"
+                      ToolTip.Tip="从 HuggingFace / 魔搭 / Ollama 官方库拉取最新模型清单">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Path Classes="icon" Data="{StaticResource IconSpark}" Width="16" Height="16"/>
+                  <TextBlock Text="同步" VerticalAlignment="Center"/>
                 </StackPanel>
               </Button>
-              <Button Classes="ghost" Command="{Binding AddCustomModelCommand}" IsEnabled="{Binding !IsImporting}">
-                <StackPanel Orientation="Horizontal" Spacing="7">
-                  <Path Classes="icon" Data="{StaticResource IconPlus}" Width="15" Height="15"/>
-                  <TextBlock Text="自定义模型" VerticalAlignment="Center"/>
+              <Button Classes="ghost" Command="{Binding AddCustomModelCommand}" IsEnabled="{Binding !IsImporting}"
+                      ToolTip.Tip="手动填写模型名称与下载地址">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Path Classes="icon" Data="{StaticResource IconPlus}" Width="16" Height="16"/>
+                  <TextBlock Text="自定义" VerticalAlignment="Center"/>
                 </StackPanel>
               </Button>
-              <Button Classes="ghost" Command="{Binding ImportCommand}" IsEnabled="{Binding !IsImporting}">
-                <StackPanel Orientation="Horizontal" Spacing="7">
-                  <Path Classes="icon" Data="{StaticResource IconFolder}" Width="15" Height="15"/>
-                  <TextBlock Text="导入本地 GGUF" VerticalAlignment="Center"/>
+              <Button Classes="primary" Command="{Binding ImportCommand}" IsEnabled="{Binding !IsImporting}"
+                      ToolTip.Tip="把已下载的 GGUF 文件加入本机模型库">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Path Classes="icon" Data="{StaticResource IconFolder}" Width="16" Height="16"/>
+                  <TextBlock Text="导入 GGUF" VerticalAlignment="Center"/>
                 </StackPanel>
               </Button>
             </StackPanel>
           </Grid>
+
           <views:ModelLegendView Margin="0,2,0,0"/>
         </StackPanel>
       </Border>
-      <StackPanel Spacing="3" Margin="4,0,0,0">
+
+      <StackPanel Spacing="2" Margin="4,0,0,0">
         <StackPanel Orientation="Horizontal" Spacing="12">
           <TextBlock Text="{Binding ProviderHint}" Classes="caption"/>
           <TextBlock Text="{Binding SyncSummaryText}" Classes="caption"/>
@@ -96,8 +106,8 @@
       </StackPanel>
     </StackPanel>
 
-    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-      <StackPanel Margin="30,0,14,22">
+    <ScrollViewer Grid.Row="1" Classes="page" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="32,4,14,24">
         <ItemsControl ItemsSource="{Binding Cards}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
@@ -116,17 +126,17 @@
                 Command="{Binding LoadMoreCommand}"
                 IsVisible="{Binding HasMore}"
                 HorizontalAlignment="Center"
-                Margin="0,2,0,6"/>
+                Margin="0,4,0,8"/>
       </StackPanel>
     </ScrollViewer>
 
     <StackPanel Grid.Row="1"
                 IsVisible="{Binding IsEmpty}"
                 HorizontalAlignment="Center"
-                Margin="0,48,0,0"
+                Margin="0,56,0,0"
                 Spacing="8">
       <TextBlock Text="没有匹配的模型。"
-                 Classes="muted"
+                 Classes="h3"
                  HorizontalAlignment="Center"/>
       <TextBlock Text="{Binding ActiveFilterText}"
                  Classes="caption"
@@ -137,7 +147,8 @@
       <Button Classes="ghost"
               Content="重置筛选"
               Command="{Binding ResetFiltersCommand}"
-              HorizontalAlignment="Center"/>
+              HorizontalAlignment="Center"
+              Margin="0,6,0,0"/>
     </StackPanel>
   </Grid>
 </UserControl>

@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using LocalModelHub.Core.Models;
+using LocalModelHub.Core.Services.Abstractions;
 
 namespace LocalModelHub.Core.Services;
 
@@ -12,10 +13,12 @@ namespace LocalModelHub.Core.Services;
 /// </summary>
 public sealed class WorkspaceAgent
 {
-    private const int MaxTokens = 2048;
+    private const int DefaultMaxTokens = AgentTuningLimits.DefaultMaxTokens;
     private const int PlanTokens = 512;
     private const int VerifyTokens = 700;
-    private const int MaxObservationChars = 400;
+    private const int DefaultObservationChars = AgentTuningLimits.DefaultObservationChars;
+    private const int DefaultPlanRounds = AgentTuningLimits.DefaultPlanRounds;
+    private const int DefaultGoalRounds = AgentTuningLimits.DefaultGoalRounds;
 
     private static readonly ToolDefinition ListTool = new(
         "list_files", "列出工作文件夹中的文件（最多 3 层、300 项）。",
@@ -58,27 +61,35 @@ public sealed class WorkspaceAgent
         [ListTool, SearchTool, FindSymbolTool, ReadTool, WriteTool, ReplaceTool, ApplyTool];
 
     private readonly IChatCompletion _server;
-    private readonly WorkspaceService _workspace;
-    private readonly MemoryService _memory;
+    private readonly IWorkspace _workspace;
+    private readonly IMemoryStore _memory;
     private readonly AgentMode _mode;
     private readonly bool _allowMemoryWrites;
     private readonly bool _allowCommands;
     private readonly ICommandRunner _commands;
     private readonly bool _textToolProtocol;
     private readonly bool _selfVerify;
+    private readonly int _maxTokens;
+    private readonly int _observationChars;
+    private readonly int _planRounds;
+    private readonly int _goalRounds;
 
     /// <param name="textToolProtocol">模型不支持原生 tool_calls 时改走 Thought / Action / Action Input 文本协议。</param>
     /// <param name="selfVerify">是否在执行后自检；多 Agent 协作时由外层 Reviewer 负责，传 false 避免双重评审。</param>
     public WorkspaceAgent(
         IChatCompletion server,
-        WorkspaceService workspace,
-        MemoryService memory,
+        IWorkspace workspace,
+        IMemoryStore memory,
         AgentMode mode,
         bool allowMemoryWrites,
         bool allowCommands = false,
         ICommandRunner? commands = null,
         bool textToolProtocol = false,
-        bool selfVerify = true)
+        bool selfVerify = true,
+        int maxTokens = DefaultMaxTokens,
+        int observationChars = DefaultObservationChars,
+        int planRounds = DefaultPlanRounds,
+        int goalRounds = DefaultGoalRounds)
     {
         _server = server;
         _workspace = workspace;
@@ -89,6 +100,11 @@ public sealed class WorkspaceAgent
         _commands = commands ?? new CommandService();
         _textToolProtocol = textToolProtocol;
         _selfVerify = selfVerify;
+        _maxTokens = Math.Clamp(maxTokens, AgentTuningLimits.MaxTokensMin, AgentTuningLimits.MaxTokensMax);
+        _observationChars = Math.Clamp(
+            observationChars, AgentTuningLimits.ObservationCharsMin, AgentTuningLimits.ObservationCharsMax);
+        _planRounds = Math.Clamp(planRounds, AgentTuningLimits.PlanRoundsMin, AgentTuningLimits.PlanRoundsMax);
+        _goalRounds = Math.Clamp(goalRounds, AgentTuningLimits.GoalRoundsMin, AgentTuningLimits.GoalRoundsMax);
     }
 
     /// <summary>各模式可用的工具名，便于测试与展示。</summary>
@@ -117,6 +133,13 @@ public sealed class WorkspaceAgent
         if (_allowMemoryWrites && _mode != AgentMode.Chat)
         {
             systemPrompt += "\n如果用户表达了长期偏好或重要事实，可调用 remember 工具保存到长期记忆。";
+        }
+
+        // 项目规约放在系统提示末尾（紧邻对话，注意力更高），总长不超过 800 token。
+        var projectRules = ProjectRules.Build(_workspace.Root);
+        if (projectRules.Length > 0)
+        {
+            systemPrompt += "\n\n" + projectRules;
         }
 
         var messages = new List<ChatMessage> { ChatMessage.System(systemPrompt) };
@@ -227,14 +250,14 @@ public sealed class WorkspaceAgent
         if (verification is not null)
         {
             steps.Add(new AgentStep(
-                AgentStage.Verify, 0, "", "verify", "", Truncate(verification.Summary, MaxObservationChars),
+                AgentStage.Verify, 0, "", "verify", "", Truncate(verification.Summary, _observationChars),
                 verification.Passed));
             var issues = !verification.Passed && verification.Issues.Count > 0
                 ? $" · {verification.Issues.Count} 个问题"
                 : "";
             var activity = new ToolActivity(
                 "verify",
-                $"{verification.OutcomeLabel} · 质量分 {evaluation.Score}{issues}");
+                $"{verification.OutcomeLabel} · 过程分 {evaluation.Score}{issues}");
             activities.Add(activity);
             onActivity?.Invoke(activity);
         }
@@ -251,14 +274,14 @@ public sealed class WorkspaceAgent
             var timeoutRetries = 0;
             while (used < actBudget - actUsed)
             {
-                ContextBudget.Compact(messages, contextTokens, MaxTokens);
+                ContextBudget.Compact(messages, contextTokens, _maxTokens);
 
                 ChatTurn turn;
                 try
                 {
                     // 流式：工具轮次的正文也会实时回传，最终回答由调用方覆盖为完整文本。
                     turn = await _server.ChatAsync(
-                        messages, tools, MaxTokens, new ChatRequestOptions(OnDelta: onDelta), cancellationToken);
+                        messages, tools, _maxTokens, new ChatRequestOptions(OnDelta: onDelta), cancellationToken);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -270,7 +293,7 @@ public sealed class WorkspaceAgent
                     {
                         case FailureKind.ContextOverflow when overflowRetries < 2:
                             overflowRetries++;
-                            ContextBudget.Compact(messages, contextTokens, MaxTokens, aggressive: true);
+                            ContextBudget.Compact(messages, contextTokens, _maxTokens, aggressive: true);
                             Report("budget", $"上下文超限 · 已压缩历史后重试（{overflowRetries}/2）");
                             continue; // 不消耗轮次
                         case FailureKind.Timeout when timeoutRetries < 1:
@@ -323,7 +346,7 @@ public sealed class WorkspaceAgent
                     // 参数保留完整 JSON：评估器要靠 path 判断「读了再改」，截断会让证据核对失效。
                     steps.Add(new AgentStep(
                         AgentStage.Act, roundOffset + used + 1, thought, call.Name, call.Arguments ?? "{}",
-                        Truncate(result, MaxObservationChars), success));
+                        Truncate(result, _observationChars), success));
 
                     Report(call.Name, summary);
                 }
@@ -357,7 +380,7 @@ public sealed class WorkspaceAgent
         {
             var planMessages = new List<ChatMessage>(messages)
             {
-                ChatMessage.System(AgentProtocol.BuildPlanSystemPrompt()),
+                ChatMessage.System(AgentProtocol.BuildPlanSystemPrompt(_server.ModelName)),
                 ChatMessage.User(AgentProtocol.BuildPlanRequest(request))
             };
             ContextBudget.Compact(planMessages, _server.ContextTokens, PlanTokens);
@@ -366,7 +389,7 @@ public sealed class WorkspaceAgent
 
             steps.Add(new AgentStep(
                 AgentStage.Plan, 0, FirstLine(turn.Content, 120), "plan", "",
-                Truncate(plan.Raw, MaxObservationChars), plan.HasSteps));
+                Truncate(plan.Raw, _observationChars), plan.HasSteps));
             var activity = new ToolActivity(
                 "plan",
                 plan.HasSteps
@@ -404,7 +427,8 @@ public sealed class WorkspaceAgent
         {
             var verifyMessages = new List<ChatMessage>
             {
-                ChatMessage.System($"{AgentProtocol.VerifyMarker} 你是验收角色，只依据工具轨迹与证据判断，不补充臆测内容。"),
+                ChatMessage.System(PromptLibrary.Default.Render(
+                    PromptLibrary.Verify, _server.ModelName, ("verify_marker", AgentProtocol.VerifyMarker))),
                 ChatMessage.User(AgentProtocol.BuildVerifyPrompt(request, plan, steps) +
                                  $"\n\n当前回答：\n{Truncate(answer, 2000)}")
             };
@@ -460,11 +484,11 @@ public sealed class WorkspaceAgent
         return tools;
     }
 
-    private static int RoundsFor(AgentMode mode) => mode switch
+    private int RoundsFor(AgentMode mode) => mode switch
     {
-        AgentMode.Plan => 4,
-        AgentMode.Goal => 10,
-        _ => 4
+        AgentMode.Plan => _planRounds,
+        AgentMode.Goal => _goalRounds,
+        _ => _planRounds
     };
 
     private async Task<(string Result, string Summary, bool Success)> ExecuteAsync(
@@ -671,47 +695,25 @@ public sealed class WorkspaceAgent
         }
     }
 
-    private static string BuildSystemPrompt(string root, AgentMode mode, bool allowCommands)
+    private string BuildSystemPrompt(string root, AgentMode mode, bool allowCommands)
     {
-        var common = $"""
-            工作文件夹：{root}
-            代码定位：已知类 / 函数名时优先 find_symbols 查定义；再用 search_code 搜索文件名 / 标识符，可用 context_lines（最多 3）在命中行前后展开；读取大文件用 start_line / end_line 分窗口，不要一次要求整个文件。
-            规则：path 必须是工作文件夹内的相对路径；绝对路径、.. 与符号链接都会被拒绝。
-            修改既有文件前必须先 read_file（新建文件除外），否则会被拦截。
-            用户要求查看或修改文件时，必须先调用工具读取真实内容；没有调用工具时，禁止声称已经读取或修改。
-            工具返回“错误”时不要重复同样的调用，应修正参数或向用户说明。
-            """;
+        var model = _server.ModelName;
+        var common = PromptLibrary.Default.Render(PromptLibrary.Chat, model, ("root", root));
 
         var verifyRule = allowCommands
             ? "4. 修改后若项目有构建 / 测试命令，用 run_command 运行一次；失败时依据真实输出修复，禁止口称通过；"
             : "4. 当前未开启命令执行：无法验证构建 / 测试时，在回答里明确说明「未验证」，不要声称测试通过；";
 
-        return mode switch
-        {
-            AgentMode.Plan => $"""
-                {common}
+        if (mode == AgentMode.Chat) return common;
 
-                你是「计划」模式助手：只能使用 list_files、find_symbols、search_code 与 read_file，禁止修改任何文件。
-                流程：
-                1. 先用 find_symbols / search_code / list_files 了解工作区结构与关键文件；
-                2. 输出中文实施计划，包含：目标理解、范围、按顺序的步骤、涉及文件、风险与回滚、验收标准；
-                3. 不要粘贴大段代码，也不要尝试写文件。
-                """,
-            AgentMode.Goal => $"""
-                {common}
-
-                你是「目标」模式助手：直接在工作文件夹里读取和修改文件，完成用户的目标。
-                流程：
-                1. 若存在 PLAN.md / SPEC.md，先读取并遵循；
-                2. 修改前先用 search_code / read_file 定位：局部改动优先 apply_patch（统一 diff，--- / +++ 与 @@ 头，上下文行必须与原文一致）；其次 replace_in_file；整文件重写才用 write_file；
-                3. 若上下文里有 {AgentProtocol.PlanMarker} 计划，按计划执行；偏离计划时在最终回答里说明原因；
-                {verifyRule}
-                5. 每完成一步可用 read_file 复核；
-                6. 无法完成时说明原因并停止，不要虚构结果；
-                7. 完成后用中文列出改动文件与验收结果，不要粘贴完整文件内容。
-                """,
-            _ => common
-        };
+        var name = mode == AgentMode.Plan ? PromptLibrary.Plan : PromptLibrary.Goal;
+        var body = PromptLibrary.Default.Render(
+            name,
+            model,
+            ("root", root),
+            ("verify_rule", verifyRule),
+            ("plan_marker", AgentProtocol.PlanMarker));
+        return $"{common}\n\n{body}";
     }
 
     private WorkspaceResult Remember(string? text)

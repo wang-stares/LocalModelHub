@@ -17,4 +17,8 @@
     <ProjectReference Include="..\..\src\LocalModelHub.Core\LocalModelHub.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\regression\tasks.json" Link="regression\tasks.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -3,9 +3,9 @@
              xmlns:vm="using:LocalModelHub.App.ViewModels"
              x:Class="LocalModelHub.App.Views.MemoryView"
              x:DataType="vm:MemoryViewModel">
-  <Grid RowDefinitions="Auto,*">
-    <StackPanel Margin="30,0,30,14" Spacing="10">
-      <Border Classes="card" Padding="14" CornerRadius="16">
+  <Grid Classes="page" RowDefinitions="Auto,*">
+    <StackPanel Margin="32,12,32,14" Spacing="10">
+      <Border Classes="card" Padding="14" CornerRadius="18">
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="长期记忆" Classes="h3" VerticalAlignment="Center"/>
@@ -52,10 +52,10 @@
     </StackPanel>
 
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-      <ItemsControl ItemsSource="{Binding Items}" Margin="30,0,14,22">
+      <ItemsControl ItemsSource="{Binding Items}" Margin="32,4,14,24">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:MemoryItemViewModel">
-            <Border Classes="card" CornerRadius="14" Padding="14,11" Margin="0,0,0,10">
+            <Border Classes="card" CornerRadius="18" Padding="16,12" Margin="0,0,0,10">
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel IsVisible="{Binding !IsEditing}" Spacing="6">
                   <TextBlock Text="{Binding Text}" TextWrapping="Wrap" LineHeight="19"/>
@@ -87,13 +87,13 @@
                             VerticalAlignment="Top"
                             IsVisible="{Binding !IsEditing}">
                   <Button Classes="icon" Command="{Binding TogglePinCommand}" ToolTip.Tip="{Binding PinToolTip}">
-                    <Path Classes="icon" Data="{StaticResource IconPin}" Width="15" Height="15"/>
+                    <Path Classes="icon" Data="{StaticResource IconPin}" Width="16" Height="16"/>
                   </Button>
                   <Button Classes="icon" Command="{Binding BeginEditCommand}" ToolTip.Tip="编辑">
-                    <Path Classes="icon" Data="{StaticResource IconEdit}" Width="15" Height="15"/>
+                    <Path Classes="icon" Data="{StaticResource IconEdit}" Width="16" Height="16"/>
                   </Button>
                   <Button Classes="icon" Command="{Binding RemoveCommand}" ToolTip.Tip="删除这条记忆">
-                    <Path Classes="icon" Data="{StaticResource IconTrash}" Width="15" Height="15"/>
+                    <Path Classes="icon" Data="{StaticResource IconTrash}" Width="16" Height="16"/>
                   </Button>
                 </StackPanel>
               </Grid>

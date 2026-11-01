@@ -9,158 +9,194 @@
         MinWidth="1000"
         MinHeight="660"
         WindowStartupLocation="CenterScreen"
+        TransparencyLevelHint="Mica, AcrylicBlur, Blur, Transparent"
+        Background="Transparent"
         Icon="/Assets/app.ico">
-  <Grid>
-    <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="{Binding NavColumnWidth}"/>
-      <ColumnDefinition Width="*"/>
-    </Grid.ColumnDefinitions>
-    <Border Grid.Column="0"
-            Background="{DynamicResource SidebarBg}"
-            BorderBrush="{DynamicResource Stroke}"
-            BorderThickness="0,0,1,0">
-      <Grid RowDefinitions="Auto,*,Auto" Margin="16,18,16,16">
-        <StackPanel Orientation="Horizontal" Spacing="11" Margin="6,2,6,24" IsVisible="{Binding !IsNavCollapsed}">
-          <Border Width="40" Height="40" CornerRadius="13" Background="{StaticResource LogoGradient}">
+  <Grid x:Name="ShellRoot" Classes="shell">
+    <!-- 材质光晕：为半透明面板提供可透出的层次，不参与命中测试；系统磨砂生效时隐藏 -->
+    <Border x:Name="BloomLayer" Background="{DynamicResource BloomBrush}" IsHitTestVisible="False"/>
+    <Border x:Name="BloomLayerAlt" Background="{DynamicResource BloomBrushAlt}" IsHitTestVisible="False"/>
+
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="{Binding NavColumnWidth}"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- 侧边栏：五个工作区，二级内容不再挂在导航树里 -->
+      <Border Grid.Column="0"
+              Background="{DynamicResource NavBg}"
+              BorderBrush="{DynamicResource MicaStroke}"
+              BorderThickness="0,0,1,0">
+        <Grid RowDefinitions="Auto,*,Auto" Margin="14,16,14,14">
+          <StackPanel Orientation="Horizontal" Spacing="11" Margin="6,2,4,20" IsVisible="{Binding !IsNavCollapsed}">
+            <Border Width="38" Height="38" CornerRadius="10" Background="{StaticResource LogoGradient}"
+                    BoxShadow="0 6 16 0 #333482FF">
+              <TextBlock Text="星"
+                         FontWeight="Bold"
+                         FontSize="17"
+                         Foreground="#FFFFFF"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"/>
+            </Border>
+            <StackPanel Spacing="1" VerticalAlignment="Center">
+              <TextBlock Text="星坞" FontSize="13.5" FontWeight="SemiBold"/>
+              <TextBlock Text="本地模型启动器" Classes="caption"/>
+            </StackPanel>
+          </StackPanel>
+          <Border Width="38" Height="38" CornerRadius="10" Background="{StaticResource LogoGradient}"
+                  HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2,0,20"
+                  BoxShadow="0 6 16 0 #333482FF"
+                  IsVisible="{Binding IsNavCollapsed}"
+                  ToolTip.Tip="星坞 · 本地模型启动器">
             <TextBlock Text="星"
                        FontWeight="Bold"
-                       FontSize="18"
+                       FontSize="17"
                        Foreground="#FFFFFF"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center"/>
           </Border>
-          <StackPanel Spacing="1" VerticalAlignment="Center">
-            <TextBlock Text="星坞" FontSize="13.5" FontWeight="SemiBold"/>
-            <TextBlock Text="本地模型启动器" Classes="caption"/>
-          </StackPanel>
-        </StackPanel>
-        <Border Width="40" Height="40" CornerRadius="13" Background="{StaticResource LogoGradient}"
-                HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2,0,24"
-                IsVisible="{Binding IsNavCollapsed}"
-                ToolTip.Tip="星坞 · 本地模型启动器">
-          <TextBlock Text="星"
-                     FontWeight="Bold"
-                     FontSize="18"
-                     Foreground="#FFFFFF"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center"/>
-        </Border>
 
-        <Grid Grid.Row="1" RowDefinitions="Auto,*">
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="导航" Classes="caption" Margin="14,0,0,6" VerticalAlignment="Center"
-                       IsVisible="{Binding !IsNavCollapsed}"/>
-            <Button Grid.Column="1"
-                    Classes="icon"
-                    Command="{Binding ToggleNavCommand}"
-                    ToolTip.Tip="{Binding NavToggleTip}"
-                    HorizontalAlignment="Right">
-              <TextBlock Text="{Binding NavToggleText}" FontSize="16"/>
-            </Button>
+          <Grid Grid.Row="1" RowDefinitions="Auto,*">
+            <Grid ColumnDefinitions="*,Auto" Margin="4,0,0,0">
+              <TextBlock Text="导航" Classes="eyebrow" VerticalAlignment="Center"
+                         IsVisible="{Binding !IsNavCollapsed}"/>
+              <Button Grid.Column="1"
+                      Classes="icon"
+                      Command="{Binding ToggleNavCommand}"
+                      ToolTip.Tip="{Binding NavToggleTip}"
+                      HorizontalAlignment="Right">
+                <StackPanel Orientation="Horizontal">
+                  <Path Classes="chev" Data="{StaticResource IconChevronRight}" Width="14" Height="14" StrokeThickness="1.6" IsVisible="{Binding IsNavCollapsed}"/>
+                  <Path Classes="chev" Data="{StaticResource IconChevronLeft}" Width="14" Height="14" StrokeThickness="1.6" IsVisible="{Binding !IsNavCollapsed}"/>
+                </StackPanel>
+              </Button>
+            </Grid>
+            <StackPanel Grid.Row="1" Spacing="2" Margin="0,8,0,0">
+              <Button Classes="nav" Classes.active="{Binding IsDashboardActive}" Command="{Binding OpenRouteCommand}" CommandParameter="dashboard" ToolTip.Tip="工作台" HorizontalContentAlignment="{Binding NavAlignment}">
+                <StackPanel Orientation="Horizontal" Spacing="11">
+                  <Path Classes="icon" Data="{StaticResource IconHome}"/>
+                  <TextBlock Text="工作台" VerticalAlignment="Center" IsVisible="{Binding IsNavExpanded}"/>
+                </StackPanel>
+              </Button>
+              <Button Classes="nav" Classes.active="{Binding IsModelsActive}" Command="{Binding OpenRouteCommand}" CommandParameter="models" ToolTip.Tip="模型库：已下载 / 推荐 / 商店" HorizontalContentAlignment="{Binding NavAlignment}">
+                <StackPanel Orientation="Horizontal" Spacing="11">
+                  <Path Classes="icon" Data="{StaticResource IconFolder}"/>
+                  <TextBlock Text="模型库" VerticalAlignment="Center" IsVisible="{Binding IsNavExpanded}"/>
+                </StackPanel>
+              </Button>
+              <Button Classes="nav" Classes.active="{Binding IsChatActive}" Command="{Binding OpenRouteCommand}" CommandParameter="chat" ToolTip.Tip="对话" HorizontalContentAlignment="{Binding NavAlignment}">
+                <StackPanel Orientation="Horizontal" Spacing="11">
+                  <Path Classes="icon" Data="{StaticResource IconChat}"/>
+                  <TextBlock Text="对话" VerticalAlignment="Center" IsVisible="{Binding IsNavExpanded}"/>
+                </StackPanel>
+              </Button>
+              <Button Classes="nav" Classes.active="{Binding IsKnowledgeActive}" Command="{Binding OpenRouteCommand}" CommandParameter="knowledge" ToolTip.Tip="知识：知识库 / 记忆 / 技能" HorizontalContentAlignment="{Binding NavAlignment}">
+                <StackPanel Orientation="Horizontal" Spacing="11">
+                  <Path Classes="icon" Data="{StaticResource IconBook}"/>
+                  <TextBlock Text="知识" VerticalAlignment="Center" IsVisible="{Binding IsNavExpanded}"/>
+                </StackPanel>
+              </Button>
+
+              <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="6,10"/>
+
+              <Button Classes="nav" Classes.active="{Binding IsSettingsActive}" Command="{Binding OpenRouteCommand}" CommandParameter="settings" ToolTip.Tip="设置" HorizontalContentAlignment="{Binding NavAlignment}">
+                <StackPanel Orientation="Horizontal" Spacing="11">
+                  <Path Classes="icon" Data="{StaticResource IconGear}"/>
+                  <TextBlock Text="设置" VerticalAlignment="Center" IsVisible="{Binding IsNavExpanded}"/>
+                </StackPanel>
+              </Button>
+            </StackPanel>
           </Grid>
-          <StackPanel Grid.Row="1" Spacing="4" Margin="0,6,0,0">
-            <Button Classes="nav" Classes.active="{Binding IsDashboardActive}" Command="{Binding NavigateCommand}" CommandParameter="0" ToolTip.Tip="概览" HorizontalContentAlignment="{Binding NavAlignment}">
-              <StackPanel Orientation="Horizontal" Spacing="12">
-                <Path Classes="icon" Data="{StaticResource IconHome}"/>
-                <TextBlock Text="概览" VerticalAlignment="Center" IsVisible="{Binding !IsNavCollapsed}"/>
+
+          <StackPanel Grid.Row="2" Spacing="9" IsVisible="{Binding !IsNavCollapsed}">
+            <Border Classes="glass" Padding="13" CornerRadius="14">
+              <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Border Width="18" Height="18" CornerRadius="999" Background="{DynamicResource SuccessSoft}"
+                          IsVisible="{Binding IsServerRunning}" VerticalAlignment="Center">
+                    <Ellipse Width="7" Height="7" Fill="{DynamicResource Success}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Border>
+                  <Border Width="18" Height="18" CornerRadius="999" Background="{DynamicResource StrokeSubtle}"
+                          IsVisible="{Binding !IsServerRunning}" VerticalAlignment="Center">
+                    <Ellipse Width="7" Height="7" Fill="{DynamicResource TextMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Border>
+                  <TextBlock Grid.Column="1" Text="{Binding ServerSummary}" Classes="caption" VerticalAlignment="Center" Margin="7,0,0,0"/>
+                  <TextBlock Grid.Column="2" Text="服务" Classes="eyebrow" VerticalAlignment="Center"/>
+                </Grid>
+                <TextBlock Text="{Binding LoadedModelName}" Classes="muted" FontSize="11.5" TextTrimming="CharacterEllipsis"/>
+                <Button Classes="soft" Content="打开 WebUI" Command="{Binding OpenWebUiCommand}" IsEnabled="{Binding IsServerRunning}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                <Button Classes="ghost" Content="停止服务" Command="{Binding StopServerCommand}" IsEnabled="{Binding CanStopServer}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
               </StackPanel>
-            </Button>
-            <Button Classes="nav" Classes.active="{Binding IsModelsActive}" Command="{Binding NavigateCommand}" CommandParameter="1" ToolTip.Tip="我的模型" HorizontalContentAlignment="{Binding NavAlignment}">
-              <StackPanel Orientation="Horizontal" Spacing="12">
-                <Path Classes="icon" Data="{StaticResource IconFolder}"/>
-                <TextBlock Text="我的模型" VerticalAlignment="Center" IsVisible="{Binding !IsNavCollapsed}"/>
-              </StackPanel>
-            </Button>
-            <Button Classes="nav" Classes.active="{Binding IsStoreActive}" Command="{Binding NavigateCommand}" CommandParameter="2" ToolTip.Tip="模型商店" HorizontalContentAlignment="{Binding NavAlignment}">
-              <StackPanel Orientation="Horizontal" Spacing="12">
-                <Path Classes="icon" Data="{StaticResource IconStore}"/>
-                <TextBlock Text="模型商店" VerticalAlignment="Center" IsVisible="{Binding !IsNavCollapsed}"/>
-              </StackPanel>
-            </Button>
-            <Button Classes="nav" Classes.active="{Binding IsChatActive}" Command="{Binding NavigateCommand}" CommandParameter="3" ToolTip.Tip="对话" HorizontalContentAlignment="{Binding NavAlignment}">
-              <StackPanel Orientation="Horizontal" Spacing="12">
-                <Path Classes="icon" Data="{StaticResource IconChat}"/>
-                <TextBlock Text="对话" VerticalAlignment="Center" IsVisible="{Binding !IsNavCollapsed}"/>
-              </StackPanel>
-            </Button>
-            <Button Classes="nav" Classes.active="{Binding IsKnowledgeMemoryActive}" Command="{Binding NavigateCommand}" CommandParameter="4" ToolTip.Tip="知识与记忆" HorizontalContentAlignment="{Binding NavAlignment}">
-              <StackPanel Orientation="Horizontal" Spacing="12">
-                <Path Classes="icon" Data="{StaticResource IconBook}"/>
-                <TextBlock Text="知识与记忆" VerticalAlignment="Center" IsVisible="{Binding !IsNavCollapsed}"/>
-              </StackPanel>
-            </Button>
-            <Button Classes="nav" Classes.active="{Binding IsSettingsActive}" Command="{Binding NavigateCommand}" CommandParameter="5" ToolTip.Tip="设置" HorizontalContentAlignment="{Binding NavAlignment}">
-              <StackPanel Orientation="Horizontal" Spacing="12">
-                <Path Classes="icon" Data="{StaticResource IconSliders}"/>
-                <TextBlock Text="设置" VerticalAlignment="Center" IsVisible="{Binding !IsNavCollapsed}"/>
-              </StackPanel>
-            </Button>
+            </Border>
+            <TextBlock Text="{Binding VersionText}"
+                       Classes="caption"
+                       HorizontalAlignment="Center"
+                       MaxWidth="212"
+                       TextTrimming="CharacterEllipsis"
+                       ToolTip.Tip="{Binding VersionText}"/>
+          </StackPanel>
+          <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                      IsVisible="{Binding IsNavCollapsed}">
+            <Ellipse Width="8" Height="8" Fill="{DynamicResource Success}" IsVisible="{Binding IsServerRunning}"/>
+            <Ellipse Width="8" Height="8" Fill="{DynamicResource TextMuted}" IsVisible="{Binding !IsServerRunning}"/>
           </StackPanel>
         </Grid>
+      </Border>
 
-        <StackPanel Grid.Row="2" Spacing="10" IsVisible="{Binding !IsNavCollapsed}">
-          <Border Background="{DynamicResource CardBg}"
-                  BorderBrush="{DynamicResource Stroke}"
-                  BorderThickness="1"
-                  CornerRadius="16"
-                  Padding="12">
-            <StackPanel Spacing="8">
-              <StackPanel Orientation="Horizontal" Spacing="7">
-                <Ellipse Width="7" Height="7" Fill="{DynamicResource Success}" VerticalAlignment="Center" IsVisible="{Binding IsServerRunning}"/>
-                <Ellipse Width="7" Height="7" Fill="{DynamicResource TextMuted}" VerticalAlignment="Center" IsVisible="{Binding !IsServerRunning}"/>
-                <TextBlock Text="{Binding ServerSummary}" Classes="caption" VerticalAlignment="Center"/>
-              </StackPanel>
-              <TextBlock Text="{Binding LoadedModelName}" Classes="muted" FontSize="11.5" TextTrimming="CharacterEllipsis"/>
-              <Button Classes="soft" Content="打开 WebUI" Command="{Binding OpenWebUiCommand}" IsEnabled="{Binding IsServerRunning}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
-              <Button Classes="ghost" Content="停止服务" Command="{Binding StopServerCommand}" IsEnabled="{Binding CanStopServer}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+      <!-- 内容列：顶栏只保留工作区标题与服务状态，页面自己负责层级 -->
+      <Grid Grid.Column="1" Background="{DynamicResource ContentSurface}">
+        <Grid MaxWidth="1520" HorizontalAlignment="Stretch" RowDefinitions="Auto,*">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="32,22,32,6">
+            <StackPanel Spacing="2" VerticalAlignment="Center">
+              <TextBlock Text="{Binding HeaderTitle}" Classes="h1"/>
+              <TextBlock Text="{Binding HeaderSubtitle}" Classes="muted"/>
             </StackPanel>
-          </Border>
-          <TextBlock Text="{Binding VersionText}" Classes="caption" HorizontalAlignment="Center"/>
-        </StackPanel>
-        <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom"
-                    IsVisible="{Binding IsNavCollapsed}">
-          <Ellipse Width="8" Height="8" Fill="{DynamicResource Success}" IsVisible="{Binding IsServerRunning}"/>
-          <Ellipse Width="8" Height="8" Fill="{DynamicResource TextMuted}" IsVisible="{Binding !IsServerRunning}"/>
-        </StackPanel>
-      </Grid>
-    </Border>
+            <Border Grid.Column="1"
+                    Classes="glass"
+                    CornerRadius="9"
+                    Padding="11,6"
+                    VerticalAlignment="Center"
+                    IsVisible="{Binding IsServerRunning}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Border Width="16" Height="16" CornerRadius="999" Background="{DynamicResource SuccessSoft}" VerticalAlignment="Center">
+                  <Ellipse Width="6" Height="6" Fill="{DynamicResource Success}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="{Binding LoadedModelName}" Classes="caption" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Border>
+          </Grid>
 
-    <Grid Grid.Column="1" RowDefinitions="Auto,*" Background="{DynamicResource AppBg}">
-      <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="30,24,30,10">
-        <StackPanel Spacing="3" VerticalAlignment="Center">
-          <TextBlock Text="{Binding HeaderTitle}" Classes="h1"/>
-          <TextBlock Text="{Binding HeaderSubtitle}" Classes="muted"/>
-        </StackPanel>
-        <Border Grid.Column="1"
-                Background="{DynamicResource CardBg}"
-                BorderBrush="{DynamicResource Stroke}"
-                BorderThickness="1"
-                CornerRadius="999"
-                Padding="14,7"
-                VerticalAlignment="Center"
-                IsVisible="{Binding IsServerRunning}">
-          <StackPanel Orientation="Horizontal" Spacing="7">
-            <Ellipse Width="7" Height="7" Fill="{DynamicResource Success}" VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding LoadedModelName}" Classes="caption" VerticalAlignment="Center"/>
-          </StackPanel>
-        </Border>
+          <ContentControl x:Name="PageHost"
+                          Grid.Row="1"
+                          Content="{Binding CurrentPage}"
+                          RenderTransform="translate(0px,0px)">
+            <ContentControl.Transitions>
+              <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.24"/>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.28" Easing="CubicEaseOut"/>
+              </Transitions>
+            </ContentControl.Transitions>
+          </ContentControl>
+        </Grid>
       </Grid>
-
-      <ContentControl Grid.Row="1" Content="{Binding CurrentPage}"/>
     </Grid>
 
-    <Border Grid.ColumnSpan="2" Background="{DynamicResource OverlayBg}" IsVisible="{Binding IsBusy}">
+    <Border Background="{DynamicResource OverlayBg}" IsVisible="{Binding IsBusy}">
       <Border Background="{DynamicResource CardBg}"
               BorderBrush="{DynamicResource Stroke}"
               BorderThickness="1"
-              CornerRadius="20"
-              Padding="28,24"
-              Width="380"
+              CornerRadius="22"
+              BoxShadow="0 2 6 0 #140B1220, 0 32 72 0 #330B1220"
+              Padding="30,26"
+              Width="400"
               HorizontalAlignment="Center"
               VerticalAlignment="Center">
         <StackPanel Spacing="16">
           <TextBlock Text="正在准备本地推理" Classes="h3" HorizontalAlignment="Center"/>
-          <ProgressBar IsIndeterminate="True" Height="4"/>
+          <Border ClipToBounds="True" Height="4">
+            <ProgressBar IsIndeterminate="True" Height="4"/>
+          </Border>
           <TextBlock Text="{Binding BusyText}" TextAlignment="Center" TextWrapping="Wrap" Classes="muted"/>
         </StackPanel>
       </Border>

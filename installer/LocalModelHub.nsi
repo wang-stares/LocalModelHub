@@ -19,12 +19,12 @@ ManifestSupportedOS all
 !define APP_NAME      "星坞"
 !define APP_NAME_CN   "星坞 · 本地模型启动器"
 !define APP_EXE       "LocalModelHub.exe"
-!define APP_VERSION   "0.34.0"
+!define APP_VERSION   "0.35.0"
 !define APP_PUBLISHER "星坞"
 !define APP_ID        "LocalModelHub"
 !define UNINST_KEY    "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
-!define BUILD_DIR     "../dist/win-x64"
-!define APP_ASSETS    "../src/LocalModelHub.App/Assets"
+!define BUILD_DIR     "..\dist\win-x64"
+!define APP_ASSETS    "..\src\LocalModelHub.App\Assets"
 
 ; ---------------------------- 基本信息 ----------------------------
 Name "${APP_NAME} ${APP_VERSION}"
@@ -57,12 +57,12 @@ VIAddVersionKey /LANG=1033 "LegalCopyright"  "Copyright (C) 2026 ${APP_PUBLISHER
 
 ; ---------------------------- 界面 ----------------------------
 !define MUI_ABORTWARNING
-!define MUI_ICON              "${APP_ASSETS}/app.ico"
-!define MUI_UNICON            "${APP_ASSETS}/app.ico"
+!define MUI_ICON              "${APP_ASSETS}\app.ico"
+!define MUI_UNICON            "${APP_ASSETS}\app.ico"
 !define MUI_HEADERIMAGE
-!define MUI_HEADERIMAGE_BITMAP       "assets/header.bmp"
-!define MUI_WELCOMEFINISHPAGE_BITMAP "assets/welcome.bmp"
-!define MUI_UNWELCOMEFINISHPAGE_BITMAP "assets/welcome.bmp"
+!define MUI_HEADERIMAGE_BITMAP       "assets\header.bmp"
+!define MUI_WELCOMEFINISHPAGE_BITMAP "assets\welcome.bmp"
+!define MUI_UNWELCOMEFINISHPAGE_BITMAP "assets\welcome.bmp"
 
 !define MUI_WELCOMEPAGE_TITLE "$(WelcomeTitle)"
 !define MUI_WELCOMEPAGE_TEXT  "$(WelcomeText)"
@@ -197,7 +197,7 @@ Section "$(SecMain)" SEC_MAIN
   Delete "$INSTDIR\${APP_EXE}"
 
   SetOutPath "$INSTDIR"
-  File /r "${BUILD_DIR}/*"
+  File /r "${BUILD_DIR}\*"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
   ; 清理旧品牌快捷方式（0.16.0 及更早版本显示为 Local Model Hub）

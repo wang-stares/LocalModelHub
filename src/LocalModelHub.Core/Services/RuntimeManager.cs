@@ -11,6 +11,26 @@ public sealed record RuntimeProgress(string Stage, double Percent, string Messag
 
 public sealed record RuntimeInstall(string ServerPath, string Variant, string Tag);
 
+/// <summary>单个已安装运行时目录的占用情况。</summary>
+public sealed record RuntimeStorageEntry(string Tag, string Variant, string Directory, long Bytes, bool IsCurrent)
+{
+    /// <summary>保留的「最近 1 个旧版本」：当前版本之外最新的一份。</summary>
+    public bool IsNewestFallback { get; init; }
+
+    public bool IsObsolete => !IsCurrent && !IsNewestFallback;
+}
+
+/// <summary>运行时占用统计；<see cref="Obsolete"/> 是清理时会删除的目录。</summary>
+public sealed record RuntimeStorageReport(long TotalBytes, IReadOnlyList<RuntimeStorageEntry> Entries)
+{
+    public IReadOnlyList<RuntimeStorageEntry> Obsolete =>
+        Entries.Where(entry => entry.IsObsolete).ToArray();
+
+    public long ObsoleteBytes => Obsolete.Sum(entry => entry.Bytes);
+}
+
+public sealed record RuntimeCleanupResult(int Deleted, long FreedBytes, IReadOnlyList<string> Failed);
+
 /// <summary>管理 llama.cpp 的 Windows 预编译运行时（下载、解压、定位 llama-server.exe）。</summary>
 public sealed class RuntimeManager
 {
@@ -168,6 +188,137 @@ public sealed class RuntimeManager
         catch
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// 统计运行时目录占用：只统计含 llama-server.exe 的顶层目录，避免把用户的其它文件算进来。
+    /// 保留「当前使用 + 最近 1 个旧版本」，其余标记为可清理。
+    /// </summary>
+    public RuntimeStorageReport ScanStorage()
+    {
+        var entries = new List<RuntimeStorageEntry>();
+        string? currentDirectory = null;
+        var current = FindExistingServer();
+        if (!string.IsNullOrWhiteSpace(current))
+        {
+            var directory = Path.GetDirectoryName(current);
+            if (!string.IsNullOrEmpty(directory)) currentDirectory = Path.GetFullPath(directory);
+        }
+
+        try
+        {
+            foreach (var directory in Directory.EnumerateDirectories(AppPaths.RuntimeDirectory))
+            {
+                var server = Directory.EnumerateFiles(directory, "llama-server.exe", SearchOption.AllDirectories).FirstOrDefault();
+                if (server is null) continue;
+
+                var folder = Path.GetFileName(directory);
+                var dash = folder.IndexOf('-');
+                var tag = dash > 0 ? folder[..dash] : folder;
+                var variant = dash > 0 ? folder[(dash + 1)..] : "unknown";
+                var isCurrent = currentDirectory is not null &&
+                                folder.Equals(Path.GetFileName(currentDirectory), StringComparison.OrdinalIgnoreCase);
+
+                entries.Add(new RuntimeStorageEntry(tag, variant, directory, DirectorySize(directory), isCurrent));
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Debug.WriteLine($"[RuntimeManager] 统计运行时占用失败：{ex.Message}");
+        }
+
+        // 当前版本之外，最近修改的一份保留作降级备份。
+        var fallback = entries
+            .Where(entry => !entry.IsCurrent)
+            .OrderByDescending(entry => LastWrite(entry.Directory))
+            .FirstOrDefault();
+        if (fallback is not null)
+        {
+            var index = entries.IndexOf(fallback);
+            entries[index] = fallback with { IsNewestFallback = true };
+        }
+
+        return new RuntimeStorageReport(entries.Sum(entry => entry.Bytes), entries);
+    }
+
+    /// <summary>保留策略：当前版本 + 最近修改的 1 个旧版本，其余目录视为可清理。</summary>
+    public static IReadOnlyList<string> SelectObsolete(
+        IReadOnlyList<(string Directory, bool IsCurrent, DateTime ModifiedUtc)> installed)
+    {
+        var keep = installed.Where(entry => entry.IsCurrent).Select(entry => entry.Directory).ToList();
+        var newestFallback = installed
+            .Where(entry => !entry.IsCurrent)
+            .OrderByDescending(entry => entry.ModifiedUtc)
+            .Select(entry => entry.Directory)
+            .FirstOrDefault();
+        if (newestFallback is not null) keep.Add(newestFallback);
+
+        return installed
+            .Select(entry => entry.Directory)
+            .Where(directory => !keep.Contains(directory, StringComparer.OrdinalIgnoreCase))
+            .ToArray();
+    }
+
+    /// <summary>删除可清理的运行时目录；返回删除数量、释放字节与失败目录。</summary>
+    public RuntimeCleanupResult CleanupObsolete()
+    {
+        var deleted = 0;
+        long freed = 0;
+        var failed = new List<string>();
+        foreach (var entry in ScanStorage().Obsolete)
+        {
+            try
+            {
+                Directory.Delete(entry.Directory, recursive: true);
+                deleted++;
+                freed += entry.Bytes;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Debug.WriteLine($"[RuntimeManager] 清理运行时目录失败 {entry.Directory}：{ex.Message}");
+                failed.Add(Path.GetFileName(entry.Directory));
+            }
+        }
+
+        return new RuntimeCleanupResult(deleted, freed, failed);
+    }
+
+    private static long DirectorySize(string directory)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
+                .Sum(path =>
+                {
+                    try { return new FileInfo(path).Length; }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return 0L; }
+                });
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Debug.WriteLine($"[RuntimeManager] 计算目录大小失败 {directory}：{ex.Message}");
+            return 0;
+        }
+    }
+
+    private static DateTime LastWrite(string directory)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
+                .Select(path =>
+                {
+                    try { return File.GetLastWriteTimeUtc(path); }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return DateTime.MinValue; }
+                })
+                .DefaultIfEmpty(DateTime.MinValue)
+                .Max();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Debug.WriteLine($"[RuntimeManager] 读取目录修改时间失败 {directory}：{ex.Message}");
+            return DateTime.MinValue;
         }
     }
 

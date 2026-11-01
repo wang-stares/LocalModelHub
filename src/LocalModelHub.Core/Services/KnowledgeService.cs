@@ -1,4 +1,5 @@
 using System.Text;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using LocalModelHub.Core.Models;
@@ -52,6 +53,36 @@ public sealed class KnowledgeService
     private readonly string? _filePath;
     private readonly List<KnowledgeDocument> _documents = [];
 
+    // 倒排索引：term → (chunk 序号, 词频)。文档增删改时整体重建（16 万 chunk < 1 s），查询变成 O(命中词)。
+    private readonly object _indexLock = new();
+    private readonly List<IndexEntry> _entries = [];
+    private readonly Dictionary<string, List<Posting>> _postings = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _documentFrequency = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, CachedQuery> _queryCache = new(StringComparer.Ordinal);
+    private double _averageLength = 1;
+    private int _dataVersion;
+    private int _indexVersion = -1;
+
+    // 混合检索（可选）：chunk 向量按数据版本缓存；不落盘，文档变化后自动失效。
+    private readonly Dictionary<int, float[]> _vectors = new();
+    private int _vectorsVersion = -1;
+    private const int MaxVectorChunks = 512;
+    private const int EmbeddingBatchSize = 32;
+    private const int RrfK = 60;
+
+    /// <summary>可选的向量提供者；为空时只做 BM25，行为与未开启混合检索一致。</summary>
+    public IEmbeddingProvider? Embeddings { get; set; }
+
+    /// <summary>同 query 的结果缓存命中次数（Agent 多轮常重复同一问题）；供诊断与测试。</summary>
+    public long QueryCacheHits { get; private set; }
+
+    /// <summary>索引重建次数；文档变化后第一次查询会 +1。</summary>
+    public long IndexBuilds { get; private set; }
+
+    private sealed record IndexEntry(KnowledgeDocument Document, KnowledgeChunk Chunk, int Length);
+    private sealed record Posting(int Entry, int Frequency);
+    private sealed record CachedQuery(DateTime ExpiresAt, IReadOnlyList<KnowledgeHit> Hits);
+
     public KnowledgeService(string? filePath = null) => _filePath = filePath;
 
     public string FilePath => _filePath ?? AppPaths.KnowledgeFile;
@@ -94,6 +125,7 @@ public sealed class KnowledgeService
             // 索引文件损坏时按空知识库处理
         }
 
+        MarkDirty();
         return _documents;
     }
 
@@ -155,102 +187,325 @@ public sealed class KnowledgeService
     {
         var removed = _documents.RemoveAll(document =>
             document.Id.Equals(documentId, StringComparison.OrdinalIgnoreCase)) > 0;
-        if (removed) Save();
+        if (removed)
+        {
+            MarkDirty();
+            Save();
+        }
+
         return removed;
     }
 
     public void Clear()
     {
         _documents.Clear();
+        MarkDirty();
         Save();
     }
 
-    /// <summary>BM25 检索，英文词与中文二元组都参与打分；可选限定单个文档。</summary>
+    /// <summary>BM25 检索，英文词与中文二元组都参与打分；可选限定单个文档。首次查询建倒排索引，60 秒内同 query 走缓存。</summary>
     public IReadOnlyList<KnowledgeHit> Search(string? query, int limit = 4, string? documentId = null)
     {
         if (limit <= 0 || string.IsNullOrWhiteSpace(query)) return [];
 
-        var terms = TokenizeCounts(query).Keys.Take(MaxQueryTerms).ToArray();
-        if (terms.Length == 0) return [];
-
-        var candidates = new List<(KnowledgeDocument Document, KnowledgeChunk Chunk)>();
-        foreach (var document in _documents)
+        var key = $"{documentId ?? "*"}|{limit}|{query.Trim()}";
+        lock (_indexLock)
         {
-            if (documentId is not null &&
-                !document.Id.Equals(documentId, StringComparison.OrdinalIgnoreCase))
+            var now = DateTime.UtcNow;
+            if (_queryCache.TryGetValue(key, out var cached) && cached.ExpiresAt > now)
             {
-                continue;
+                QueryCacheHits++;
+                return cached.Hits;
             }
 
-            foreach (var chunk in document.Chunks)
-            {
-                if (!string.IsNullOrWhiteSpace(chunk.Text)) candidates.Add((document, chunk));
-            }
-        }
+            EnsureIndex();
+            if (_entries.Count == 0) return [];
 
-        if (candidates.Count == 0) return [];
+            var terms = TokenizeCounts(query).Keys.Take(MaxQueryTerms).ToArray();
+            if (terms.Length == 0) return [];
 
-        var termCounts = new List<Dictionary<string, int>>(candidates.Count);
-        var lengths = new List<int>(candidates.Count);
-        var documentFrequency = new Dictionary<string, int>(StringComparer.Ordinal);
-
-        foreach (var (_, chunk) in candidates)
-        {
-            var counts = TokenizeCounts(chunk.Text);
-            termCounts.Add(counts);
-            lengths.Add(counts.Values.Sum());
-
-            foreach (var term in counts.Keys)
-            {
-                documentFrequency[term] = documentFrequency.GetValueOrDefault(term) + 1;
-            }
-        }
-
-        const double k1 = 1.4;
-        const double b = 0.72;
-        var averageLength = Math.Max(1, lengths.Average());
-        var phrase = query.Trim();
-        var hits = new List<KnowledgeHit>();
-
-        for (var index = 0; index < candidates.Count; index++)
-        {
-            var counts = termCounts[index];
-            var length = lengths[index];
-            double score = 0;
+            const double k1 = 1.4;
+            const double b = 0.72;
+            var scores = new Dictionary<int, double>();
+            var totalEntries = _entries.Count;
 
             foreach (var term in terms)
             {
-                if (!counts.TryGetValue(term, out var frequency)) continue;
+                if (!_postings.TryGetValue(term, out var postings)) continue;
+                if (!_documentFrequency.TryGetValue(term, out var df) || df <= 0) continue;
 
-                var df = documentFrequency[term];
-                var idf = Math.Log(1 + (candidates.Count - df + 0.5) / (df + 0.5));
-                score += idf * (frequency * (k1 + 1)) /
-                         (frequency + k1 * (1 - b + b * length / averageLength));
+                var idf = Math.Log(1 + (totalEntries - df + 0.5) / (df + 0.5));
+                foreach (var posting in postings)
+                {
+                    var entry = _entries[posting.Entry];
+                    if (documentId is not null &&
+                        !entry.Document.Id.Equals(documentId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var norm = posting.Frequency + k1 * (1 - b + b * entry.Length / _averageLength);
+                    scores[posting.Entry] = scores.GetValueOrDefault(posting.Entry) +
+                                            idf * (posting.Frequency * (k1 + 1)) / norm;
+                }
             }
 
-            if (phrase.Length >= 2 &&
-                candidates[index].Chunk.Text.Contains(phrase, StringComparison.OrdinalIgnoreCase))
+            var phrase = query.Trim();
+            var hits = new List<KnowledgeHit>();
+            foreach (var (entryIndex, score) in scores)
             {
-                score += 2;
+                var entry = _entries[entryIndex];
+                var total = score;
+                if (phrase.Length >= 2 &&
+                    entry.Chunk.Text.Contains(phrase, StringComparison.OrdinalIgnoreCase))
+                {
+                    total += 2;
+                }
+
+                if (total <= 0) continue;
+                hits.Add(new KnowledgeHit(
+                    entry.Document.Id, entry.Document.Name, entry.Chunk.Index, entry.Chunk.Text, total));
             }
 
-            if (score <= 0) continue;
+            var result = hits
+                .OrderByDescending(hit => hit.Score)
+                .ThenBy(hit => hit.DocumentName, StringComparer.OrdinalIgnoreCase)
+                .Take(Math.Clamp(limit, 1, 10))
+                .ToArray();
 
-            var (document, chunk) = candidates[index];
-            hits.Add(new KnowledgeHit(document.Id, document.Name, chunk.Index, chunk.Text, score));
+            if (_queryCache.Count >= 64) PruneQueryCache(now);
+            _queryCache[key] = new CachedQuery(now.AddSeconds(60), result);
+            return result;
+        }
+    }
+
+    /// <summary>文档变化时让索引与查询缓存失效；下一次查询时重建。</summary>
+    private void MarkDirty()
+    {
+        _dataVersion++;
+        lock (_indexLock)
+        {
+            // 缓存必须随数据变化立即失效：否则删除文档后 60 秒内仍会命中旧结果。
+            _queryCache.Clear();
+        }
+    }
+
+    /// <summary>调用方需持有 <see cref="_indexLock"/>。</summary>
+    private void EnsureIndex()
+    {
+        if (_indexVersion == _dataVersion) return;
+
+        _entries.Clear();
+        _postings.Clear();
+        _documentFrequency.Clear();
+        _queryCache.Clear();
+
+        var totalLength = 0;
+        foreach (var document in _documents)
+        {
+            foreach (var chunk in document.Chunks)
+            {
+                if (string.IsNullOrWhiteSpace(chunk.Text)) continue;
+
+                var counts = TokenizeCounts(chunk.Text);
+                var length = Math.Max(1, counts.Values.Sum());
+                var entryIndex = _entries.Count;
+                _entries.Add(new IndexEntry(document, chunk, length));
+                totalLength += length;
+
+                foreach (var (term, frequency) in counts)
+                {
+                    if (!_postings.TryGetValue(term, out var postings))
+                    {
+                        postings = [];
+                        _postings[term] = postings;
+                    }
+
+                    postings.Add(new Posting(entryIndex, frequency));
+                    _documentFrequency[term] = _documentFrequency.GetValueOrDefault(term) + 1;
+                }
+            }
         }
 
-        return hits
-            .OrderByDescending(hit => hit.Score)
-            .ThenBy(hit => hit.DocumentName, StringComparer.OrdinalIgnoreCase)
-            .Take(Math.Clamp(limit, 1, 10))
-            .ToArray();
+        _averageLength = _entries.Count == 0 ? 1 : Math.Max(1, totalLength / (double)_entries.Count);
+        _indexVersion = _dataVersion;
+        IndexBuilds++;
+    }
+
+    private void PruneQueryCache(DateTime now)
+    {
+        foreach (var expired in _queryCache.Where(pair => pair.Value.ExpiresAt <= now).Select(pair => pair.Key).ToList())
+        {
+            _queryCache.Remove(expired);
+        }
+
+        if (_queryCache.Count < 64) return;
+        _queryCache.Clear();
     }
 
     /// <summary>构造注入提示词的知识片段，带上来源编号，便于模型标注引用。</summary>
     public KnowledgeContext BuildContext(string? query, int limit = 4)
     {
         var hits = Search(query, limit);
+        return FormatContext(hits);
+    }
+
+    /// <summary>
+    /// 可选混合检索（P1-15）：BM25 与向量检索各出候选，用 RRF 融合排序。
+    /// 未开启、没有向量提供者或调用失败时静默回退到纯 BM25，不阻断对话。
+    /// </summary>
+    public async Task<KnowledgeContext> BuildContextAsync(
+        string? query,
+        int limit = 4,
+        bool hybrid = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (!hybrid || Embeddings is null || string.IsNullOrWhiteSpace(query))
+        {
+            return BuildContext(query, limit);
+        }
+
+        try
+        {
+            var hits = await HybridSearchAsync(query, limit, cancellationToken);
+            if (hits.Count > 0) return FormatContext(hits);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // 嵌入端点不可用（模型不支持 / 服务刚重启 / 请求被拒）时保持 BM25 结果。
+            Debug.WriteLine($"[Knowledge] 混合检索失败，回退 BM25：{ex.Message}");
+        }
+
+        return BuildContext(query, limit);
+    }
+
+    private async Task<IReadOnlyList<KnowledgeHit>> HybridSearchAsync(
+        string query,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        List<IndexEntry> entries;
+        Dictionary<(string DocumentId, int ChunkIndex), int> lookup;
+        lock (_indexLock)
+        {
+            EnsureIndex();
+            if (_entries.Count == 0 || _entries.Count > MaxVectorChunks) return [];
+            entries = [.. _entries];
+            lookup = entries
+                .Select((entry, index) => (entry, index))
+                .ToDictionary(
+                    item => (item.entry.Document.Id, item.entry.Chunk.Index),
+                    item => item.index);
+        }
+
+        var bm25 = Search(query, 10);
+        var vectors = await EnsureVectorsAsync(entries, cancellationToken);
+        var queryVector = (await Embeddings!.EmbedAsync([query.Trim()], cancellationToken)).FirstOrDefault();
+        if (queryVector is null) return [];
+
+        var fused = new Dictionary<int, double>();
+        for (var rank = 0; rank < bm25.Count; rank++)
+        {
+            var hit = bm25[rank];
+            if (!lookup.TryGetValue((hit.DocumentId, hit.ChunkIndex), out var index)) continue;
+            fused[index] = fused.GetValueOrDefault(index) + 1.0 / (RrfK + rank + 1);
+        }
+
+        var vectorRanks = vectors
+            .Select(pair => (Index: pair.Key, Score: Cosine(queryVector, pair.Value)))
+            .OrderByDescending(item => item.Score)
+            .ThenBy(item => item.Index)
+            .Take(10)
+            .ToList();
+
+        for (var rank = 0; rank < vectorRanks.Count; rank++)
+        {
+            fused[vectorRanks[rank].Index] =
+                fused.GetValueOrDefault(vectorRanks[rank].Index) + 1.0 / (RrfK + rank + 1);
+        }
+
+        return fused
+            .OrderByDescending(pair => pair.Value)
+            .ThenBy(pair => entries[pair.Key].Document.Name, StringComparer.OrdinalIgnoreCase)
+            .Take(Math.Clamp(limit, 1, 10))
+            .Select(pair => new KnowledgeHit(
+                entries[pair.Key].Document.Id,
+                entries[pair.Key].Document.Name,
+                entries[pair.Key].Chunk.Index,
+                entries[pair.Key].Chunk.Text,
+                pair.Value))
+            .ToArray();
+    }
+
+    /// <summary>按数据版本缓存 chunk 向量；只补算缺失项，分批请求嵌入接口。</summary>
+    private async Task<Dictionary<int, float[]>> EnsureVectorsAsync(
+        IReadOnlyList<IndexEntry> entries,
+        CancellationToken cancellationToken)
+    {
+        List<int> missing;
+        lock (_indexLock)
+        {
+            if (_vectorsVersion != _dataVersion)
+            {
+                _vectors.Clear();
+                _vectorsVersion = _dataVersion;
+            }
+
+            missing = Enumerable.Range(0, entries.Count).Where(index => !_vectors.ContainsKey(index)).ToList();
+        }
+
+        if (missing.Count > 0)
+        {
+            var computed = new List<(int Index, float[] Vector)>();
+            foreach (var batch in missing.Chunk(EmbeddingBatchSize))
+            {
+                var texts = batch.Select(index => entries[index].Chunk.Text).ToArray();
+                var result = await Embeddings!.EmbedAsync(texts, cancellationToken);
+                for (var offset = 0; offset < Math.Min(batch.Length, result.Count); offset++)
+                {
+                    computed.Add((batch[offset], result[offset]));
+                }
+            }
+
+            lock (_indexLock)
+            {
+                // 计算期间文档可能变化：版本不一致时丢弃这批向量，下次重新计算。
+                if (_vectorsVersion == _dataVersion)
+                {
+                    foreach (var (index, vector) in computed) _vectors[index] = vector;
+                }
+            }
+        }
+
+        lock (_indexLock)
+        {
+            return new Dictionary<int, float[]>(_vectors);
+        }
+    }
+
+    private static double Cosine(float[] left, float[] right)
+    {
+        if (left.Length == 0 || left.Length != right.Length) return 0;
+        var dot = 0.0;
+        var leftNorm = 0.0;
+        var rightNorm = 0.0;
+        for (var index = 0; index < left.Length; index++)
+        {
+            dot += left[index] * right[index];
+            leftNorm += left[index] * left[index];
+            rightNorm += right[index] * right[index];
+        }
+
+        if (leftNorm <= 0 || rightNorm <= 0) return 0;
+        return dot / (Math.Sqrt(leftNorm) * Math.Sqrt(rightNorm));
+    }
+
+    private static KnowledgeContext FormatContext(IReadOnlyList<KnowledgeHit> hits)
+    {
         if (hits.Count == 0) return KnowledgeContext.Empty;
 
         var builder = new StringBuilder();
@@ -316,6 +571,7 @@ public sealed class KnowledgeService
 
         _documents.Insert(0, document);
         while (_documents.Count > MaxDocuments) _documents.RemoveAt(_documents.Count - 1);
+        MarkDirty();
         return document;
     }
 

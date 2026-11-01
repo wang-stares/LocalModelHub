@@ -11,18 +11,27 @@ namespace LocalModelHub.App.ViewModels;
 
 public sealed partial class MainWindowViewModel : ObservableObject
 {
-    private static readonly string[] Titles =
-        ["概览", "我的模型", "模型商店", "对话", "知识与记忆", "设置"];
+    private sealed record RouteInfo(int Page, int Tab, string Title, string Subtitle);
 
-    private static readonly string[] Subtitles =
-    [
-        "检测硬件性能，查看适合这台电脑的本地模型",
-        "已下载模型与为你推荐的模型，启动推理或继续下载",
-        "从 HuggingFace、魔搭与 Ollama 同步开源模型，一键下载到本机",
-        "与本地模型对话，所有内容都留在本机",
-        "知识库文档与长期记忆，都会在对话时自动引用",
-        "下载源、存储目录与推理参数"
-    ];
+    /// <summary>
+    /// 导航路由表：五个工作区，页面内的二级内容用页内分段控件承载，不再占用侧边栏。
+    /// 带点的键是页内标签别名，供页内控件与代码统一入口使用。
+    /// </summary>
+    private static readonly Dictionary<string, RouteInfo> Routes = new()
+    {
+        ["dashboard"] = new(0, 0, "工作台", "这台电脑能跑什么模型，下一步该做什么"),
+        ["models"] = new(1, 0, "模型库", "已下载、为你推荐与模型商店"),
+        ["chat"] = new(2, 0, "对话", "与本地模型对话，所有内容都留在本机"),
+        ["knowledge"] = new(3, 0, "知识", "知识库、长期记忆与技能"),
+        ["settings"] = new(4, 0, "设置", "外观、下载源、推理参数与 API 接入"),
+
+        ["models.installed"] = new(1, 0, "", ""),
+        ["models.recommend"] = new(1, 1, "", ""),
+        ["store"] = new(1, 2, "", ""),
+        ["knowledge.docs"] = new(3, 0, "", ""),
+        ["knowledge.memory"] = new(3, 1, "", ""),
+        ["knowledge.skills"] = new(3, 2, "", "")
+    };
 
     private readonly AppServices _services = AppServices.Current;
     private List<ModelCardViewModel> _cards;
@@ -37,10 +46,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
             .ToList();
 
         Dashboard = new DashboardViewModel();
-        Library = new LibraryViewModel(LaunchModelAsync, () => PageIndex = 2);
+        Library = new LibraryViewModel(LaunchModelAsync, () => OpenRoute("store"));
         Recommend = new RecommendViewModel(_cards);
-        Models = new ModelsViewModel(Library, Recommend);
         Store = new StoreViewModel(_cards);
+        Models = new ModelsViewModel(Library, Recommend, Store);
         Chat = new ChatViewModel();
         KnowledgePage = new KnowledgeViewModel();
         SettingsPage = new SettingsViewModel();
@@ -48,10 +57,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
         MemoryPage = new MemoryViewModel();
         SkillsPage = new SkillsViewModel(_services);
         KnowledgeMemory = new KnowledgeMemoryViewModel(KnowledgePage, MemoryPage, SkillsPage);
-        Dashboard.OpenRecommendations = () =>
+        Dashboard.OpenRecommendations = () => OpenRoute("models.recommend");
+
+        // 二级菜单切换由页面页签状态驱动：无论从侧边栏、仪表盘还是代码进入，标题与高亮都保持一致。
+        Models.PropertyChanged += (_, e) =>
         {
-            Models.TabIndex = 1;
-            PageIndex = 1;
+            if (e.PropertyName == nameof(ModelsViewModel.TabIndex) && PageIndex == 1) SyncRoute();
+        };
+        KnowledgeMemory.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(KnowledgeMemoryViewModel.TabIndex) && PageIndex == 3) SyncRoute();
         };
 
         // 统一失效入口：量化 / 设置 / 服务状态 / 检测 / 空闲卸载 / 导入都会走到这里，
@@ -90,8 +105,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         PageIndex = 0;
         CurrentPage = Dashboard;
-        HeaderTitle = Titles[0];
-        HeaderSubtitle = Subtitles[0];
+        SyncRoute();
         RefreshRecommendations();
         RefreshServerState();
         Dashboard.Initialize();
@@ -111,8 +125,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty] private int _pageIndex;
     [ObservableProperty] private object? _currentPage;
-    [ObservableProperty] private string _headerTitle = Titles[0];
-    [ObservableProperty] private string _headerSubtitle = Subtitles[0];
+    [ObservableProperty] private string _currentRouteKey = "dashboard";
+    [ObservableProperty] private string _headerTitle = "工作台";
+    [ObservableProperty] private string _headerSubtitle = "这台电脑能跑什么模型，下一步该做什么";
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _busyText = "";
     [ObservableProperty] private bool _isServerRunning;
@@ -121,12 +136,19 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string _serverSummary = "推理服务未运行";
     [ObservableProperty] private string _loadedModelName = "未加载模型";
 
+    // 一级工作区：工作台 / 模型库 / 对话 / 知识 / 设置。二级内容全部收进页面内的分段控件。
     public bool IsDashboardActive => PageIndex == 0;
     public bool IsModelsActive => PageIndex == 1;
-    public bool IsStoreActive => PageIndex == 2;
-    public bool IsChatActive => PageIndex == 3;
-    public bool IsKnowledgeMemoryActive => PageIndex == 4;
-    public bool IsSettingsActive => PageIndex == 5;
+    public bool IsChatActive => PageIndex == 2;
+    public bool IsKnowledgeActive => PageIndex == 3;
+    public bool IsSettingsActive => PageIndex == 4;
+
+    public bool IsLibraryActive => PageIndex == 1 && Models.TabIndex == 0;
+    public bool IsRecommendActive => PageIndex == 1 && Models.TabIndex == 1;
+    public bool IsStoreActive => PageIndex == 1 && Models.TabIndex == 2;
+    public bool IsKnowledgeDocActive => PageIndex == 3 && KnowledgeMemory.TabIndex == 0;
+    public bool IsMemoryActive => PageIndex == 3 && KnowledgeMemory.TabIndex == 1;
+    public bool IsSkillsActive => PageIndex == 3 && KnowledgeMemory.TabIndex == 2;
 
     /// <summary>导航折叠状态：折叠后只保留图标列，把宽度让给内容区。</summary>
     [ObservableProperty] private bool _isNavCollapsed;
@@ -135,15 +157,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public Avalonia.Layout.HorizontalAlignment NavAlignment => IsNavCollapsed
         ? Avalonia.Layout.HorizontalAlignment.Center
         : Avalonia.Layout.HorizontalAlignment.Left;
-    public string NavToggleText => IsNavCollapsed ? "›" : "‹";
     public string NavToggleTip => IsNavCollapsed ? "展开导航" : "收起导航";
+    public bool IsNavExpanded => !IsNavCollapsed;
 
     partial void OnIsNavCollapsedChanged(bool value)
     {
         OnPropertyChanged(nameof(NavColumnWidth));
         OnPropertyChanged(nameof(NavAlignment));
-        OnPropertyChanged(nameof(NavToggleText));
         OnPropertyChanged(nameof(NavToggleTip));
+        OnPropertyChanged(nameof(IsNavExpanded));
         _services.Settings.NavCollapsed = value;
         _services.SettingsService.Save();
     }
@@ -157,25 +179,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     partial void OnPageIndexChanged(int value)
     {
-        HeaderTitle = Titles[value];
-        HeaderSubtitle = Subtitles[value];
         CurrentPage = value switch
         {
             0 => Dashboard,
             1 => Models,
-            2 => Store,
-            3 => Chat,
-            4 => KnowledgeMemory,
-            5 => SettingsPage,
-            _ => Dashboard
+            2 => Chat,
+            3 => KnowledgeMemory,
+            _ => SettingsPage
         };
 
-        OnPropertyChanged(nameof(IsDashboardActive));
-        OnPropertyChanged(nameof(IsModelsActive));
-        OnPropertyChanged(nameof(IsStoreActive));
-        OnPropertyChanged(nameof(IsChatActive));
-        OnPropertyChanged(nameof(IsKnowledgeMemoryActive));
-        OnPropertyChanged(nameof(IsSettingsActive));
+        SyncRoute();
 
         switch (value)
         {
@@ -184,28 +197,73 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 Library.RefreshRunning();
                 break;
             case 2:
-                Store.Refresh();
-                break;
-            case 3:
                 Chat.RefreshWorkspaceState();
                 Chat.RefreshServerState();
                 break;
-            case 4:
+            case 3:
                 KnowledgeMemory.Refresh();
                 break;
-            case 5:
+            case 4:
                 SettingsPage.RefreshApiModels();
                 break;
         }
     }
 
+    /// <summary>根据当前页面与页内标签推导路由，刷新标题与侧边栏高亮。</summary>
+    private void SyncRoute()
+    {
+        CurrentRouteKey = PageIndex switch
+        {
+            0 => "dashboard",
+            1 => "models",
+            2 => "chat",
+            3 => "knowledge",
+            _ => "settings"
+        };
+
+        if (Routes.TryGetValue(CurrentRouteKey, out var route))
+        {
+            HeaderTitle = route.Title;
+            HeaderSubtitle = route.Subtitle;
+        }
+
+        NotifyNavigationState();
+    }
+
+    private void NotifyNavigationState()
+    {
+        OnPropertyChanged(nameof(IsDashboardActive));
+        OnPropertyChanged(nameof(IsModelsActive));
+        OnPropertyChanged(nameof(IsChatActive));
+        OnPropertyChanged(nameof(IsKnowledgeActive));
+        OnPropertyChanged(nameof(IsSettingsActive));
+        OnPropertyChanged(nameof(IsLibraryActive));
+        OnPropertyChanged(nameof(IsRecommendActive));
+        OnPropertyChanged(nameof(IsStoreActive));
+        OnPropertyChanged(nameof(IsKnowledgeDocActive));
+        OnPropertyChanged(nameof(IsMemoryActive));
+        OnPropertyChanged(nameof(IsSkillsActive));
+    }
+
     [RelayCommand]
     private void Navigate(string? index)
     {
-        if (int.TryParse(index, out var value) && value is >= 0 and < 6)
+        if (int.TryParse(index, out var value) && value is >= 0 and < 5)
         {
             PageIndex = value;
         }
+    }
+
+    /// <summary>导航入口：dashboard / models / chat / knowledge / settings，以及页内标签别名。</summary>
+    [RelayCommand]
+    private void OpenRoute(string? key)
+    {
+        if (key is null || !Routes.TryGetValue(key, out var route)) return;
+
+        if (route.Page == 1) Models.TabIndex = route.Tab;
+        if (route.Page == 3) KnowledgeMemory.TabIndex = route.Tab;
+
+        PageIndex = route.Page;
     }
 
     [RelayCommand]
@@ -238,7 +296,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             await _services.Launcher.LaunchAsync(model, runtimeProgress, status, CancellationToken.None);
 
             Chat.OnModelLaunched(model);
-            PageIndex = 3;
+            PageIndex = 2;
             RefreshServerState();
         }
         catch (OperationCanceledException)
@@ -370,7 +428,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             await _services.Launcher.LaunchAsync(model, runtimeProgress, status, CancellationToken.None, tuning);
 
             Chat.OnModelLaunched(model);
-            PageIndex = 3;
+            PageIndex = 2;
             RefreshServerState();
             await DialogService.AlertAsync(
                 "已自动处理",
@@ -402,7 +460,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 card.Model.ApiBaseUrl, card.Model.ApiKey, card.Model.ApiModelId, card.Model.DisplayName);
             Chat.OnRemoteActivated(card.Model.DisplayName);
             RefreshServerState();
-            PageIndex = 3;
+            PageIndex = 2;
             return;
         }
 

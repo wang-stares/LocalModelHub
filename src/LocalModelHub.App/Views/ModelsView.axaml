@@ -5,9 +5,13 @@
              x:Class="LocalModelHub.App.Views.ModelsView"
              x:DataType="vm:ModelsViewModel">
   <Grid RowDefinitions="Auto,*">
-    <Border Classes="card" Padding="12" CornerRadius="16" Margin="30,0,30,14">
+    <!-- 三个二级内容不再占据侧边栏，统一收在模型库内部的标签带 -->
+    <Border Grid.Row="0"
+            Padding="32,8,32,12"
+            BorderBrush="{DynamicResource StrokeSubtle}"
+            BorderThickness="0,0,0,1">
       <Grid ColumnDefinitions="Auto,*">
-        <Border Classes="segmentHost">
+        <Border Classes="segmentHost" VerticalAlignment="Center">
           <ListBox Classes="segments"
                    ItemsSource="{Binding Tabs}"
                    SelectedIndex="{Binding TabIndex, Mode=TwoWay}">
@@ -22,16 +26,21 @@
                    Text="{Binding TabHint}"
                    Classes="caption"
                    VerticalAlignment="Center"
-                   Margin="14,0,4,0"
-                   TextWrapping="Wrap"/>
+                   TextTrimming="CharacterEllipsis"
+                   Margin="16,0,0,0"/>
       </Grid>
     </Border>
 
-    <Panel Grid.Row="1" IsVisible="{Binding IsInstalledTab}">
-      <views:LibraryView DataContext="{Binding Library}"/>
-    </Panel>
-    <Panel Grid.Row="1" IsVisible="{Binding IsRecommendTab}">
-      <views:RecommendView DataContext="{Binding Recommend}"/>
+    <Panel Grid.Row="1">
+      <Panel IsVisible="{Binding IsInstalledTab}">
+        <views:LibraryView DataContext="{Binding Library}"/>
+      </Panel>
+      <Panel IsVisible="{Binding IsRecommendTab}">
+        <views:RecommendView DataContext="{Binding Recommend}"/>
+      </Panel>
+      <Panel IsVisible="{Binding IsStoreTab}">
+        <views:StoreView DataContext="{Binding Store}"/>
+      </Panel>
     </Panel>
   </Grid>
 </UserControl>

@@ -42,18 +42,6 @@ public static class AgentLocalizer
     private const int MaxFileBytes = 256 * 1024;
     private const int MaxScannedFiles = 3000;
 
-    private static readonly string[] IgnoredDirectories =
-    [
-        ".git", ".svn", ".hg", "node_modules", "bin", "obj", "dist", "build", "target", "vendor",
-        ".venv", "venv", "__pycache__", ".idea", ".vs", "packages", "coverage", ".next", ".cache"
-    ];
-
-    private static readonly string[] BinaryExtensions =
-    [
-        ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".bmp", ".pdf", ".zip", ".gz", ".7z", ".rar",
-        ".exe", ".dll", ".so", ".dylib", ".pdb", ".class", ".jar", ".gguf", ".bin", ".mp4", ".mov", ".woff", ".woff2"
-    ];
-
     private static readonly Regex FileTokenPattern = new(
         @"[A-Za-z0-9_./\\-]+\.(?:cs|ts|tsx|js|jsx|py|go|rs|java|kt|kts|rb|php|md|json|yaml|yml|toml|xml|csproj|sln|html|css|scss|sql|sh|ps1|gradle)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -202,6 +190,7 @@ public static class AgentLocalizer
 
     private static IEnumerable<string> EnumerateFiles(string root, int maxDepth)
     {
+        var rules = WorkspaceRules.ForRoot(root);
         var stack = new Stack<(string Directory, int Depth)>();
         stack.Push((root, 0));
 
@@ -233,13 +222,12 @@ public static class AgentLocalizer
                 {
                     if (depth + 1 > maxDepth) continue;
                     var name = Path.GetFileName(entry);
-                    if (IgnoredDirectories.Contains(name, StringComparer.OrdinalIgnoreCase)) continue;
+                    if (rules.IsIgnoredDirectory(name)) continue;
                     stack.Push((entry, depth + 1));
                     continue;
                 }
 
-                var extension = Path.GetExtension(entry);
-                if (BinaryExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase)) continue;
+                if (rules.IsBinaryFile(entry)) continue;
                 yield return entry;
             }
         }

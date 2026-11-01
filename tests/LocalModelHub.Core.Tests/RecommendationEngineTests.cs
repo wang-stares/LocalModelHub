@@ -729,7 +729,7 @@ public class PerformanceScorerTests
     }
 
     [Fact]
-    public void Score_RewardsWideInstructionSetsAndAvailableMemory()
+    public void Score_RewardsWideInstructionSetsAndIgnoresAvailableMemory()
     {
         static HardwareProfile Machine(bool avx2, bool avx512, double availableGb) => new(
             "B", "Windows 11",
@@ -747,7 +747,55 @@ public class PerformanceScorerTests
 
         Assert.True(avx512Score.Total > avx2Score.Total, "AVX512 的 CPU 分应高于 AVX2");
         Assert.True(avx2Score.Total > plainScore.Total, "支持 AVX2 的 CPU 分应高于无 AVX2");
-        Assert.True(avx512Score.MemoryPoints > tightScore.MemoryPoints, "可用内存过低应拉低内存分");
+        // 可用内存是瞬时量：开个浏览器就会变化，不能再让评分跟着跳（P1-19）。
+        Assert.Equal(avx512Score.MemoryPoints, tightScore.MemoryPoints);
+        Assert.Equal(avx512Score.Total, tightScore.Total);
+    }
+
+    [Fact]
+    public void Score_exposes_capability_profile_and_component_sources()
+    {
+        var hw = new HardwareProfile(
+            "C", "Windows 11",
+            new CpuInfo("Ryzen 7", 8, 16, 4200, 32768),
+            (long)(32 * Formatters.Gib), (long)(20 * Formatters.Gib),
+            [new GpuInfo("NVIDIA GeForce RTX 4060", GpuInfo.VendorNvidia, (long)(8 * Formatters.Gib), 0)],
+            (long)(1024 * Formatters.Gib), (long)(400 * Formatters.Gib), true, false, DateTime.Now);
+
+        var score = new PerformanceScorer().Score(hw);
+
+        Assert.NotNull(score.Capability);
+        Assert.True(score.Capability!.ComfortableParamsB > 0, "8 GB 显卡应能完整装入一个可用模型");
+        Assert.True(score.Capability.PlayableParamsB >= score.Capability.ComfortableParamsB);
+        Assert.True(score.Capability.MaxContextTokens >= 2048);
+        Assert.Equal(4, score.Components.Count);
+        Assert.Equal(Provenance.Estimated, score.Components[0].Source);
+        Assert.Equal("显卡", score.Components[2].Name);
+        Assert.Equal(Provenance.Lookup, score.Components[2].Source);
+        Assert.Equal(0.5, score.Confidence, 2);
+        Assert.Equal(PerformanceScorer.CalibrationVersion, score.CalibrationVersion);
+        Assert.NotEmpty(score.Components[0].Meaning);
+    }
+
+    [Fact]
+    public void Score_marks_measured_benchmark_and_does_not_use_available_memory()
+    {
+        var hw = new HardwareProfile(
+            "D", "Windows 11",
+            new CpuInfo("Test CPU", 8, 16, 3800, 16384),
+            (long)(32 * Formatters.Gib), (long)(24 * Formatters.Gib),
+            Array.Empty<GpuInfo>(),
+            (long)(512 * Formatters.Gib), (long)(300 * Formatters.Gib), true, false, DateTime.Now);
+        var benchmark = new BenchmarkResult(42.5, 20.7, TimeSpan.FromSeconds(2), 0.03);
+
+        var score = new PerformanceScorer().Score(hw, benchmark);
+        var replayed = new PerformanceScorer().Score(hw with { AvailableRamBytes = (long)(3 * Formatters.Gib) }, benchmark);
+
+        Assert.Equal(Provenance.Measured, score.Components[0].Source);
+        Assert.Equal(Provenance.Measured, score.Components[1].Source);
+        Assert.True(score.Confidence >= 0.8);
+        Assert.Equal(score.Total, replayed.Total);
+        Assert.Equal(score.MemoryPoints, replayed.MemoryPoints);
     }
 
     [Fact]

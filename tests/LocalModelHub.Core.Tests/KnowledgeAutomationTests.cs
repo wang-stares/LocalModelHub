@@ -125,18 +125,38 @@ public sealed class SkillServiceTests : IDisposable
     }
 
     [Fact]
-    public void Matching_query_puts_related_skill_first_and_counts_usage()
+    public void Matching_query_puts_related_skill_first_and_counts_usage_only_on_adoption()
     {
         var service = Create();
         service.Load();
         service.Add("部署到服务器", "当用户要求发布", "1. 打包");
         var target = service.Add("修改 Program.cs", "当用户要求修改启动代码", "1. 读取 main.cs");
 
-        var context = service.BuildContext("帮我修改 main.cs 的启动逻辑");
+        var context = service.SelectContext("帮我修改 main.cs 的启动逻辑");
 
-        Assert.Contains("修改 Program.cs", context);
-        Assert.Contains(target.Id, service.Entries.Select(entry => entry.Id));
+        Assert.Contains("修改 Program.cs", context.Text);
+        Assert.Contains(target.Id, context.SkillIds);
+        // 读取上下文是纯操作：不累加 Uses、不写盘
+        Assert.Equal(0, service.Entries.Single(entry => entry.Id == target.Id).Uses);
+
+        // 回答成功后记账，并只落盘一次
+        Assert.Equal(1, service.MarkUsed(context.SkillIds));
         Assert.Equal(1, service.Entries.Single(entry => entry.Id == target.Id).Uses);
+
+        var reloaded = new SkillService(_path);
+        reloaded.Load();
+        Assert.Equal(1, reloaded.Entries.Single(entry => entry.Id == target.Id).Uses);
+    }
+
+    [Fact]
+    public void Unrelated_skills_are_not_injected_below_score_threshold()
+    {
+        var service = Create();
+        service.Load();
+        service.Add("番茄炒蛋", "当用户要求做饭", "1. 打蛋");
+
+        Assert.Equal("", service.BuildContext("部署到服务器"));
+        Assert.Empty(service.SelectContext("部署到服务器").SkillIds);
     }
 
     [Fact]

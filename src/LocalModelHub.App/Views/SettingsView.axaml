@@ -4,656 +4,815 @@
              xmlns:svc="using:LocalModelHub.App.Services"
              x:Class="LocalModelHub.App.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
-  <ScrollViewer VerticalScrollBarVisibility="Auto">
-    <StackPanel Margin="30,0,30,30" Spacing="16" MaxWidth="940" HorizontalAlignment="Left">
+  <!-- 主从布局：左侧分类决定右侧唯一表单，表单内部用分割线分组，不再用长页锚点跳转 -->
+  <Grid ColumnDefinitions="196,*">
+    <StackPanel Margin="32,14,0,0" Spacing="2">
+      <TextBlock Text="设置分类" Classes="eyebrow" Margin="12,0,0,8"/>
+      <ListBox x:Name="CategoryList"
+               Classes="sessions"
+               SelectedIndex="0"
+               SelectionChanged="SelectCategory">
+        <ListBoxItem Tag="Appearance" Content="外观"/>
+        <ListBoxItem Tag="Download" Content="下载设置"/>
+        <ListBoxItem Tag="ModelSource" Content="模型源"/>
+        <ListBoxItem Tag="Storage" Content="存储与工作区"/>
+        <ListBoxItem Tag="ApiAccess" Content="API 接入"/>
+        <ListBoxItem Tag="ChatParams" Content="对话与推理"/>
+        <ListBoxItem Tag="Runtime" Content="引擎与关于"/>
+      </ListBox>
+      <TextBlock Text="所有选项即时生效，切换分类不会卸载未保存的修改。"
+                 Classes="caption"
+                 TextWrapping="Wrap"
+                 Margin="12,14,12,0"/>
+    </StackPanel>
 
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <StackPanel Spacing="14">
-          <StackPanel Spacing="2">
-            <TextBlock Text="外观" Classes="h3"/>
-            <TextBlock Text="界面为 Miuix 风格，同时保留 Windows 原生窗口边框、快捷键与系统菜单。"
-                       Classes="caption"
-                       TextWrapping="Wrap"/>
-          </StackPanel>
-          <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto">
-            <TextBlock Text="主题" Classes="muted" VerticalAlignment="Center"/>
-            <Border Grid.Column="1" Classes="segmentHost" HorizontalAlignment="Left">
-              <ListBox Classes="segments"
-                       ItemsSource="{Binding ThemeOptions}"
-                       SelectedIndex="{Binding ThemeIndex, Mode=TwoWay}">
-                <ListBox.ItemsPanel>
-                  <ItemsPanelTemplate>
-                    <StackPanel Orientation="Horizontal"/>
-                  </ItemsPanelTemplate>
-                </ListBox.ItemsPanel>
-              </ListBox>
-            </Border>
-            <TextBlock Grid.Row="1"
-                       Grid.Column="1"
-                       Text="跟随系统会随 Windows 的浅色 / 深色模式自动切换；选择后立即生效。"
-                       Classes="caption"
-                       TextWrapping="Wrap"
-                       Margin="0,10,0,0"/>
-          </Grid>
-        </StackPanel>
-      </Border>
+    <Grid Grid.Column="1" RowDefinitions="*,Auto">
+      <ScrollViewer x:Name="SettingsScroll" Classes="page"
+                    VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="20,8,32,24" MaxWidth="1040" HorizontalAlignment="Stretch">
 
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <StackPanel Spacing="14">
-          <TextBlock Text="下载设置" Classes="h3"/>
-          <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto">
-            <TextBlock Text="下载源模式" Classes="muted" VerticalAlignment="Center"/>
-            <Border Grid.Column="1" Classes="segmentHost" HorizontalAlignment="Left">
-              <ListBox Classes="segments"
-                       ItemsSource="{Binding DownloadModes}"
-                       SelectedIndex="{Binding DownloadModeIndex, Mode=TwoWay}">
-                <ListBox.ItemsPanel>
-                  <ItemsPanelTemplate>
-                    <StackPanel Orientation="Horizontal"/>
-                  </ItemsPanelTemplate>
-                </ListBox.ItemsPanel>
-              </ListBox>
-            </Border>
-
-            <TextBlock Grid.Row="1" Text="手动选择源" Classes="muted" VerticalAlignment="Center" Margin="0,12,0,0"/>
-            <StackPanel Grid.Row="1"
-                        Grid.Column="1"
-                        Spacing="6"
-                        Margin="0,12,0,0"
-                        IsEnabled="{Binding IsManualSource}">
-              <CheckBox Content="魔搭 ModelScope（国内网络更稳定）"
-                        IsChecked="{Binding DownloadModelScope, Mode=TwoWay}"/>
-              <CheckBox Content="HuggingFace 社区"
-                        IsChecked="{Binding DownloadHuggingFace, Mode=TwoWay}"/>
-              <CheckBox Content="Ollama 官方库"
-                        IsChecked="{Binding DownloadOllama, Mode=TwoWay}"/>
-            </StackPanel>
-
-            <CheckBox Grid.Row="2"
-                      Grid.Column="1"
-                      Margin="0,10,0,0"
-                      Content="下载失败时自动切换到其他源"
-                      IsChecked="{Binding AutoSwitchSource, Mode=TwoWay}"
-                      IsEnabled="{Binding IsManualSource}"/>
-
-            <CheckBox Grid.Row="3"
-                      Grid.Column="1"
-                      Margin="0,2,0,0"
-                      Content="HuggingFace 通过国内镜像 hf-mirror.com 加速"
-                      IsChecked="{Binding UseHfMirror, Mode=TwoWay}"/>
-          </Grid>
-          <TextBlock Text="{Binding DownloadSourceHint}"
-                     Classes="caption"
-                     TextWrapping="Wrap"/>
-        </StackPanel>
-      </Border>
-
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <StackPanel Spacing="14">
-          <StackPanel Spacing="2">
-            <TextBlock Text="模型源" Classes="h3"/>
-            <TextBlock Text="同步时从下列站点按下载量抓取 GGUF 模型，结果缓存到本地；未同步或离线时继续使用内置目录。"
-                       Classes="caption"
-                       TextWrapping="Wrap"/>
-          </StackPanel>
-          <StackPanel Spacing="8">
-            <CheckBox Content="HuggingFace 社区（全球最大的开源模型社区）"
-                      IsChecked="{Binding SyncHuggingFace, Mode=TwoWay}"/>
-            <CheckBox Content="魔搭 ModelScope（国内网络更稳定）"
-                      IsChecked="{Binding SyncModelScope, Mode=TwoWay}"/>
-            <CheckBox Content="Ollama 官方库（直接读取 registry 中的 GGUF 权重）"
-                      IsChecked="{Binding SyncOllama, Mode=TwoWay}"/>
-          </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="12">
-            <Button Classes="primary"
-                    Content="立即同步"
-                    Command="{Binding SyncSourcesCommand}"
-                    IsEnabled="{Binding !IsSyncing}"/>
-            <TextBlock Text="{Binding SyncSummaryText}"
-                       Classes="caption"
-                       VerticalAlignment="Center"
-                       TextWrapping="Wrap"
-                       MaxWidth="620"/>
-          </StackPanel>
-          <TextBlock Text="{Binding SyncStatus}"
-                     Classes="caption"
-                     Foreground="{DynamicResource Accent}"
-                     IsVisible="{Binding HasSyncStatus}"
-                     TextWrapping="Wrap"/>
-        </StackPanel>
-      </Border>
-
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <StackPanel Spacing="14">
-          <StackPanel Spacing="2">
-            <TextBlock Text="外部 API 模型" Classes="h3"/>
-            <TextBlock Text="内置 OpenRouter、Gitee AI、硅基流动、DeepSeek、百炼、方舟、智谱、Kimi、OpenAI 九个常用源；选中后自动填地址，填写密钥即可拉取模型列表并弹窗选择，无需下载权重。"
-                       Classes="caption"
-                       TextWrapping="Wrap"/>
-          </StackPanel>
-          <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto">
-            <TextBlock Text="服务商" Classes="muted" VerticalAlignment="Center"/>
-            <ComboBox Grid.Column="1"
-                      ItemsSource="{Binding ApiPresetNames}"
-                      SelectedIndex="{Binding ApiPresetIndex, Mode=TwoWay}"
-                      HorizontalAlignment="Stretch"/>
-            <TextBlock Grid.Row="1"
-                       Grid.Column="1"
-                       Text="{Binding ApiPresetHint}"
-                       Classes="caption"
-                       TextWrapping="Wrap"
-                       Margin="0,4,0,0"/>
-
-            <TextBlock Grid.Row="2" Text="API 地址" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
-            <TextBox Grid.Row="2"
-                     Grid.Column="1"
-                     Text="{Binding RemoteApiBaseUrl, Mode=TwoWay}"
-                     Watermark="例如 https://api.deepseek.com/v1"
-                     Margin="0,10,0,0"/>
-
-            <TextBlock Grid.Row="3" Text="API Key" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
-            <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
-              <TextBox Text="{Binding RemoteApiKey, Mode=TwoWay}" Watermark="sk-…（本地兼容服务可留空）"/>
-              <Button Grid.Column="1"
-                      Classes="ghost"
-                      Content="获取模型"
-                      Command="{Binding FetchApiModelsCommand}"
-                      IsEnabled="{Binding !IsApiProbing}"
-                      Margin="8,0,0,0"/>
-            </Grid>
-          </Grid>
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <Button Classes="ghost"
-                    Content="选择模型"
-                    Command="{Binding ChooseApiModelCommand}"
-                    IsEnabled="{Binding HasApiModels}"/>
-            <TextBlock Text="{Binding ApiProbeStatus}"
-                       Classes="caption"
-                       VerticalAlignment="Center"
-                       TextWrapping="Wrap"
-                       MaxWidth="620"/>
-          </StackPanel>
-        </StackPanel>
-      </Border>
-
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <StackPanel Spacing="14">
-          <TextBlock Text="存储位置" Classes="h3"/>
-          <Grid ColumnDefinitions="170,*,Auto" RowDefinitions="Auto,Auto,Auto">
-            <TextBlock Text="模型目录" Classes="muted" VerticalAlignment="Center"/>
-            <TextBox Grid.Column="1" Text="{Binding ModelsDirectory, Mode=TwoWay}" Margin="0,0,8,0"/>
-            <Button Grid.Column="2" Classes="ghost" Content="浏览" Command="{Binding BrowseModelsCommand}"/>
-
-            <TextBlock Grid.Row="1" Text="推理运行时" Classes="muted" VerticalAlignment="Center" Margin="0,8,0,0"/>
-            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding RuntimePathText, Mode=TwoWay}" Margin="0,8,8,0" Watermark="留空 = 自动下载"/>
-            <Button Grid.Row="1" Grid.Column="2" Classes="ghost" Content="浏览" Command="{Binding BrowseRuntimeCommand}" Margin="0,8,0,0"/>
-
-            <TextBlock Grid.Row="2"
-                       Grid.Column="1"
-                       Grid.ColumnSpan="2"
-                       Text="{Binding RuntimePathHint}"
-                       Classes="caption"
-                       TextWrapping="Wrap"
-                       Margin="0,8,0,0"/>
-          </Grid>
-          <Button Classes="ghost" Content="打开数据目录" Command="{Binding OpenDataFolderCommand}" HorizontalAlignment="Left"/>
-        </StackPanel>
-      </Border>
-
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <StackPanel Spacing="14">
-          <StackPanel Spacing="2">
-            <TextBlock Text="工作文件夹" Classes="h3"/>
-            <TextBlock Text="允许模型在对话中读取、创建和修改此文件夹内的文件；越界路径、绝对路径和符号链接都会被拒绝。"
-                       Classes="caption"
-                       TextWrapping="Wrap"/>
-          </StackPanel>
-          <Grid ColumnDefinitions="170,*,Auto">
-            <TextBlock Text="文件夹" Classes="muted" VerticalAlignment="Center"/>
-            <TextBox Grid.Column="1"
-                     Text="{Binding WorkspaceDirectory, Mode=TwoWay}"
-                     Watermark="留空 = 禁用文件编辑"
-                     Margin="0,0,8,0"/>
-            <Button Grid.Column="2" Classes="ghost" Content="浏览" Command="{Binding BrowseWorkspaceCommand}"/>
-          </Grid>
-          <TextBlock Text="仅在对话页勾选“允许模型读写文件”后生效；所有写入都限制在该文件夹内。"
-                     Classes="caption"
-                     TextWrapping="Wrap"/>
-        </StackPanel>
-      </Border>
-
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <StackPanel Spacing="14">
-          <StackPanel Spacing="2">
-            <TextBlock Text="节能休眠" Classes="h3"/>
-            <TextBlock Text="模型完成回复后开始计时；长时间没有交互会自动停止 llama-server 释放显存与内存，输入消息时再自动唤醒。"
-                       Classes="caption"
-                       TextWrapping="Wrap"/>
-          </StackPanel>
-          <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto">
-            <TextBlock Text="空闲休眠" Classes="muted" VerticalAlignment="Center"/>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-              <NumericUpDown Width="170"
-                             Minimum="0"
-                             Maximum="240"
-                             Increment="5"
-                             FormatString="0"
-                             Value="{Binding IdleSleepMinutes, Mode=TwoWay}"/>
-              <TextBlock Text="分钟（0 = 关闭休眠）" Classes="caption" VerticalAlignment="Center"/>
-            </StackPanel>
-            <CheckBox Grid.Row="1"
-                      Grid.Column="1"
-                      Margin="0,10,0,0"
-                      Content="用户开始输入时自动唤醒最近使用的模型"
-                      IsChecked="{Binding AutoWake, Mode=TwoWay}"/>
-          </Grid>
-        </StackPanel>
-      </Border>
-
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <StackPanel Spacing="14">
-          <StackPanel Spacing="2">
-            <TextBlock Text="API 接入" Classes="h3"/>
-            <TextBlock Text="对外提供 OpenAI 兼容接口，可被 Cherry Studio、Open WebUI、沉浸式翻译等客户端直接调用。"
-                       Classes="caption"
-                       TextWrapping="Wrap"/>
-          </StackPanel>
-          <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto">
-            <TextBlock Text="监听范围" Classes="muted" VerticalAlignment="Center"/>
-            <CheckBox Grid.Column="1"
-                      Content="允许局域网内其他设备访问（0.0.0.0）"
-                      IsChecked="{Binding ApiExposeLan, Mode=TwoWay}"/>
-
-            <TextBlock Grid.Row="1" Text="API Key" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
-            <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
-              <TextBox Text="{Binding ApiKey, Mode=TwoWay}" Watermark="留空 = 不校验密钥"/>
-              <Button Grid.Column="1"
-                      Classes="ghost"
-                      Content="生成"
-                      Command="{Binding GenerateApiKeyCommand}"
-                      Margin="8,0,0,0"/>
-            </Grid>
-
-            <TextBlock Grid.Row="2" Text="接口地址" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
-            <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
-              <TextBlock Text="{Binding ApiEndpointText}"
-                         Classes="mono"
-                         FontSize="12"
-                         VerticalAlignment="Center"
-                         TextWrapping="Wrap"/>
-              <Button Grid.Column="1"
-                      Classes="ghost"
-                      Content="复制"
-                      Command="{Binding CopyApiEndpointCommand}"
-                      Margin="8,0,0,0"/>
-            </Grid>
-          </Grid>
-          <TextBlock Text="{Binding ApiKeyHint}" Classes="caption" TextWrapping="Wrap"/>
-          <TextBlock Text="{Binding ApiStateText}" Classes="muted" TextWrapping="Wrap"/>
-          <TextBlock Text="{Binding ApiCopyStatus}" Classes="caption" Foreground="{DynamicResource Success}" IsVisible="{Binding HasApiCopyStatus}"/>
-
-          <StackPanel Spacing="6">
-            <TextBlock Text="可调用模型" Classes="muted"/>
-            <Border Classes="card" CornerRadius="14" Padding="12">
-              <StackPanel Spacing="4">
-                <ItemsControl ItemsSource="{Binding ApiModels}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding}" Classes="mono" FontSize="12"/>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <TextBlock Text="{Binding ApiModelsEmptyText}"
+          <!-- 外观 -->
+          <Border x:Name="AppearanceSection" Classes="card" Padding="24,22" IsVisible="True">
+            <StackPanel Spacing="14">
+              <StackPanel Spacing="2">
+                <TextBlock Text="外观" Classes="h3"/>
+                <TextBlock Text="Miuix 风格界面，保留 Windows 原生窗口边框、快捷键与系统菜单。"
+                           Classes="caption"
+                           TextWrapping="Wrap"/>
+              </StackPanel>
+              <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto">
+                <TextBlock Text="主题" Classes="muted" VerticalAlignment="Center"/>
+                <Border Grid.Column="1" Classes="segmentHost" HorizontalAlignment="Left">
+                  <ListBox Classes="segments"
+                           ItemsSource="{Binding ThemeOptions}"
+                           SelectedIndex="{Binding ThemeIndex, Mode=TwoWay}">
+                    <ListBox.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                      </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                  </ListBox>
+                </Border>
+                <TextBlock Grid.Row="1"
+                           Grid.Column="1"
+                           Text="跟随系统会随 Windows 的浅色 / 深色模式自动切换；选择后立即生效。"
                            Classes="caption"
                            TextWrapping="Wrap"
-                           IsVisible="{Binding HasNoApiModels}"/>
-              </StackPanel>
-            </Border>
-            <TextBlock Text="客户端调用时 model 字段填上面的模型名；外部 API 模型由远端服务提供，不走本机端口。"
-                       Classes="caption"
-                       TextWrapping="Wrap"/>
-          </StackPanel>
-
-          <TextBlock Text="兼容端点：/v1/chat/completions、/v1/models、/v1/embeddings（需嵌入模型）。局域网模式会把模型暴露给同网段设备，请务必设置 API Key。"
-                     Classes="caption"
-                     TextWrapping="Wrap"/>
-        </StackPanel>
-      </Border>
-
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <StackPanel Spacing="14">
-          <StackPanel Spacing="2">
-            <TextBlock Text="对话参数" Classes="h3"/>
-            <TextBlock Text="系统提示会与长期记忆一起注入，对普通对话与三种代理模式都生效。"
-                       Classes="caption"
-                       TextWrapping="Wrap"/>
-          </StackPanel>
-          <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto">
-            <TextBlock Text="系统提示" Classes="muted" VerticalAlignment="Top" Margin="0,8,0,0"/>
-            <TextBox Grid.Column="1"
-                     AcceptsReturn="True"
-                     TextWrapping="Wrap"
-                     Height="76"
-                     Text="{Binding SystemPrompt, Mode=TwoWay}"
-                     Watermark="例如：你是资深 C# 工程师，回答先给结论，再给示例代码。"/>
-
-            <TextBlock Grid.Row="1" Text="Temperature" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
-            <NumericUpDown Grid.Row="1"
-                           Grid.Column="1"
-                           Width="170"
-                           HorizontalAlignment="Left"
-                           Margin="0,10,0,0"
-                           Minimum="0"
-                           Maximum="2"
-                           Increment="0.1"
-                           FormatString="0.0"
-                           Value="{Binding Temperature, Mode=TwoWay}"/>
-
-            <TextBlock Grid.Row="2" Text="Top P" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
-            <NumericUpDown Grid.Row="2"
-                           Grid.Column="1"
-                           Width="170"
-                           HorizontalAlignment="Left"
-                           Margin="0,10,0,0"
-                           Minimum="0"
-                           Maximum="1"
-                           Increment="0.05"
-                           FormatString="0.00"
-                           Value="{Binding TopP, Mode=TwoWay}"/>
-
-            <TextBlock Grid.Row="3" Text="最大输出 tokens" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
-            <NumericUpDown Grid.Row="3"
-                           Grid.Column="1"
-                           Width="170"
-                           HorizontalAlignment="Left"
-                           Margin="0,10,0,0"
-                           Minimum="64"
-                           Maximum="8192"
-                           Increment="128"
-                           FormatString="0"
-                           Value="{Binding MaxTokens, Mode=TwoWay}"/>
-          </Grid>
-        </StackPanel>
-      </Border>
-
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <StackPanel Spacing="14">
-          <TextBlock Text="推理参数" Classes="h3"/>
-          <Grid ColumnDefinitions="170,*,Auto" RowDefinitions="Auto,Auto,Auto">
-            <TextBlock Text="服务端口" Classes="muted" VerticalAlignment="Center"/>
-            <NumericUpDown Grid.Column="1"
-                           Width="170"
-                           HorizontalAlignment="Left"
-                           Minimum="1024"
-                           Maximum="65535"
-                           Increment="1"
-                           FormatString="0"
-                           Value="{Binding Port, Mode=TwoWay}"/>
-
-            <TextBlock Grid.Row="1" Text="上下文长度" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
-            <NumericUpDown Grid.Row="1" Grid.Column="1"
-                           Width="170"
-                           HorizontalAlignment="Left"
-                           Margin="0,10,0,0"
-                           Minimum="1024"
-                           Maximum="131072"
-                           Increment="1024"
-                           FormatString="0"
-                           Value="{Binding ContextSize, Mode=TwoWay}"/>
-
-            <TextBlock Grid.Row="2" Text="CPU 线程数" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
-            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
-              <NumericUpDown Width="170"
-                             Minimum="0"
-                             Maximum="256"
-                             Increment="1"
-                             FormatString="0"
-                             Value="{Binding Threads, Mode=TwoWay}"/>
-              <TextBlock Text="{Binding ThreadsHint}" Classes="caption" VerticalAlignment="Center"/>
-            </StackPanel>
-          </Grid>
-          <TextBlock Text="上下文越大占用内存越多；显存不足时程序会自动减少卸载到 GPU 的层数。"
-                     Classes="caption"
-                     TextWrapping="Wrap"/>
-        </StackPanel>
-      </Border>
-
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <StackPanel Spacing="14">
-          <StackPanel Spacing="2">
-            <TextBlock Text="推理性能" Classes="h3"/>
-            <TextBlock Text="启动模型时写入 llama-server 参数；修改后需重启推理服务生效。"
-                       Classes="caption"
-                       TextWrapping="Wrap"/>
-          </StackPanel>
-          <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-            <TextBlock Text="Flash Attention" Classes="muted" VerticalAlignment="Center"/>
-            <ComboBox Grid.Column="1"
-                      Width="280"
-                      HorizontalAlignment="Left"
-                      ItemsSource="{Binding FlashAttentionOptions}"
-                      SelectedIndex="{Binding FlashAttentionIndex, Mode=TwoWay}"/>
-
-            <TextBlock Grid.Row="1" Text="KV cache 量化" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
-            <ComboBox Grid.Row="1"
-                      Grid.Column="1"
-                      Width="280"
-                      HorizontalAlignment="Left"
-                      Margin="0,10,0,0"
-                      ItemsSource="{Binding KvCacheOptions}"
-                      SelectedIndex="{Binding KvCacheIndex, Mode=TwoWay}"/>
-
-            <TextBlock Grid.Row="2" Text="模型装载模式" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
-            <ComboBox Grid.Row="2"
-                      Grid.Column="1"
-                      Width="280"
-                      HorizontalAlignment="Left"
-                      Margin="0,10,0,0"
-                      ItemsSource="{Binding LoadModeOptions}"
-                      SelectedIndex="{Binding LoadModeIndex, Mode=TwoWay}"/>
-
-            <TextBlock Grid.Row="3" Text="并行槽位" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
-            <StackPanel Grid.Row="3" Grid.Column="1" Spacing="4" Margin="0,10,0,0">
-              <NumericUpDown Width="170"
-                             HorizontalAlignment="Left"
-                             Minimum="0"
-                             Maximum="64"
-                             Increment="1"
-                             FormatString="0"
-                             Value="{Binding ParallelSlots, Mode=TwoWay}"/>
-              <TextBlock Text="{Binding ParallelSlotsHint}"
+                           Margin="0,10,0,0"/>
+              </Grid>
+              <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="0,8,0,0"/>
+              <TextBlock Text="当前版本 v0.35.0 · 内核 llama.cpp / Vulkan，支持 NVIDIA、AMD、Intel 显卡。"
                          Classes="caption"
                          TextWrapping="Wrap"/>
             </StackPanel>
+          </Border>
 
-            <TextBlock Grid.Row="4" Text="MoE 卸载层数" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
-            <StackPanel Grid.Row="4" Grid.Column="1" Spacing="4" Margin="0,10,0,0">
-              <NumericUpDown Width="170"
-                             HorizontalAlignment="Left"
-                             Minimum="0"
-                             Maximum="999"
-                             Increment="1"
-                             FormatString="0"
-                             Value="{Binding CpuMoeLayers, Mode=TwoWay}"/>
-              <TextBlock Text="{Binding CpuMoeLayersHint}"
-                         Classes="caption"
-                         TextWrapping="Wrap"/>
-            </StackPanel>
-          </Grid>
-          <CheckBox Content="折叠显示模型的思考过程（reasoning_content）"
-                    IsChecked="{Binding ReasoningEnabled, Mode=TwoWay}"/>
-          <CheckBox Content="启用 Prometheus 指标端点（/metrics）"
-                    IsChecked="{Binding MetricsEnabled, Mode=TwoWay}"/>
-          <TextBlock Text="{Binding KvCacheHint}" Classes="caption" TextWrapping="Wrap"/>
-        </StackPanel>
-      </Border>
-
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <StackPanel Spacing="12">
-          <Grid ColumnDefinitions="*,Auto">
-            <StackPanel Spacing="2">
-              <TextBlock Text="推理引擎" Classes="h3"/>
-              <TextBlock Text="{Binding RuntimeStatusText}" Classes="muted" TextWrapping="Wrap"/>
-            </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-              <Button Classes="ghost"
-                      Content="检查更新"
-                      Command="{Binding CheckRuntimeUpdateCommand}"
-                      IsEnabled="{Binding !IsRuntimeBusy}"/>
-              <Button Classes="primary"
-                      Content="{Binding RuntimeUpdateButtonText}"
-                      Command="{Binding UpdateRuntimeCommand}"
-                      IsVisible="{Binding HasRuntimeUpdate}"
-                      IsEnabled="{Binding CanUpdateRuntime}"/>
-            </StackPanel>
-          </Grid>
-          <Grid ColumnDefinitions="170,*">
-            <TextBlock Text="运行时后端" Classes="muted" VerticalAlignment="Center"/>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-              <ComboBox Width="280"
-                        HorizontalAlignment="Left"
-                        ItemsSource="{Binding Variants}"
-                        SelectedIndex="{Binding VariantIndex, Mode=TwoWay}"/>
-              <Button Classes="ghost"
-                      Content="{Binding ReinstallRuntimeText}"
-                      Command="{Binding ReinstallRuntimeCommand}"
-                      IsEnabled="{Binding CanReinstallRuntime}"/>
-            </StackPanel>
-          </Grid>
-          <TextBlock Text="{Binding RuntimeUpdateText}"
-                     Classes="caption"
-                     Foreground="{DynamicResource Accent}"
-                     TextWrapping="Wrap"
-                     IsVisible="{Binding HasRuntimeUpdateText}"/>
-          <TextBlock Text="版本信息来自 GitHub 上 ggml-org/llama.cpp 的最新发布；更新与切换只替换应用托管的运行时，自定义 llama-server 路径不受影响。切换后端或更新后需重启推理服务。"
-                     Classes="caption"
-                     TextWrapping="Wrap"/>
-        </StackPanel>
-      </Border>
-
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <StackPanel Spacing="6">
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="版本更新公告" Classes="h3" VerticalAlignment="Center"/>
-            <Border Grid.Column="1" Classes="badge accent" VerticalAlignment="Center">
-              <TextBlock Text="最新"/>
-            </Border>
-          </Grid>
-          <TextBlock Text="{Binding LatestReleaseText}" Classes="muted"/>
-          <ItemsControl ItemsSource="{Binding LatestReleaseLines}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="svc:ReleaseLine">
-                <TextBlock Text="{Binding Text}"
-                           Classes="muted"
-                           Classes.releaseHeading="{Binding IsHeading}"
+          <!-- 下载设置 -->
+          <Border x:Name="DownloadSection" Classes="card" Padding="24,22" IsVisible="False">
+            <StackPanel Spacing="14">
+              <StackPanel Spacing="2">
+                <TextBlock Text="下 载" Classes="h3"/>
+                <TextBlock Text="决定下载权重时优先请求哪个站点，以及失败后的处理方式。"
+                           Classes="caption"
                            TextWrapping="Wrap"/>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-
-          <Border Height="1" Background="{DynamicResource Stroke}" Margin="0,10,0,6"/>
-
-          <Grid ColumnDefinitions="*,Auto">
-            <StackPanel Spacing="2">
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="星河档案" Classes="h3" VerticalAlignment="Center"/>
-                <Border Classes="badge" VerticalAlignment="Center" IsVisible="{Binding HasPreviousReleases}">
-                  <TextBlock Text="{Binding ReleaseArchiveCountText}"/>
-                </Border>
               </StackPanel>
-              <TextBlock Text="收录此前全部版本的更新公告，可随时翻阅。"
+              <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                <TextBlock Text="下载源模式" Classes="muted" VerticalAlignment="Center"/>
+                <Border Grid.Column="1" Classes="segmentHost" HorizontalAlignment="Left">
+                  <ListBox Classes="segments"
+                           ItemsSource="{Binding DownloadModes}"
+                           SelectedIndex="{Binding DownloadModeIndex, Mode=TwoWay}">
+                    <ListBox.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                      </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                  </ListBox>
+                </Border>
+
+                <TextBlock Grid.Row="1" Text="手动选择源" Classes="muted" VerticalAlignment="Center" Margin="0,14,0,0"/>
+                <StackPanel Grid.Row="1"
+                            Grid.Column="1"
+                            Spacing="6"
+                            Margin="0,14,0,0"
+                            IsEnabled="{Binding IsManualSource}">
+                  <CheckBox Content="魔搭 ModelScope（国内网络更稳定）"
+                            IsChecked="{Binding DownloadModelScope, Mode=TwoWay}"/>
+                  <CheckBox Content="HuggingFace 社区"
+                            IsChecked="{Binding DownloadHuggingFace, Mode=TwoWay}"/>
+                  <CheckBox Content="Ollama 官方库"
+                            IsChecked="{Binding DownloadOllama, Mode=TwoWay}"/>
+                </StackPanel>
+
+                <CheckBox Grid.Row="2"
+                          Grid.Column="1"
+                          Margin="0,12,0,0"
+                          Content="下载失败时自动切换到其他源"
+                          IsChecked="{Binding AutoSwitchSource, Mode=TwoWay}"
+                          IsEnabled="{Binding IsManualSource}"/>
+
+                <CheckBox Grid.Row="3"
+                          Grid.Column="1"
+                          Margin="0,2,0,0"
+                          Content="HuggingFace 通过国内镜像 hf-mirror.com 加速"
+                          IsChecked="{Binding UseHfMirror, Mode=TwoWay}"/>
+              </Grid>
+              <Border Height="1" Background="{DynamicResource StrokeSubtle}"/>
+              <TextBlock Text="{Binding DownloadSourceHint}"
                          Classes="caption"
                          TextWrapping="Wrap"/>
             </StackPanel>
-            <Button Grid.Column="1"
-                    Classes="ghost"
-                    Content="{Binding ReleaseArchiveToggleText}"
-                    Command="{Binding ToggleReleaseArchiveCommand}"
-                    IsVisible="{Binding HasPreviousReleases}"
-                    VerticalAlignment="Center"/>
-          </Grid>
+          </Border>
 
-          <Border IsVisible="{Binding IsReleaseArchiveOpen}"
-                  Background="{DynamicResource InputBg}"
-                  CornerRadius="12"
-                  Padding="14,4,10,10">
-            <ScrollViewer MaxHeight="340" VerticalScrollBarVisibility="Auto">
-              <ItemsControl ItemsSource="{Binding PreviousReleases}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="svc:ReleaseNote">
-                    <StackPanel Spacing="2" Margin="0,10,0,2">
-                      <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="{Binding Version}" Classes="h3"/>
-                        <TextBlock Text="{Binding Date}" Classes="caption" VerticalAlignment="Center"/>
-                      </StackPanel>
-                      <ItemsControl ItemsSource="{Binding Lines}">
+          <!-- 模型源 -->
+          <Border x:Name="ModelSourceSection" Classes="card" Padding="24,22" IsVisible="False">
+            <StackPanel Spacing="14">
+              <StackPanel Spacing="2">
+                <TextBlock Text="模型源" Classes="h3"/>
+                <TextBlock Text="同步时从下列站点按下载量抓取 GGUF 模型，结果缓存到本地；未同步或离线时继续使用内置目录。"
+                           Classes="caption"
+                           TextWrapping="Wrap"/>
+              </StackPanel>
+              <StackPanel Spacing="8">
+                <CheckBox Content="HuggingFace 社区（全球最大的开源模型社区）"
+                          IsChecked="{Binding SyncHuggingFace, Mode=TwoWay}"/>
+                <CheckBox Content="魔搭 ModelScope（国内网络更稳定）"
+                          IsChecked="{Binding SyncModelScope, Mode=TwoWay}"/>
+                <CheckBox Content="Ollama 官方库（直接读取 registry 中的 GGUF 权重）"
+                          IsChecked="{Binding SyncOllama, Mode=TwoWay}"/>
+              </StackPanel>
+              <Border Height="1" Background="{DynamicResource StrokeSubtle}"/>
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button Classes="primary"
+                        Content="立即同步"
+                        Command="{Binding SyncSourcesCommand}"
+                        IsEnabled="{Binding !IsSyncing}"/>
+                <TextBlock Text="{Binding SyncSummaryText}"
+                           Classes="caption"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="620"/>
+              </StackPanel>
+              <TextBlock Text="{Binding SyncStatus}"
+                         Classes="caption"
+                         Foreground="{DynamicResource Accent}"
+                         IsVisible="{Binding HasSyncStatus}"
+                         TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+
+          <!-- 存储与工作区 -->
+          <Border x:Name="StorageSection" Classes="card" Padding="24,22" IsVisible="False">
+            <StackPanel Spacing="0">
+              <StackPanel Spacing="14">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="存储位置" Classes="h3"/>
+                  <TextBlock Text="模型权重与推理运行时所在的磁盘目录；更改后重启应用生效。"
+                             Classes="caption"
+                             TextWrapping="Wrap"/>
+                </StackPanel>
+                <Grid ColumnDefinitions="170,*,Auto" RowDefinitions="Auto,Auto,Auto">
+                  <TextBlock Text="模型目录" Classes="muted" VerticalAlignment="Center"/>
+                  <TextBox Grid.Column="1" Text="{Binding ModelsDirectory, Mode=TwoWay}" Margin="0,0,8,0"/>
+                  <Button Grid.Column="2" Classes="ghost" Content="浏览" Command="{Binding BrowseModelsCommand}"/>
+
+                  <TextBlock Grid.Row="1" Text="推理运行时" Classes="muted" VerticalAlignment="Center" Margin="0,8,0,0"/>
+                  <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding RuntimePathText, Mode=TwoWay}" Margin="0,8,8,0" Watermark="留空 = 自动下载"/>
+                  <Button Grid.Row="1" Grid.Column="2" Classes="ghost" Content="浏览" Command="{Binding BrowseRuntimeCommand}" Margin="0,8,0,0"/>
+
+                  <TextBlock Grid.Row="2"
+                             Grid.Column="1"
+                             Grid.ColumnSpan="2"
+                             Text="{Binding RuntimePathHint}"
+                             Classes="caption"
+                             TextWrapping="Wrap"
+                             Margin="0,8,0,0"/>
+                </Grid>
+                <Button Classes="ghost" Content="打开数据目录" Command="{Binding OpenDataFolderCommand}" HorizontalAlignment="Left"/>
+              </StackPanel>
+
+              <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="0,18"/>
+
+              <StackPanel Spacing="14">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="工作文件夹" Classes="h3"/>
+                  <TextBlock Text="允许模型在对话中读取、创建和修改此文件夹内的文件；越界路径、绝对路径和符号链接都会被拒绝。"
+                             Classes="caption"
+                             TextWrapping="Wrap"/>
+                </StackPanel>
+                <Grid ColumnDefinitions="170,*,Auto">
+                  <TextBlock Text="文件夹" Classes="muted" VerticalAlignment="Center"/>
+                  <TextBox Grid.Column="1"
+                           Text="{Binding WorkspaceDirectory, Mode=TwoWay}"
+                           Watermark="留空 = 禁用文件编辑"
+                           Margin="0,0,8,0"/>
+                  <Button Grid.Column="2" Classes="ghost" Content="浏览" Command="{Binding BrowseWorkspaceCommand}"/>
+                </Grid>
+                <TextBlock Text="仅在对话页勾选“允许模型读写文件”后生效；所有写入都限制在该文件夹内。"
+                           Classes="caption"
+                           TextWrapping="Wrap"/>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- API 接入 -->
+          <Border x:Name="ApiAccessSection" Classes="card" Padding="24,22" IsVisible="False">
+            <StackPanel Spacing="0">
+              <StackPanel Spacing="14">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="外部 API 模型" Classes="h3"/>
+                  <TextBlock Text="内置 OpenRouter、Gitee AI、硅基流动、DeepSeek、百炼、方舟、智谱、Kimi、OpenAI 九个常用源；选中自动填地址，填密钥即可拉取模型列表，无需下载权重。"
+                             Classes="caption"
+                             TextWrapping="Wrap"/>
+                </StackPanel>
+                <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                  <TextBlock Text="服务商" Classes="muted" VerticalAlignment="Center"/>
+                  <ComboBox Grid.Column="1"
+                            ItemsSource="{Binding ApiPresetNames}"
+                            SelectedIndex="{Binding ApiPresetIndex, Mode=TwoWay}"
+                            HorizontalAlignment="Stretch"/>
+                  <TextBlock Grid.Row="1"
+                             Grid.Column="1"
+                             Text="{Binding ApiPresetHint}"
+                             Classes="caption"
+                             TextWrapping="Wrap"
+                             Margin="0,4,0,0"/>
+
+                  <TextBlock Grid.Row="2" Text="API 地址" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <TextBox Grid.Row="2"
+                           Grid.Column="1"
+                           Text="{Binding RemoteApiBaseUrl, Mode=TwoWay}"
+                           Watermark="例如 https://api.deepseek.com/v1"
+                           Margin="0,10,0,0"/>
+
+                  <TextBlock Grid.Row="3" Text="API Key" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+                    <TextBox Text="{Binding RemoteApiKey, Mode=TwoWay}" Watermark="sk-…（本地兼容服务可留空）"/>
+                    <Button Grid.Column="1"
+                            Classes="ghost"
+                            Content="获取模型"
+                            Command="{Binding FetchApiModelsCommand}"
+                            IsEnabled="{Binding !IsApiProbing}"
+                            Margin="8,0,0,0"/>
+                  </Grid>
+                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <Button Classes="ghost"
+                          Content="选择模型"
+                          Command="{Binding ChooseApiModelCommand}"
+                          IsEnabled="{Binding HasApiModels}"/>
+                  <TextBlock Text="{Binding ApiProbeStatus}"
+                             Classes="caption"
+                             VerticalAlignment="Center"
+                             TextWrapping="Wrap"
+                             MaxWidth="620"/>
+                </StackPanel>
+              </StackPanel>
+
+              <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="0,18"/>
+
+              <StackPanel Spacing="14">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="本机接口" Classes="h3"/>
+                  <TextBlock Text="对外提供 OpenAI 兼容接口，可被 Cherry Studio、Open WebUI、沉浸式翻译等客户端直接调用。"
+                             Classes="caption"
+                             TextWrapping="Wrap"/>
+                </StackPanel>
+                <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto">
+                  <TextBlock Text="监听范围" Classes="muted" VerticalAlignment="Center"/>
+                  <CheckBox Grid.Column="1"
+                            Content="允许局域网内其他设备访问（0.0.0.0）"
+                            IsChecked="{Binding ApiExposeLan, Mode=TwoWay}"/>
+
+                  <TextBlock Grid.Row="1" Text="API Key" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+                    <TextBox Text="{Binding ApiKey, Mode=TwoWay}" Watermark="留空 = 不校验密钥"/>
+                    <Button Grid.Column="1"
+                            Classes="ghost"
+                            Content="生成"
+                            Command="{Binding GenerateApiKeyCommand}"
+                            Margin="8,0,0,0"/>
+                  </Grid>
+
+                  <TextBlock Grid.Row="2" Text="接口地址" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+                    <TextBlock Text="{Binding ApiEndpointText}"
+                               Classes="mono"
+                               FontSize="12"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"/>
+                    <Button Grid.Column="1"
+                            Classes="ghost"
+                            Content="复制"
+                            Command="{Binding CopyApiEndpointCommand}"
+                            Margin="8,0,0,0"/>
+                  </Grid>
+                </Grid>
+                <TextBlock Text="{Binding ApiKeyHint}" Classes="caption" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding ApiStateText}" Classes="muted" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding ApiCopyStatus}" Classes="caption" Foreground="{DynamicResource Success}" IsVisible="{Binding HasApiCopyStatus}"/>
+
+                <StackPanel Spacing="6">
+                  <TextBlock Text="可调用模型" Classes="muted"/>
+                  <Border Classes="card flat" Padding="12">
+                    <StackPanel Spacing="4">
+                      <ItemsControl ItemsSource="{Binding ApiModels}">
                         <ItemsControl.ItemTemplate>
-                          <DataTemplate x:DataType="svc:ReleaseLine">
-                            <TextBlock Text="{Binding Text}"
-                                       Classes="muted"
-                                       Classes.releaseHeading="{Binding IsHeading}"
-                                       TextWrapping="Wrap"/>
+                          <DataTemplate>
+                            <TextBlock Text="{Binding}" Classes="mono" FontSize="12"/>
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
+                      <TextBlock Text="{Binding ApiModelsEmptyText}"
+                                 Classes="caption"
+                                 TextWrapping="Wrap"
+                                 IsVisible="{Binding HasNoApiModels}"/>
                     </StackPanel>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </ScrollViewer>
+                  </Border>
+                  <TextBlock Text="客户端调用时 model 字段填上面的模型名；外部 API 模型由远端服务提供，不走本机端口。"
+                             Classes="caption"
+                             TextWrapping="Wrap"/>
+                </StackPanel>
+                <TextBlock Text="兼容端点：/v1/chat/completions、/v1/models、/v1/embeddings（需嵌入模型）。局域网模式会把模型暴露给同网段设备，请务必设置 API Key。"
+                           Classes="caption"
+                           TextWrapping="Wrap"/>
+              </StackPanel>
+            </StackPanel>
           </Border>
 
-          <TextBlock Text="完整更新日志见应用目录下的 CHANGELOG.md。"
-                     Classes="caption"
-                     Margin="0,8,0,0"/>
-        </StackPanel>
-      </Border>
+          <!-- 对话与推理 -->
+          <Border x:Name="ChatParamsSection" Classes="card" Padding="24,22" IsVisible="False">
+            <StackPanel Spacing="0">
+              <StackPanel Spacing="14">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="对话参数" Classes="h3"/>
+                  <TextBlock Text="系统提示会与长期记忆一起注入，对普通对话与三种代理模式都生效。"
+                             Classes="caption"
+                             TextWrapping="Wrap"/>
+                </StackPanel>
+                <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                  <TextBlock Text="系统提示" Classes="muted" VerticalAlignment="Top" Margin="0,8,0,0"/>
+                  <TextBox Grid.Column="1"
+                           AcceptsReturn="True"
+                           TextWrapping="Wrap"
+                           Height="76"
+                           Text="{Binding SystemPrompt, Mode=TwoWay}"
+                           Watermark="例如：你是资深 C# 工程师，回答先给结论，再给示例代码。"/>
 
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <StackPanel Spacing="12">
-          <TextBlock Text="关于" Classes="h3"/>
-          <Grid ColumnDefinitions="Auto,*">
-            <Border Width="44" Height="44" CornerRadius="14" Background="{DynamicResource AvatarBg}">
-              <TextBlock Text="星"
-                         FontSize="17"
-                         FontWeight="Bold"
-                         Foreground="{DynamicResource Accent}"
-                         HorizontalAlignment="Center"
-                         VerticalAlignment="Center"/>
-            </Border>
-            <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="3" VerticalAlignment="Center">
-              <TextBlock Text="{Binding VersionText}" Classes="h3"/>
-              <TextBlock Text="{Binding CatalogCountText}" Classes="caption"/>
+                  <TextBlock Grid.Row="1" Text="Temperature" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <NumericUpDown Grid.Row="1"
+                                 Grid.Column="1"
+                                 Width="170"
+                                 HorizontalAlignment="Left"
+                                 Margin="0,10,0,0"
+                                 Minimum="0"
+                                 Maximum="2"
+                                 Increment="0.1"
+                                 FormatString="0.0"
+                                 Value="{Binding Temperature, Mode=TwoWay}"/>
+
+                  <TextBlock Grid.Row="2" Text="Top P" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <NumericUpDown Grid.Row="2"
+                                 Grid.Column="1"
+                                 Width="170"
+                                 HorizontalAlignment="Left"
+                                 Margin="0,10,0,0"
+                                 Minimum="0"
+                                 Maximum="1"
+                                 Increment="0.05"
+                                 FormatString="0.00"
+                                 Value="{Binding TopP, Mode=TwoWay}"/>
+
+                  <TextBlock Grid.Row="3" Text="最大输出 tokens" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <NumericUpDown Grid.Row="3"
+                                 Grid.Column="1"
+                                 Width="170"
+                                 HorizontalAlignment="Left"
+                                 Margin="0,10,0,0"
+                                 Minimum="64"
+                                 Maximum="8192"
+                                 Increment="128"
+                                 FormatString="0"
+                                 Value="{Binding MaxTokens, Mode=TwoWay}"/>
+                </Grid>
+              </StackPanel>
+
+              <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="0,18"/>
+
+              <StackPanel Spacing="14">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="上下文与线程" Classes="h3"/>
+                  <TextBlock Text="上下文越大占用内存越多；显存不足时程序会自动减少卸载到 GPU 的层数。"
+                             Classes="caption"
+                             TextWrapping="Wrap"/>
+                </StackPanel>
+                <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto">
+                  <TextBlock Text="服务端口" Classes="muted" VerticalAlignment="Center"/>
+                  <NumericUpDown Grid.Column="1"
+                                 Width="170"
+                                 HorizontalAlignment="Left"
+                                 Minimum="1024"
+                                 Maximum="65535"
+                                 Increment="1"
+                                 FormatString="0"
+                                 Value="{Binding Port, Mode=TwoWay}"/>
+
+                  <TextBlock Grid.Row="1" Text="上下文长度" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <NumericUpDown Grid.Row="1" Grid.Column="1"
+                                 Width="170"
+                                 HorizontalAlignment="Left"
+                                 Margin="0,10,0,0"
+                                 Minimum="1024"
+                                 Maximum="131072"
+                                 Increment="1024"
+                                 FormatString="0"
+                                 Value="{Binding ContextSize, Mode=TwoWay}"/>
+
+                  <TextBlock Grid.Row="2" Text="CPU 线程数" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+                    <NumericUpDown Width="170"
+                                   Minimum="0"
+                                   Maximum="256"
+                                   Increment="1"
+                                   FormatString="0"
+                                   Value="{Binding Threads, Mode=TwoWay}"/>
+                    <TextBlock Text="{Binding ThreadsHint}" Classes="caption" VerticalAlignment="Center"/>
+                  </StackPanel>
+                </Grid>
+              </StackPanel>
+
+              <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="0,18"/>
+
+              <StackPanel Spacing="14">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="推理性能" Classes="h3"/>
+                  <TextBlock Text="启动模型时写入 llama-server 参数；修改后需重启推理服务生效。"
+                             Classes="caption"
+                             TextWrapping="Wrap"/>
+                </StackPanel>
+                <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                  <TextBlock Text="Flash Attention" Classes="muted" VerticalAlignment="Center"/>
+                  <ComboBox Grid.Column="1"
+                            Width="280"
+                            HorizontalAlignment="Left"
+                            ItemsSource="{Binding FlashAttentionOptions}"
+                            SelectedIndex="{Binding FlashAttentionIndex, Mode=TwoWay}"/>
+
+                  <TextBlock Grid.Row="1" Text="KV cache 量化" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <ComboBox Grid.Row="1"
+                            Grid.Column="1"
+                            Width="280"
+                            HorizontalAlignment="Left"
+                            Margin="0,10,0,0"
+                            ItemsSource="{Binding KvCacheOptions}"
+                            SelectedIndex="{Binding KvCacheIndex, Mode=TwoWay}"/>
+
+                  <TextBlock Grid.Row="2" Text="模型装载模式" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <ComboBox Grid.Row="2"
+                            Grid.Column="1"
+                            Width="280"
+                            HorizontalAlignment="Left"
+                            Margin="0,10,0,0"
+                            ItemsSource="{Binding LoadModeOptions}"
+                            SelectedIndex="{Binding LoadModeIndex, Mode=TwoWay}"/>
+
+                  <TextBlock Grid.Row="3" Text="并行槽位" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <StackPanel Grid.Row="3" Grid.Column="1" Spacing="4" Margin="0,10,0,0">
+                    <NumericUpDown Width="170"
+                                   HorizontalAlignment="Left"
+                                   Minimum="0"
+                                   Maximum="64"
+                                   Increment="1"
+                                   FormatString="0"
+                                   Value="{Binding ParallelSlots, Mode=TwoWay}"/>
+                    <TextBlock Text="{Binding ParallelSlotsHint}"
+                               Classes="caption"
+                               TextWrapping="Wrap"/>
+                  </StackPanel>
+
+                  <TextBlock Grid.Row="4" Text="MoE 卸载层数" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <StackPanel Grid.Row="4" Grid.Column="1" Spacing="4" Margin="0,10,0,0">
+                    <NumericUpDown Width="170"
+                                   HorizontalAlignment="Left"
+                                   Minimum="0"
+                                   Maximum="999"
+                                   Increment="1"
+                                   FormatString="0"
+                                   Value="{Binding CpuMoeLayers, Mode=TwoWay}"/>
+                    <TextBlock Text="{Binding CpuMoeLayersHint}"
+                               Classes="caption"
+                               TextWrapping="Wrap"/>
+                  </StackPanel>
+                </Grid>
+                <CheckBox Content="折叠显示模型的思考过程（reasoning_content）"
+                          IsChecked="{Binding ReasoningEnabled, Mode=TwoWay}"/>
+                <CheckBox Content="启用 Prometheus 指标端点（/metrics）"
+                          IsChecked="{Binding MetricsEnabled, Mode=TwoWay}"/>
+                <TextBlock Text="{Binding KvCacheHint}" Classes="caption" TextWrapping="Wrap"/>
+              </StackPanel>
+
+              <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="0,18"/>
+
+              <StackPanel Spacing="14">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Agent 资源" Classes="h3"/>
+                  <TextBlock Text="控制工作区 Agent 的轮次、读窗口与上下文裁剪。轮次与单步 tokens 直接放大耗时与显存占用；读窗口与工具结果裁剪会挤占上下文。"
+                             Classes="caption"
+                             TextWrapping="Wrap"/>
+                </StackPanel>
+                <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                  <TextBlock Text="Plan 轮次" Classes="muted" VerticalAlignment="Center"/>
+                  <NumericUpDown Grid.Column="1"
+                                 Width="170"
+                                 HorizontalAlignment="Left"
+                                 Minimum="1"
+                                 Maximum="20"
+                                 Increment="1"
+                                 FormatString="0"
+                                 Value="{Binding AgentPlanRounds, Mode=TwoWay}"/>
+
+                  <TextBlock Grid.Row="1" Text="Goal 轮次" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <NumericUpDown Grid.Row="1"
+                                 Grid.Column="1"
+                                 Width="170"
+                                 HorizontalAlignment="Left"
+                                 Margin="0,10,0,0"
+                                 Minimum="1"
+                                 Maximum="40"
+                                 Increment="1"
+                                 FormatString="0"
+                                 Value="{Binding AgentGoalRounds, Mode=TwoWay}"/>
+
+                  <TextBlock Grid.Row="2" Text="read_file 默认行数" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <NumericUpDown Grid.Row="2"
+                                 Grid.Column="1"
+                                 Width="170"
+                                 HorizontalAlignment="Left"
+                                 Margin="0,10,0,0"
+                                 Minimum="50"
+                                 Maximum="800"
+                                 Increment="50"
+                                 FormatString="0"
+                                 Value="{Binding AgentReadLines, Mode=TwoWay}"/>
+
+                  <TextBlock Grid.Row="3" Text="read_file 最大行数" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <NumericUpDown Grid.Row="3"
+                                 Grid.Column="1"
+                                 Width="170"
+                                 HorizontalAlignment="Left"
+                                 Margin="0,10,0,0"
+                                 Minimum="50"
+                                 Maximum="2000"
+                                 Increment="50"
+                                 FormatString="0"
+                                 Value="{Binding AgentMaxReadWindow, Mode=TwoWay}"/>
+
+                  <TextBlock Grid.Row="4" Text="工具结果裁剪字符" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <NumericUpDown Grid.Row="4"
+                                 Grid.Column="1"
+                                 Width="170"
+                                 HorizontalAlignment="Left"
+                                 Margin="0,10,0,0"
+                                 Minimum="120"
+                                 Maximum="4000"
+                                 Increment="40"
+                                 FormatString="0"
+                                 Value="{Binding AgentObservationChars, Mode=TwoWay}"/>
+
+                  <TextBlock Grid.Row="5" Text="单步 max_tokens" Classes="muted" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                  <NumericUpDown Grid.Row="5"
+                                 Grid.Column="1"
+                                 Width="170"
+                                 HorizontalAlignment="Left"
+                                 Margin="0,10,0,0"
+                                 Minimum="256"
+                                 Maximum="8192"
+                                 Increment="128"
+                                 FormatString="0"
+                                 Value="{Binding AgentMaxTokens, Mode=TwoWay}"/>
+                </Grid>
+                <TextBlock Text="默认值与旧版一致（4 / 10 / 200 / 400 / 400 / 2048）。调大轮次给小模型更多试错机会，但每次运行更慢、更耗 token；读窗口超过 200 行时会显著增加上下文占用。"
+                           Classes="caption"
+                           TextWrapping="Wrap"/>
+              </StackPanel>
+
+              <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="0,18"/>
+
+              <StackPanel Spacing="14">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="节能休眠" Classes="h3"/>
+                  <TextBlock Text="模型完成回复后开始计时；长时间没有交互会自动停止 llama-server 释放显存与内存，输入消息时再自动唤醒。"
+                             Classes="caption"
+                             TextWrapping="Wrap"/>
+                </StackPanel>
+                <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto">
+                  <TextBlock Text="空闲休眠" Classes="muted" VerticalAlignment="Center"/>
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                    <NumericUpDown Width="170"
+                                   Minimum="0"
+                                   Maximum="240"
+                                   Increment="5"
+                                   FormatString="0"
+                                   Value="{Binding IdleSleepMinutes, Mode=TwoWay}"/>
+                    <TextBlock Text="分钟（0 = 关闭休眠）" Classes="caption" VerticalAlignment="Center"/>
+                  </StackPanel>
+                  <CheckBox Grid.Row="1"
+                            Grid.Column="1"
+                            Margin="0,10,0,0"
+                            Content="用户开始输入时自动唤醒最近使用的模型"
+                            IsChecked="{Binding AutoWake, Mode=TwoWay}"/>
+                </Grid>
+              </StackPanel>
             </StackPanel>
-          </Grid>
-          <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto">
-            <TextBlock Text="模型目录" Classes="caption" Margin="0,4,0,0"/>
-            <StackPanel Grid.Column="1" Margin="0,4,0,0" Spacing="2">
-              <TextBlock Text="{Binding CatalogText}" Classes="muted"/>
+          </Border>
+
+          <!-- 引擎与关于 -->
+          <Border x:Name="RuntimeSection" Classes="card" Padding="24,22" IsVisible="False">
+            <StackPanel Spacing="0">
+              <StackPanel Spacing="14">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="推理引擎" Classes="h3"/>
+                  <TextBlock Text="{Binding RuntimeStatusText}" Classes="muted" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Grid ColumnDefinitions="170,*">
+                  <TextBlock Text="运行时后端" Classes="muted" VerticalAlignment="Center"/>
+                  <ComboBox Grid.Column="1"
+                            Width="280"
+                            HorizontalAlignment="Left"
+                            ItemsSource="{Binding Variants}"
+                            SelectedIndex="{Binding VariantIndex, Mode=TwoWay}"/>
+                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Classes="ghost"
+                          Content="检查更新"
+                          Command="{Binding CheckRuntimeUpdateCommand}"
+                          IsEnabled="{Binding !IsRuntimeBusy}"/>
+                  <Button Classes="ghost"
+                          Content="{Binding ReinstallRuntimeText}"
+                          Command="{Binding ReinstallRuntimeCommand}"
+                          IsEnabled="{Binding CanReinstallRuntime}"/>
+                  <Button Classes="primary"
+                          Content="{Binding RuntimeUpdateButtonText}"
+                          Command="{Binding UpdateRuntimeCommand}"
+                          IsVisible="{Binding HasRuntimeUpdate}"
+                          IsEnabled="{Binding CanUpdateRuntime}"/>
+                </StackPanel>
+                <TextBlock Text="{Binding RuntimeUpdateText}"
+                           Classes="caption"
+                           Foreground="{DynamicResource Accent}"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding HasRuntimeUpdateText}"/>
+                <Grid ColumnDefinitions="170,*" IsVisible="{Binding RuntimeStorageText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                  <TextBlock Text="磁盘占用" Classes="muted" VerticalAlignment="Center"/>
+                  <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <TextBlock Text="{Binding RuntimeStorageText}" Classes="caption" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1"
+                            Classes="ghost"
+                            Content="清理旧版本"
+                            Command="{Binding CleanupRuntimeCommand}"
+                            IsEnabled="{Binding CanCleanupRuntime}"/>
+                  </Grid>
+                </Grid>
+                <TextBlock Text="版本信息来自 GitHub 上 ggml-org/llama.cpp 的最新发布；更新与切换只替换应用托管的运行时，自定义 llama-server 路径不受影响。切换后端或更新后需重启推理服务。"
+                           Classes="caption"
+                           TextWrapping="Wrap"/>
+              </StackPanel>
+
+              <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="0,18"/>
+
+              <StackPanel Spacing="6">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="版本更新公告" Classes="h3" VerticalAlignment="Center"/>
+                  <Border Grid.Column="1" Classes="badge accent" VerticalAlignment="Center">
+                    <TextBlock Text="最新"/>
+                  </Border>
+                </Grid>
+                <TextBlock Text="{Binding LatestReleaseText}" Classes="muted"/>
+                <ItemsControl ItemsSource="{Binding LatestReleaseLines}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="svc:ReleaseLine">
+                      <TextBlock Text="{Binding Text}"
+                                 Classes="muted"
+                                 Classes.releaseHeading="{Binding IsHeading}"
+                                 TextWrapping="Wrap"/>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Border Height="1" Background="{DynamicResource Stroke}" Margin="0,10,0,6"/>
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Spacing="2">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <TextBlock Text="星河档案" Classes="h3" VerticalAlignment="Center"/>
+                      <Border Classes="badge" VerticalAlignment="Center" IsVisible="{Binding HasPreviousReleases}">
+                        <TextBlock Text="{Binding ReleaseArchiveCountText}"/>
+                      </Border>
+                    </StackPanel>
+                    <TextBlock Text="收录此前全部版本的更新公告，可随时翻阅。"
+                               Classes="caption"
+                               TextWrapping="Wrap"/>
+                  </StackPanel>
+                  <Button Grid.Column="1"
+                          Classes="ghost"
+                          Content="{Binding ReleaseArchiveToggleText}"
+                          Command="{Binding ToggleReleaseArchiveCommand}"
+                          IsVisible="{Binding HasPreviousReleases}"
+                          VerticalAlignment="Center"/>
+                </Grid>
+
+                <Border IsVisible="{Binding IsReleaseArchiveOpen}"
+                        Background="{DynamicResource InputBg}"
+                        CornerRadius="12"
+                        Padding="14,4,10,10">
+                  <ScrollViewer MaxHeight="340" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding PreviousReleases}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="svc:ReleaseNote">
+                          <StackPanel Spacing="2" Margin="0,10,0,2">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                              <TextBlock Text="{Binding Version}" Classes="h3"/>
+                              <TextBlock Text="{Binding Date}" Classes="caption" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding Lines}">
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="svc:ReleaseLine">
+                                  <TextBlock Text="{Binding Text}"
+                                             Classes="muted"
+                                             Classes.releaseHeading="{Binding IsHeading}"
+                                             TextWrapping="Wrap"/>
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </StackPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </Border>
+
+                <TextBlock Text="完整更新日志见应用目录下的 CHANGELOG.md。"
+                           Classes="caption"
+                           Margin="0,8,0,0"/>
+              </StackPanel>
+
+              <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="0,18"/>
+
+              <StackPanel Spacing="12">
+                <TextBlock Text="关于" Classes="h3"/>
+                <Grid ColumnDefinitions="Auto,*">
+                  <Border Width="44" Height="44" CornerRadius="14" Background="{DynamicResource AvatarBg}">
+                    <TextBlock Text="星"
+                               FontSize="17"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource Accent}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                  </Border>
+                  <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="3" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding VersionText}" Classes="h3"/>
+                    <TextBlock Text="{Binding CatalogCountText}" Classes="caption"/>
+                  </StackPanel>
+                </Grid>
+                <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto">
+                  <TextBlock Text="模型目录" Classes="caption" Margin="0,4,0,0"/>
+                  <StackPanel Grid.Column="1" Margin="0,4,0,0" Spacing="2">
+                    <TextBlock Text="{Binding CatalogText}" Classes="muted"/>
+                  </StackPanel>
+
+                  <TextBlock Grid.Row="1" Text="数据目录" Classes="caption" Margin="0,4,0,0"/>
+                  <TextBlock Grid.Row="1"
+                             Grid.Column="1"
+                             Text="{Binding DataRootText}"
+                             Classes="caption mono"
+                             TextWrapping="Wrap"
+                             Margin="0,4,0,0"/>
+                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <Button Classes="ghost" Content="导出备份" Command="{Binding ExportBackupCommand}"/>
+                  <Button Classes="ghost" Content="导入备份" Command="{Binding ImportBackupCommand}"/>
+                </StackPanel>
+                <TextBlock Text="备份为单个 JSON 文件，包含设置、自定义模型、长期记忆、全部会话与知识库；导入会覆盖现有数据，重启应用后生效。"
+                           Classes="caption"
+                           TextWrapping="Wrap"/>
+              </StackPanel>
             </StackPanel>
-
-            <TextBlock Grid.Row="1" Text="数据目录" Classes="caption" Margin="0,4,0,0"/>
-            <TextBlock Grid.Row="1"
-                       Grid.Column="1"
-                       Text="{Binding DataRootText}"
-                       Classes="caption mono"
-                       TextWrapping="Wrap"
-                       Margin="0,4,0,0"/>
-          </Grid>
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <Button Classes="ghost" Content="导出备份" Command="{Binding ExportBackupCommand}"/>
-            <Button Classes="ghost" Content="导入备份" Command="{Binding ImportBackupCommand}"/>
-          </StackPanel>
-          <TextBlock Text="备份为单个 JSON 文件，包含设置、自定义模型、长期记忆、全部会话与知识库；导入会覆盖现有数据，重启应用后生效。"
-                     Classes="caption"
-                     TextWrapping="Wrap"/>
+          </Border>
         </StackPanel>
-      </Border>
+      </ScrollViewer>
 
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Text="{Binding SaveStatus}" Classes="caption" VerticalAlignment="Center"/>
-        <Button Grid.Column="1" Classes="primary" Content="保存设置" Command="{Binding SaveCommand}" MinWidth="120"/>
-      </Grid>
-    </StackPanel>
-  </ScrollViewer>
+      <!-- 固定操作条：滚动再深也能看到保存入口 -->
+      <Border Grid.Row="1"
+              Background="{DynamicResource ContentSurface}"
+              BorderBrush="{DynamicResource StrokeSubtle}"
+              BorderThickness="0,1,0,0"
+              Padding="20,10,32,14">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="{Binding SaveStatus}" Classes="caption" VerticalAlignment="Center"/>
+          <Button Grid.Column="1" Classes="primary" Content="保存设置" Command="{Binding SaveCommand}" MinWidth="120"/>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
 </UserControl>

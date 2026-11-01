@@ -10,7 +10,9 @@ public sealed record BackupImportResult(
     int CustomModels,
     int Memories,
     int Sessions,
-    int KnowledgeDocuments);
+    int KnowledgeDocuments,
+    bool MachineBoundReset = false,
+    int ResetFields = 0);
 
 /// <summary>
 /// 配置与会话备份：把 settings.json、custom-models.json、memory.json、sessions.json、knowledge.json
@@ -46,7 +48,7 @@ public sealed class BackupService
     public string KnowledgeFile { get; }
 
     /// <summary>导出为单个 JSON 备份文件；损坏的单个分节会被跳过，不影响其余数据。</summary>
-    public void Export(string backupPath, string appVersion = "")
+    public void Export(string backupPath, string appVersion = "", string machineFingerprint = "")
     {
         if (string.IsNullOrWhiteSpace(backupPath))
         {
@@ -57,6 +59,8 @@ public sealed class BackupService
         {
             ["format"] = FormatName,
             ["version"] = FormatVersion,
+            ["schemaVersion"] = FormatVersion,
+            ["machineFingerprint"] = machineFingerprint,
             ["exportedAt"] = DateTimeOffset.Now.ToString("O"),
             ["appVersion"] = appVersion,
             ["settings"] = ReadNode(SettingsFile),
@@ -78,8 +82,9 @@ public sealed class BackupService
     /// <summary>
     /// 导入备份：先校验所有分节，再统一写回四个文件，任何一步失败都不会留下半份数据。
     /// 导入后需重启应用才会让设置与内存数据生效。
+    /// 备份来自另一台设备（指纹不一致）时，硬件绑定项重置为默认，而不是原样套用。
     /// </summary>
-    public BackupImportResult Import(string backupPath)
+    public BackupImportResult Import(string backupPath, string currentFingerprint = "")
     {
         if (string.IsNullOrWhiteSpace(backupPath))
         {
@@ -110,10 +115,23 @@ public sealed class BackupService
         var memories = 0;
         var sessions = 0;
         var knowledgeDocuments = 0;
+        var machineBoundReset = false;
+        var resetFields = 0;
 
         if (settingsNode is not null)
         {
             var settings = Deserialize<AppSettings>(settingsNode, "设置");
+            var exportedFingerprint = TryGetString(bundle, "machineFingerprint", out var fingerprint)
+                ? fingerprint ?? ""
+                : "";
+            if (exportedFingerprint.Length > 0 &&
+                currentFingerprint.Length > 0 &&
+                !exportedFingerprint.Equals(currentFingerprint, StringComparison.Ordinal))
+            {
+                resetFields = ResetMachineBound(settings);
+                machineBoundReset = resetFields > 0;
+            }
+
             writes.Add((SettingsFile, JsonSerializer.Serialize(settings, JsonOptions)));
             settingsImported = true;
         }
@@ -160,7 +178,41 @@ public sealed class BackupService
 
         WriteAll(writes);
 
-        return new BackupImportResult(settingsImported, customModels, memories, sessions, knowledgeDocuments);
+        return new BackupImportResult(
+            settingsImported, customModels, memories, sessions, knowledgeDocuments,
+            machineBoundReset, resetFields);
+    }
+
+    /// <summary>
+    /// 硬件绑定项重置为默认：这些值只对导出时那台机器有意义（端口、线程、显存规划、路径）。
+    /// 返回被重置的字段数，便于提示「已按当前设备重新评估」。
+    /// </summary>
+    private static int ResetMachineBound(AppSettings settings)
+    {
+        var defaults = new AppSettings();
+        var reset = 0;
+
+        void Reset<T>(T current, T fallback, Action<T> apply)
+        {
+            if (EqualityComparer<T>.Default.Equals(current, fallback)) return;
+            apply(fallback);
+            reset++;
+        }
+
+        Reset(settings.ContextSize, defaults.ContextSize, value => settings.ContextSize = value);
+        Reset(settings.Threads, defaults.Threads, value => settings.Threads = value);
+        Reset(settings.ServerPort, defaults.ServerPort, value => settings.ServerPort = value);
+        Reset(settings.KvCacheType, defaults.KvCacheType, value => settings.KvCacheType = value);
+        Reset(settings.FlashAttention, defaults.FlashAttention, value => settings.FlashAttention = value);
+        Reset(settings.CpuMoeLayers, defaults.CpuMoeLayers, value => settings.CpuMoeLayers = value);
+        Reset(settings.ParallelSlots, defaults.ParallelSlots, value => settings.ParallelSlots = value);
+        Reset(settings.LoadMode, defaults.LoadMode, value => settings.LoadMode = value);
+        Reset(settings.RuntimePath, defaults.RuntimePath, value => settings.RuntimePath = value);
+        Reset(settings.RuntimeVariant, defaults.RuntimeVariant, value => settings.RuntimeVariant = value);
+        Reset(settings.ModelsDirectory, defaults.ModelsDirectory, value => settings.ModelsDirectory = value);
+        Reset(settings.WorkspaceDirectory, defaults.WorkspaceDirectory, value => settings.WorkspaceDirectory = value);
+        Reset(settings.LastModelPath, defaults.LastModelPath, value => settings.LastModelPath = value);
+        return reset;
     }
 
     private static JsonObject ParseBundle(string backupPath)

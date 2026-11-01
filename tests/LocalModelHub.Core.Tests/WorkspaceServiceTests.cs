@@ -111,6 +111,25 @@ public sealed class WorkspaceServiceTests : IDisposable
     }
 
     [Fact]
+    public void ReadFile_window_size_is_configurable()
+    {
+        var content = string.Join('\n', Enumerable.Range(1, 300).Select(index => $"line {index}"));
+        _service.WriteFile("big.txt", content);
+        _service.DefaultReadLines = 50;
+        _service.MaxReadWindow = 120;
+
+        var first = _service.ReadFile("big.txt");
+        Assert.Contains("第 1-50 行 / 共 300 行", first.Text);
+        Assert.Contains("50| line 50", first.Text);
+        Assert.DoesNotContain("51| line 51", first.Text);
+
+        var wide = _service.ReadFile("big.txt", 1, 500);
+        Assert.Contains("第 1-120 行 / 共 300 行", wide.Text);
+        Assert.DoesNotContain("121| line 121", wide.Text);
+        Assert.Contains("单次最多 120 行", wide.Text);
+    }
+
+    [Fact]
     public void Search_matches_lines_and_honors_include_filter()
     {
         _service.WriteFile("src/a.cs", "class Alpha { }\n// TODO fix alpha");
@@ -285,6 +304,33 @@ public sealed class WorkspaceServiceTests : IDisposable
         Assert.False(result.Success);
         Assert.Equal("one\ntwo", File.ReadAllText(Path.Combine(_root, "ok.txt")));
         Assert.Equal("alpha\nbeta", File.ReadAllText(Path.Combine(_root, "bad.txt")));
+    }
+
+    [Fact]
+    public void ApplyPatch_writes_multiple_files_and_leaves_no_temp_files()
+    {
+        _service.WriteFile("a.txt", "one\ntwo");
+
+        var patch = """
+            --- a/a.txt
+            +++ b/a.txt
+            @@ -1,2 +1,2 @@
+             one
+            -two
+            +three
+            --- /dev/null
+            +++ b/new.txt
+            @@ -0,0 +1,1 @@
+            +created
+            """;
+
+        var result = _service.ApplyPatch(patch);
+
+        Assert.True(result.Success);
+        Assert.Equal("one\nthree", File.ReadAllText(Path.Combine(_root, "a.txt")));
+        Assert.Equal("created\n", File.ReadAllText(Path.Combine(_root, "new.txt")));
+        Assert.Empty(Directory.GetFiles(_root, "*", SearchOption.AllDirectories)
+            .Where(path => Path.GetFileName(path).Contains(".lmh-", StringComparison.Ordinal)));
     }
 
     [Fact]

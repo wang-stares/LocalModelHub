@@ -29,29 +29,18 @@ public static class WorkspaceDiff
     private const int MaxFileBytes = 256 * 1024;
     private const int ContextLines = 3;
 
-    private static readonly string[] IgnoredDirectories =
-    [
-        ".git", ".svn", ".hg", "node_modules", "bin", "obj", "dist", "build", "target", "vendor",
-        ".venv", "venv", "__pycache__", ".idea", ".vs", "packages", "coverage", ".next", ".cache"
-    ];
-
-    private static readonly string[] BinaryExtensions =
-    [
-        ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".bmp", ".pdf", ".zip", ".gz", ".7z", ".rar",
-        ".exe", ".dll", ".so", ".dylib", ".pdb", ".class", ".jar", ".gguf", ".bin", ".mp4", ".mov", ".woff", ".woff2"
-    ];
-
     public static WorkspaceSnapshot Capture(string? root)
     {
         var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root)) return new(files);
 
+        var rules = WorkspaceRules.ForRoot(root);
         try
         {
-            foreach (var file in EnumerateFiles(root, 8))
+            foreach (var file in EnumerateFiles(root, 8, rules))
             {
                 if (files.Count >= MaxFiles) break;
-                if (BinaryExtensions.Any(ext => file.EndsWith(ext, StringComparison.OrdinalIgnoreCase))) continue;
+                if (rules.IsBinaryFile(file)) continue;
 
                 try
                 {
@@ -202,7 +191,7 @@ public static class WorkspaceDiff
         return normalized.Length == 0 ? [] : normalized.Split('\n');
     }
 
-    private static IEnumerable<string> EnumerateFiles(string root, int maxDepth)
+    private static IEnumerable<string> EnumerateFiles(string root, int maxDepth, WorkspaceRules rules)
     {
         var stack = new Stack<(string Path, int Depth)>();
         stack.Push((root, 0));
@@ -224,12 +213,7 @@ public static class WorkspaceDiff
 
             foreach (var child in children)
             {
-                if (IgnoredDirectories.Any(ignore =>
-                        Path.GetFileName(child).Equals(ignore, StringComparison.OrdinalIgnoreCase)))
-                {
-                    continue;
-                }
-
+                if (rules.IsIgnoredDirectory(Path.GetFileName(child))) continue;
                 stack.Push((child, depth + 1));
             }
 

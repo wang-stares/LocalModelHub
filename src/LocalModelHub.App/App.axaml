@@ -9,62 +9,87 @@
     <ResourceDictionary>
       <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Light">
-          <SolidColorBrush x:Key="AppBg" Color="#F2F3F5"/>
+          <!-- 材质底：窗口不再是一块纯色，而是带冷调渐变的桌面底板 -->
+          <LinearGradientBrush x:Key="AppBg" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#F9FAFE" Offset="0"/>
+            <GradientStop Color="#F1F3F9" Offset="0.48"/>
+            <GradientStop Color="#E8ECF6" Offset="1"/>
+          </LinearGradientBrush>
+          <RadialGradientBrush x:Key="BloomBrush" Center="88%,4%" GradientOrigin="88%,4%" RadiusX="72%" RadiusY="86%">
+            <GradientStop Color="#243482FF" Offset="0"/>
+            <GradientStop Color="#003482FF" Offset="1"/>
+          </RadialGradientBrush>
+          <RadialGradientBrush x:Key="BloomBrushAlt" Center="4%,96%" GradientOrigin="4%,96%" RadiusX="64%" RadiusY="76%">
+            <GradientStop Color="#144D8DFF" Offset="0"/>
+            <GradientStop Color="#004D8DFF" Offset="1"/>
+          </RadialGradientBrush>
+          <!-- 半透明材质层：叠在渐变底上形成 Mica / 亚克力质感 -->
+          <SolidColorBrush x:Key="MicaBg" Color="#A6FBFCFF"/>
+          <SolidColorBrush x:Key="MicaStroke" Color="#1AFFFFFF"/>
+          <!-- 内容底与侧栏底：压在半透明磨砂上，避免桌面壁纸透进正文区域 -->
+          <SolidColorBrush x:Key="ContentSurface" Color="#F0F7F9FC"/>
+          <SolidColorBrush x:Key="NavBg" Color="#F5FBFCFF"/>
           <SolidColorBrush x:Key="SidebarBg" Color="#F7F8FA"/>
-          <SolidColorBrush x:Key="CardBg" Color="#FFFFFF"/>
-          <SolidColorBrush x:Key="CardHoverBg" Color="#FAFBFD"/>
-          <SolidColorBrush x:Key="InputBg" Color="#F4F5F7"/>
-          <SolidColorBrush x:Key="SegBg" Color="#F0F1F4"/>
+          <SolidColorBrush x:Key="CardBg" Color="#EBFFFFFF"/>
+          <SolidColorBrush x:Key="CardHoverBg" Color="#F7FFFFFF"/>
+          <SolidColorBrush x:Key="CardSunkenBg" Color="#080B1220"/>
+          <SolidColorBrush x:Key="GlassSheen" Color="#66FFFFFF"/>
+          <SolidColorBrush x:Key="InputBg" Color="#0C0B1220"/>
+          <SolidColorBrush x:Key="SegBg" Color="#100B1220"/>
           <SolidColorBrush x:Key="SegSelectedBg" Color="#FFFFFF"/>
-          <SolidColorBrush x:Key="Stroke" Color="#EBEDF0"/>
-          <SolidColorBrush x:Key="StrokeStrong" Color="#DCE0E5"/>
-          <SolidColorBrush x:Key="TextPrimary" Color="#0E1116"/>
-          <SolidColorBrush x:Key="TextSecondary" Color="#5F6673"/>
-          <SolidColorBrush x:Key="TextMuted" Color="#9AA0A9"/>
+          <SolidColorBrush x:Key="Stroke" Color="#170B1220"/>
+          <SolidColorBrush x:Key="StrokeSubtle" Color="#0C0B1220"/>
+          <SolidColorBrush x:Key="StrokeStrong" Color="#2E0B1220"/>
+          <SolidColorBrush x:Key="FocusRing" Color="#5C3482FF"/>
+          <SolidColorBrush x:Key="FocusGlow" Color="#293482FF"/>
+          <SolidColorBrush x:Key="TextPrimary" Color="#12161F"/>
+          <SolidColorBrush x:Key="TextSecondary" Color="#5A6373"/>
+          <SolidColorBrush x:Key="TextMuted" Color="#6F7888"/>
           <SolidColorBrush x:Key="Accent" Color="#3482FF"/>
           <SolidColorBrush x:Key="AccentHover" Color="#4B90FF"/>
-          <SolidColorBrush x:Key="AccentPressed" Color="#2A6FDB"/>
-          <SolidColorBrush x:Key="AccentSoft" Color="#E8F1FF"/>
-          <SolidColorBrush x:Key="AccentSoftHover" Color="#D9E8FF"/>
+          <SolidColorBrush x:Key="AccentPressed" Color="#2563D8"/>
+          <SolidColorBrush x:Key="AccentSoft" Color="#1C3482FF"/>
+          <SolidColorBrush x:Key="AccentSoftHover" Color="#2B3482FF"/>
+          <SolidColorBrush x:Key="AccentInk" Color="#1657C8"/>
           <SolidColorBrush x:Key="OnAccent" Color="#FFFFFF"/>
-          <SolidColorBrush x:Key="AvatarBg" Color="#E8F1FF"/>
-          <SolidColorBrush x:Key="Success" Color="#22B573"/>
-          <SolidColorBrush x:Key="SuccessSoft" Color="#E6F7EF"/>
-          <SolidColorBrush x:Key="Warning" Color="#E8952C"/>
-          <SolidColorBrush x:Key="WarningSoft" Color="#FFF4E0"/>
-          <SolidColorBrush x:Key="Danger" Color="#F55A5A"/>
-          <SolidColorBrush x:Key="DangerSoft" Color="#FEECEC"/>
-          <SolidColorBrush x:Key="DangerHover" Color="#FBE0E0"/>
-          <SolidColorBrush x:Key="ProgressBg" Color="#EFF1F4"/>
-          <SolidColorBrush x:Key="OverlayBg" Color="#D9F2F3F5"/>
+          <SolidColorBrush x:Key="AvatarBg" Color="#1F3482FF"/>
+          <SolidColorBrush x:Key="Success" Color="#12A169"/>
+          <SolidColorBrush x:Key="SuccessSoft" Color="#1F12A169"/>
+          <SolidColorBrush x:Key="Warning" Color="#D98214"/>
+          <SolidColorBrush x:Key="WarningSoft" Color="#1FD98214"/>
+          <SolidColorBrush x:Key="Danger" Color="#E0454F"/>
+          <SolidColorBrush x:Key="DangerSoft" Color="#1FE0454F"/>
+          <SolidColorBrush x:Key="DangerHover" Color="#2EE0454F"/>
+          <SolidColorBrush x:Key="ProgressBg" Color="#140B1220"/>
+          <SolidColorBrush x:Key="OverlayBg" Color="#CCF2F4FA"/>
 
-          <SolidColorBrush x:Key="BadgeNeutralBg" Color="#F2F3F5"/>
-          <SolidColorBrush x:Key="BadgeNeutralFg" Color="#6B7280"/>
-          <SolidColorBrush x:Key="BadgeCnBg" Color="#FFF0E4"/>
-          <SolidColorBrush x:Key="BadgeCnFg" Color="#C8620F"/>
-          <SolidColorBrush x:Key="BadgeIntlBg" Color="#E8F1FF"/>
-          <SolidColorBrush x:Key="BadgeIntlFg" Color="#1E6FE8"/>
-          <SolidColorBrush x:Key="BadgeLocalBg" Color="#F2F3F5"/>
-          <SolidColorBrush x:Key="BadgeLocalFg" Color="#6B7280"/>
-          <SolidColorBrush x:Key="FitPerfectBg" Color="#E6F7EF"/>
-          <SolidColorBrush x:Key="FitPerfectFg" Color="#14925C"/>
-          <SolidColorBrush x:Key="FitGoodBg" Color="#E8F1FF"/>
-          <SolidColorBrush x:Key="FitGoodFg" Color="#1E6FE8"/>
-          <SolidColorBrush x:Key="FitPlayableBg" Color="#FFF4E0"/>
-          <SolidColorBrush x:Key="FitPlayableFg" Color="#B26A00"/>
-          <SolidColorBrush x:Key="FitTightBg" Color="#FFEEE6"/>
-          <SolidColorBrush x:Key="FitTightFg" Color="#C0562A"/>
-          <SolidColorBrush x:Key="FitBadBg" Color="#FEECEC"/>
-          <SolidColorBrush x:Key="FitBadFg" Color="#D13737"/>
+          <SolidColorBrush x:Key="BadgeNeutralBg" Color="#120B1220"/>
+          <SolidColorBrush x:Key="BadgeNeutralFg" Color="#5F6878"/>
+          <SolidColorBrush x:Key="BadgeCnBg" Color="#1FD98214"/>
+          <SolidColorBrush x:Key="BadgeCnFg" Color="#A85C0A"/>
+          <SolidColorBrush x:Key="BadgeIntlBg" Color="#1C3482FF"/>
+          <SolidColorBrush x:Key="BadgeIntlFg" Color="#1657C8"/>
+          <SolidColorBrush x:Key="BadgeLocalBg" Color="#120B1220"/>
+          <SolidColorBrush x:Key="BadgeLocalFg" Color="#5F6878"/>
+          <SolidColorBrush x:Key="FitPerfectBg" Color="#1F12A169"/>
+          <SolidColorBrush x:Key="FitPerfectFg" Color="#0C8657"/>
+          <SolidColorBrush x:Key="FitGoodBg" Color="#1C3482FF"/>
+          <SolidColorBrush x:Key="FitGoodFg" Color="#1657C8"/>
+          <SolidColorBrush x:Key="FitPlayableBg" Color="#1FD98214"/>
+          <SolidColorBrush x:Key="FitPlayableFg" Color="#A05F00"/>
+          <SolidColorBrush x:Key="FitTightBg" Color="#1FEF6C23"/>
+          <SolidColorBrush x:Key="FitTightFg" Color="#B85222"/>
+          <SolidColorBrush x:Key="FitBadBg" Color="#1FE0454F"/>
+          <SolidColorBrush x:Key="FitBadFg" Color="#C23540"/>
 
-          <SolidColorBrush x:Key="TileCpuBg" Color="#E8F1FF"/>
-          <SolidColorBrush x:Key="TileCpuFg" Color="#2067D4"/>
-          <SolidColorBrush x:Key="TileGpuBg" Color="#F1EBFF"/>
-          <SolidColorBrush x:Key="TileGpuFg" Color="#6E45D0"/>
-          <SolidColorBrush x:Key="TileRamBg" Color="#E6F7EF"/>
-          <SolidColorBrush x:Key="TileRamFg" Color="#14925C"/>
-          <SolidColorBrush x:Key="TileDiskBg" Color="#FFF4E0"/>
-          <SolidColorBrush x:Key="TileDiskFg" Color="#B26A00"/>
+          <SolidColorBrush x:Key="TileCpuBg" Color="#1C3482FF"/>
+          <SolidColorBrush x:Key="TileCpuFg" Color="#1A62CE"/>
+          <SolidColorBrush x:Key="TileGpuBg" Color="#1F7C4DE0"/>
+          <SolidColorBrush x:Key="TileGpuFg" Color="#6438C8"/>
+          <SolidColorBrush x:Key="TileRamBg" Color="#1F12A169"/>
+          <SolidColorBrush x:Key="TileRamFg" Color="#0C8657"/>
+          <SolidColorBrush x:Key="TileDiskBg" Color="#1FD98214"/>
+          <SolidColorBrush x:Key="TileDiskFg" Color="#A05F00"/>
 
           <Color x:Key="SystemAccentColor">#3482FF</Color>
           <Color x:Key="SystemAccentColorLight1">#4B90FF</Color>
@@ -76,62 +101,85 @@
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Dark">
-          <SolidColorBrush x:Key="AppBg" Color="#101114"/>
+          <!-- 深色材质：偏冷的石墨底 + 蓝紫光晕实况感 -->
+          <LinearGradientBrush x:Key="AppBg" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#191C23" Offset="0"/>
+            <GradientStop Color="#121419" Offset="0.5"/>
+            <GradientStop Color="#0C0E12" Offset="1"/>
+          </LinearGradientBrush>
+          <RadialGradientBrush x:Key="BloomBrush" Center="88%,4%" GradientOrigin="88%,4%" RadiusX="72%" RadiusY="86%">
+            <GradientStop Color="#3A4D8DFF" Offset="0"/>
+            <GradientStop Color="#004D8DFF" Offset="1"/>
+          </RadialGradientBrush>
+          <RadialGradientBrush x:Key="BloomBrushAlt" Center="4%,96%" GradientOrigin="4%,96%" RadiusX="64%" RadiusY="76%">
+            <GradientStop Color="#1F7C4DE0" Offset="0"/>
+            <GradientStop Color="#007C4DE0" Offset="1"/>
+          </RadialGradientBrush>
+          <SolidColorBrush x:Key="MicaBg" Color="#9914171C"/>
+          <SolidColorBrush x:Key="MicaStroke" Color="#26FFFFFF"/>
+          <SolidColorBrush x:Key="ContentSurface" Color="#E8111419"/>
+          <SolidColorBrush x:Key="NavBg" Color="#F0111418"/>
           <SolidColorBrush x:Key="SidebarBg" Color="#0D0E11"/>
-          <SolidColorBrush x:Key="CardBg" Color="#1B1D23"/>
-          <SolidColorBrush x:Key="CardHoverBg" Color="#22252C"/>
-          <SolidColorBrush x:Key="InputBg" Color="#22252C"/>
-          <SolidColorBrush x:Key="SegBg" Color="#17191E"/>
-          <SolidColorBrush x:Key="SegSelectedBg" Color="#2C3038"/>
-          <SolidColorBrush x:Key="Stroke" Color="#262931"/>
-          <SolidColorBrush x:Key="StrokeStrong" Color="#333844"/>
-          <SolidColorBrush x:Key="TextPrimary" Color="#F2F4F7"/>
-          <SolidColorBrush x:Key="TextSecondary" Color="#A3A9B3"/>
-          <SolidColorBrush x:Key="TextMuted" Color="#6C7280"/>
+          <SolidColorBrush x:Key="CardBg" Color="#DC1C2028"/>
+          <SolidColorBrush x:Key="CardHoverBg" Color="#EA222731"/>
+          <SolidColorBrush x:Key="CardSunkenBg" Color="#1A000000"/>
+          <SolidColorBrush x:Key="GlassSheen" Color="#1FFFFFFF"/>
+          <SolidColorBrush x:Key="InputBg" Color="#12FFFFFF"/>
+          <SolidColorBrush x:Key="SegBg" Color="#1A000000"/>
+          <SolidColorBrush x:Key="SegSelectedBg" Color="#2E3441"/>
+          <SolidColorBrush x:Key="Stroke" Color="#20FFFFFF"/>
+          <SolidColorBrush x:Key="StrokeSubtle" Color="#12FFFFFF"/>
+          <SolidColorBrush x:Key="StrokeStrong" Color="#33FFFFFF"/>
+          <SolidColorBrush x:Key="FocusRing" Color="#804D8DFF"/>
+          <SolidColorBrush x:Key="FocusGlow" Color="#3A4D8DFF"/>
+          <SolidColorBrush x:Key="TextPrimary" Color="#F3F5FA"/>
+          <SolidColorBrush x:Key="TextSecondary" Color="#A6ADBA"/>
+          <SolidColorBrush x:Key="TextMuted" Color="#7E8797"/>
           <SolidColorBrush x:Key="Accent" Color="#4D8DFF"/>
           <SolidColorBrush x:Key="AccentHover" Color="#6AA3FF"/>
           <SolidColorBrush x:Key="AccentPressed" Color="#3B7BEF"/>
-          <SolidColorBrush x:Key="AccentSoft" Color="#1B2A44"/>
-          <SolidColorBrush x:Key="AccentSoftHover" Color="#223754"/>
+          <SolidColorBrush x:Key="AccentSoft" Color="#294D8DFF"/>
+          <SolidColorBrush x:Key="AccentSoftHover" Color="#3A4D8DFF"/>
+          <SolidColorBrush x:Key="AccentInk" Color="#9CC3FF"/>
           <SolidColorBrush x:Key="OnAccent" Color="#FFFFFF"/>
-          <SolidColorBrush x:Key="AvatarBg" Color="#1F2A3C"/>
-          <SolidColorBrush x:Key="Success" Color="#3DDC97"/>
-          <SolidColorBrush x:Key="SuccessSoft" Color="#123326"/>
-          <SolidColorBrush x:Key="Warning" Color="#F7B955"/>
-          <SolidColorBrush x:Key="WarningSoft" Color="#332713"/>
+          <SolidColorBrush x:Key="AvatarBg" Color="#294D8DFF"/>
+          <SolidColorBrush x:Key="Success" Color="#4ADE9B"/>
+          <SolidColorBrush x:Key="SuccessSoft" Color="#1F4ADE9B"/>
+          <SolidColorBrush x:Key="Warning" Color="#F5B349"/>
+          <SolidColorBrush x:Key="WarningSoft" Color="#1FF5B349"/>
           <SolidColorBrush x:Key="Danger" Color="#FF7A85"/>
-          <SolidColorBrush x:Key="DangerSoft" Color="#3A1B20"/>
-          <SolidColorBrush x:Key="DangerHover" Color="#4A2229"/>
-          <SolidColorBrush x:Key="ProgressBg" Color="#262A32"/>
-          <SolidColorBrush x:Key="OverlayBg" Color="#D9101214"/>
+          <SolidColorBrush x:Key="DangerSoft" Color="#1FFF7A85"/>
+          <SolidColorBrush x:Key="DangerHover" Color="#33FF7A85"/>
+          <SolidColorBrush x:Key="ProgressBg" Color="#14FFFFFF"/>
+          <SolidColorBrush x:Key="OverlayBg" Color="#CC0E1014"/>
 
-          <SolidColorBrush x:Key="BadgeNeutralBg" Color="#262A32"/>
-          <SolidColorBrush x:Key="BadgeNeutralFg" Color="#93A1B5"/>
-          <SolidColorBrush x:Key="BadgeCnBg" Color="#2E2118"/>
-          <SolidColorBrush x:Key="BadgeCnFg" Color="#FFB077"/>
-          <SolidColorBrush x:Key="BadgeIntlBg" Color="#17283C"/>
-          <SolidColorBrush x:Key="BadgeIntlFg" Color="#7FB6FF"/>
-          <SolidColorBrush x:Key="BadgeLocalBg" Color="#262A32"/>
-          <SolidColorBrush x:Key="BadgeLocalFg" Color="#93A1B5"/>
-          <SolidColorBrush x:Key="FitPerfectBg" Color="#123326"/>
-          <SolidColorBrush x:Key="FitPerfectFg" Color="#4AE3A0"/>
-          <SolidColorBrush x:Key="FitGoodBg" Color="#16293F"/>
-          <SolidColorBrush x:Key="FitGoodFg" Color="#79B0FF"/>
-          <SolidColorBrush x:Key="FitPlayableBg" Color="#332713"/>
-          <SolidColorBrush x:Key="FitPlayableFg" Color="#F7B955"/>
-          <SolidColorBrush x:Key="FitTightBg" Color="#33231C"/>
-          <SolidColorBrush x:Key="FitTightFg" Color="#FF9E6B"/>
-          <SolidColorBrush x:Key="FitBadBg" Color="#3A1B20"/>
-          <SolidColorBrush x:Key="FitBadFg" Color="#FF7A85"/>
+          <SolidColorBrush x:Key="BadgeNeutralBg" Color="#16FFFFFF"/>
+          <SolidColorBrush x:Key="BadgeNeutralFg" Color="#A9B1C0"/>
+          <SolidColorBrush x:Key="BadgeCnBg" Color="#1FF5B349"/>
+          <SolidColorBrush x:Key="BadgeCnFg" Color="#FFC078"/>
+          <SolidColorBrush x:Key="BadgeIntlBg" Color="#294D8DFF"/>
+          <SolidColorBrush x:Key="BadgeIntlFg" Color="#9CC3FF"/>
+          <SolidColorBrush x:Key="BadgeLocalBg" Color="#16FFFFFF"/>
+          <SolidColorBrush x:Key="BadgeLocalFg" Color="#A9B1C0"/>
+          <SolidColorBrush x:Key="FitPerfectBg" Color="#1F4ADE9B"/>
+          <SolidColorBrush x:Key="FitPerfectFg" Color="#6FE8B4"/>
+          <SolidColorBrush x:Key="FitGoodBg" Color="#294D8DFF"/>
+          <SolidColorBrush x:Key="FitGoodFg" Color="#9CC3FF"/>
+          <SolidColorBrush x:Key="FitPlayableBg" Color="#1FF5B349"/>
+          <SolidColorBrush x:Key="FitPlayableFg" Color="#FFC078"/>
+          <SolidColorBrush x:Key="FitTightBg" Color="#1FFF9A5C"/>
+          <SolidColorBrush x:Key="FitTightFg" Color="#FFB68C"/>
+          <SolidColorBrush x:Key="FitBadBg" Color="#1FFF7A85"/>
+          <SolidColorBrush x:Key="FitBadFg" Color="#FF9AA3"/>
 
-          <SolidColorBrush x:Key="TileCpuBg" Color="#1B2A44"/>
-          <SolidColorBrush x:Key="TileCpuFg" Color="#7FB6FF"/>
-          <SolidColorBrush x:Key="TileGpuBg" Color="#2A2140"/>
-          <SolidColorBrush x:Key="TileGpuFg" Color="#C0A6FF"/>
-          <SolidColorBrush x:Key="TileRamBg" Color="#123326"/>
-          <SolidColorBrush x:Key="TileRamFg" Color="#4AE3A0"/>
-          <SolidColorBrush x:Key="TileDiskBg" Color="#332713"/>
-          <SolidColorBrush x:Key="TileDiskFg" Color="#F7B955"/>
+          <SolidColorBrush x:Key="TileCpuBg" Color="#294D8DFF"/>
+          <SolidColorBrush x:Key="TileCpuFg" Color="#9CC3FF"/>
+          <SolidColorBrush x:Key="TileGpuBg" Color="#2AA57CFF"/>
+          <SolidColorBrush x:Key="TileGpuFg" Color="#C9B2FF"/>
+          <SolidColorBrush x:Key="TileRamBg" Color="#1F4ADE9B"/>
+          <SolidColorBrush x:Key="TileRamFg" Color="#6FE8B4"/>
+          <SolidColorBrush x:Key="TileDiskBg" Color="#1FF5B349"/>
+          <SolidColorBrush x:Key="TileDiskFg" Color="#FFC078"/>
 
           <Color x:Key="SystemAccentColor">#4D8DFF</Color>
           <Color x:Key="SystemAccentColorLight1">#6AA3FF</Color>
@@ -144,25 +192,43 @@
       </ResourceDictionary.ThemeDictionaries>
 
       <LinearGradientBrush x:Key="LogoGradient" StartPoint="0%,0%" EndPoint="100%,100%">
-        <GradientStop Color="#5B9BFF" Offset="0"/>
+        <GradientStop Color="#4A88F2" Offset="0"/>
         <GradientStop Color="#2F6BE8" Offset="1"/>
       </LinearGradientBrush>
 
-      <StreamGeometry x:Key="IconHome">M3.5,11 L12,3.5 L20.5,11 M6,9.2 V20.5 H18 V9.2</StreamGeometry>
-      <StreamGeometry x:Key="IconSpark">M12,3.5 L13.9,8.9 L19.5,10.8 L13.9,12.7 L12,18.1 L10.1,12.7 L4.5,10.8 L10.1,8.9 Z</StreamGeometry>
-      <StreamGeometry x:Key="IconStore">M5.5,8.5 H18.5 L17.6,20.5 H6.4 Z M9.3,8.5 V6.6 A2.7,2.7 0 0 1 14.7,6.6 V8.5</StreamGeometry>
-      <StreamGeometry x:Key="IconFolder">M3.5,6.5 H9.3 L11.4,8.7 H20.5 V19.5 H3.5 Z</StreamGeometry>
-      <StreamGeometry x:Key="IconChat">M3.8,5.5 H20.2 V16.3 H12.4 L8.3,20.2 V16.3 H3.8 Z</StreamGeometry>
-      <StreamGeometry x:Key="IconSliders">M4,8 H20 M4,16 H20 M5.9,8 A2.1,2.1 0 1 0 10.1,8 A2.1,2.1 0 1 0 5.9,8 M13.9,16 A2.1,2.1 0 1 0 18.1,16 A2.1,2.1 0 1 0 13.9,16</StreamGeometry>
-      <StreamGeometry x:Key="IconPlay">M8.2,5.5 L18.3,12 L8.2,18.5 Z</StreamGeometry>
-      <StreamGeometry x:Key="IconDownload">M12,4 V15 M7.8,10.7 L12,15 L16.2,10.7 M5,19.5 H19</StreamGeometry>
-      <StreamGeometry x:Key="IconSend">M4,12 L20,4 L15.5,20 L11.6,13.6 L4,12 Z M11.6,13.6 L20,4</StreamGeometry>
-      <StreamGeometry x:Key="IconPlus">M12,5 V19 M5,12 H19</StreamGeometry>
-      <StreamGeometry x:Key="IconTrash">M4,7 H20 M9,7 V4.8 H15 V7 M6.4,7 L7.4,20 H16.6 L17.6,7 M10,11 V16 M14,11 V16</StreamGeometry>
-      <StreamGeometry x:Key="IconMemory">M6.5,4 H17.5 V20 L12,16.2 L6.5,20 Z</StreamGeometry>
-      <StreamGeometry x:Key="IconBook">M4,6 C6.5,4.8 9.5,4.8 12,6.4 C14.5,4.8 17.5,4.8 20,6 V18.4 C17.5,17.2 14.5,17.2 12,18.8 C9.5,17.2 6.5,17.2 4,18.4 Z M12,6.4 V18.8</StreamGeometry>
-      <StreamGeometry x:Key="IconPin">M12,3.5 A4.5,4.5 0 0 1 16.5,8 C16.5,10.6 13.9,12.4 12,16 C10.1,12.4 7.5,10.6 7.5,8 A4.5,4.5 0 0 1 12,3.5 Z M12,16 V20.5</StreamGeometry>
-      <StreamGeometry x:Key="IconEdit">M4.5,19.5 H19.5 M6.5,17.5 L6.5,15.6 L15.8,6.3 L17.7,8.2 L8.4,17.5 Z</StreamGeometry>
+      <!-- 强调色渐变：主按钮、评分数字、品牌块统一使用，避免纯色块显得扁平 -->
+      <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+        <GradientStop Color="#3D7AF0" Offset="0"/>
+        <GradientStop Color="#2B6DE8" Offset="1"/>
+      </LinearGradientBrush>
+      <!-- 顶部高光：模拟材质的受光面 -->
+      <LinearGradientBrush x:Key="TopSheen" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#16FFFFFF" Offset="0"/>
+        <GradientStop Color="#00FFFFFF" Offset="1"/>
+      </LinearGradientBrush>
+
+      <!-- 实心圆角图标：统一 24 网格光学盒，填充式轮廓，比线性图标在小尺寸下更清晰、更有层级 -->
+      <StreamGeometry x:Key="IconHome">M12,3.1 C12.42,3.1 12.82,3.24 13.13,3.52 L20.55,10.9 C21.2,11.52 20.82,12.6 19.93,12.6 H19.15 V18.85 C19.15,19.86 18.36,20.65 17.35,20.65 H14.65 C13.86,20.65 13.25,20.04 13.25,19.25 V15.9 C13.25,15.2 12.68,14.63 11.98,14.63 C11.28,14.63 10.73,15.2 10.73,15.9 V19.25 C10.73,20.04 10.12,20.65 9.33,20.65 H6.63 C5.62,20.65 4.85,19.86 4.85,18.85 V12.6 H4.07 C3.18,12.6 2.8,11.52 3.45,10.9 L10.87,3.52 C11.18,3.24 11.58,3.1 12,3.1 Z</StreamGeometry>
+      <PathGeometry x:Key="IconSpark" FillRule="NonZero" Figures="M12,3 C12.6,7.45 14.55,9.4 19,10 C14.55,10.6 12.6,12.55 12,17 C11.38,12.55 9.45,10.6 5,10 C9.45,9.4 11.38,7.45 12,3 Z M17.9,14.9 C18.13,16.37 18.75,16.98 20.2,17.2 C18.75,17.42 18.13,18.03 17.9,19.5 C17.68,18.03 17.05,17.42 15.6,17.2 C17.05,16.98 17.68,16.37 17.9,14.9 Z"/>
+      <PathGeometry x:Key="IconStore" FillRule="NonZero" Figures="M6.15,8.35 H17.85 C18.45,8.35 18.92,8.8 18.97,9.4 L19.85,18.55 C19.98,19.72 19.05,20.7 17.88,20.7 H6.12 C4.95,20.7 4.02,19.72 4.15,18.55 L5.03,9.4 C5.08,8.8 5.55,8.35 6.15,8.35 Z M8.85,8.35 V6.75 C8.85,4.95 10.25,3.4 12,3.4 C13.75,3.4 15.15,4.95 15.15,6.75 V8.35 H13.55 V6.75 C13.55,5.85 12.85,5.05 12,5.05 C11.15,5.05 10.45,5.85 10.45,6.75 V8.35 Z"/>
+      <StreamGeometry x:Key="IconFolder">M5.1,4.65 H10.5 C11.2,4.65 11.9,5.0 12.3,5.55 L12.95,6.6 C13.3,7.1 13.9,7.4 14.45,7.4 H18.4 C19.65,7.4 20.65,8.4 20.65,9.65 V17.65 C20.65,18.85 19.7,19.8 18.5,19.8 H5.5 C4.3,19.8 3.35,18.85 3.35,17.65 V6.9 C3.35,5.7 4.3,4.65 5.1,4.65 Z</StreamGeometry>
+      <StreamGeometry x:Key="IconChat">M7.1,4.3 H16.9 C19.32,4.3 21.3,6.28 21.3,8.7 V12.5 C21.3,14.92 19.32,16.9 16.9,16.9 H11.6 L7.55,20.45 C6.8,21.03 5.8,20.48 5.8,19.56 V16.6 C3.95,16.05 2.6,14.45 2.6,12.58 V8.7 C2.6,6.28 4.68,4.3 7.1,4.3 Z</StreamGeometry>
+      <PathGeometry x:Key="IconSliders" FillRule="NonZero" Figures="M6.4,3.8 C7.06,3.8 7.6,4.34 7.6,5 V19 C7.6,19.66 7.06,20.2 6.4,20.2 C5.74,20.2 5.2,19.66 5.2,19 V5 C5.2,4.34 5.74,3.8 6.4,3.8 Z M12,3.8 C12.66,3.8 13.2,4.34 13.2,5 V19 C13.2,19.66 12.66,20.2 12,20.2 C11.34,20.2 10.8,19.66 10.8,19 V5 C10.8,4.34 11.34,3.8 12,3.8 Z M17.6,3.8 C18.26,3.8 18.8,4.34 18.8,5 V19 C18.8,19.66 18.26,20.2 17.6,20.2 C16.94,20.2 16.4,19.66 16.4,19 V5 C16.4,4.34 16.94,3.8 17.6,3.8 Z M6.4,6.1 C8.11,6.1 9.5,7.49 9.5,9.2 C9.5,10.91 8.11,12.3 6.4,12.3 C4.69,12.3 3.3,10.91 3.3,9.2 C3.3,7.49 4.69,6.1 6.4,6.1 Z M12,12 C13.71,12 15.1,13.39 15.1,15.1 C15.1,16.81 13.71,18.2 12,18.2 C10.29,18.2 8.9,16.81 8.9,15.1 C8.9,13.39 10.29,12 12,12 Z M17.6,9.3 C19.31,9.3 20.7,10.69 20.7,12.4 C20.7,14.11 19.31,15.5 17.6,15.5 C15.89,15.5 14.5,14.11 14.5,12.4 C14.5,10.69 15.89,9.3 17.6,9.3 Z"/>
+      <PathGeometry x:Key="IconGear" FillRule="EvenOdd" Figures="M9.9,2.8 L14.1,2.8 L15.75,5.5 L18.9,5.6 L21.0,9.2 L19.5,12 L21.0,14.8 L18.9,18.4 L15.75,18.5 L14.1,21.2 L9.9,21.2 L8.25,18.5 L5.1,18.4 L3.0,14.8 L4.5,12 L3.0,9.2 L5.1,5.6 L8.25,5.5 Z M12,8.5 C13.93,8.5 15.5,10.07 15.5,12 C15.5,13.93 13.93,15.5 12,15.5 C10.07,15.5 8.5,13.93 8.5,12 C8.5,10.07 10.07,8.5 12,8.5 Z"/>
+      <StreamGeometry x:Key="IconPlay">M8.7,4.5 L17.9,11.25 C18.55,11.72 18.55,12.28 17.9,12.75 L8.7,19.5 C8.05,19.96 7.2,19.5 7.2,18.7 V5.3 C7.2,4.5 8.05,4.04 8.7,4.5 Z</StreamGeometry>
+      <PathGeometry x:Key="IconDownload" FillRule="NonZero" Figures="M10.6,4.3 C10.6,3.65 11.15,3.1 11.8,3.1 H12.2 C12.85,3.1 13.4,3.65 13.4,4.3 V10.2 H16.2 C17.15,10.2 17.65,11.32 16.98,11.99 L13,15.97 C12.45,16.52 11.55,16.52 11,15.97 L7.02,11.99 C6.35,11.32 6.85,10.2 7.8,10.2 H10.6 Z M4.6,17 C4.6,16.35 5.12,15.83 5.77,15.83 C6.42,15.83 6.95,16.35 6.95,17 V17.9 C6.95,18.48 7.42,18.95 8,18.95 H16 C16.58,18.95 17.05,18.48 17.05,17.9 V17 C17.05,16.35 17.58,15.83 18.23,15.83 C18.88,15.83 19.4,16.35 19.4,17 V18 C19.4,19.53 18.17,20.8 16.6,20.8 H7.4 C5.83,20.8 4.6,19.53 4.6,18 Z"/>
+      <StreamGeometry x:Key="IconSend">M20.5,3.4 C21.4,3.15 22.2,3.95 21.95,4.85 L16.55,20.45 C16.2,21.4 14.9,21.45 14.5,20.5 L11.95,14.75 L4.35,12.05 C3.4,11.7 3.45,10.45 4.4,10.15 Z</StreamGeometry>
+      <StreamGeometry x:Key="IconPlus">M10.55,4.15 C10.55,3.35 11.2,2.7 12,2.7 C12.8,2.7 13.45,3.35 13.45,4.15 V10.55 H19.85 C20.65,10.55 21.3,11.2 21.3,12 C21.3,12.8 20.65,13.45 19.85,13.45 H13.45 V19.85 C13.45,20.65 12.8,21.3 12,21.3 C11.2,21.3 10.55,20.65 10.55,19.85 V13.45 H4.15 C3.35,13.45 2.7,12.8 2.7,12 C2.7,11.2 3.35,10.55 4.15,10.55 H10.55 Z</StreamGeometry>
+      <PathGeometry x:Key="IconTrash" FillRule="NonZero" Figures="M5.15,4.6 H18.85 C19.85,4.6 20.65,5.35 20.65,6.15 C20.65,6.95 19.9,7.7 18.85,7.7 H5.15 C4.1,7.7 3.35,6.95 3.35,6.15 C3.35,5.35 4.15,4.6 5.15,4.6 Z M9.5,4.6 V4.15 C9.5,3.2 10.25,2.45 11.2,2.45 H12.8 C13.75,2.45 14.5,3.2 14.5,4.15 V4.6 H12.9 V4.2 C12.9,3.75 12.6,3.45 12.05,3.45 C11.5,3.45 11.1,3.75 11.1,4.2 V4.6 Z M6.55,8.8 H17.45 L16.75,19.05 C16.65,20.15 15.73,21 14.62,21 H9.38 C8.27,21 7.35,20.15 7.25,19.05 Z"/>
+      <StreamGeometry x:Key="IconMemory">M7.4,5.2 C7.4,4.07 8.32,3.15 9.45,3.15 H14.55 C15.68,3.15 16.6,4.07 16.6,5.2 V20.05 C16.6,20.8 15.75,21.25 15.12,20.85 L12,18.9 L8.88,20.85 C8.25,21.25 7.4,20.8 7.4,20.05 Z</StreamGeometry>
+      <PathGeometry x:Key="IconBook" FillRule="NonZero" Figures="M11.3,7.85 L4.9,6.3 C3.9,6.05 3.2,6.8 3.2,7.8 V14.6 C3.2,15.55 3.78,16.4 4.7,16.7 L11.3,18.7 Z M12.7,7.85 L19.1,6.3 C20.1,6.05 20.8,6.8 20.8,7.8 V14.6 C20.8,15.55 20.22,16.4 19.3,16.7 L12.7,18.7 Z"/>
+      <StreamGeometry x:Key="IconDoc">M6.6,5.9 C6.6,4.72 7.56,3.76 8.74,3.76 H11.9 L17.4,9.3 V18.1 C17.4,19.28 16.44,20.24 15.26,20.24 H8.74 C7.56,20.24 6.6,19.28 6.6,18.1 Z</StreamGeometry>
+      <PathGeometry x:Key="IconPin" FillRule="NonZero" Figures="M9.4,3 H14.6 C15.2,3 15.6,3.4 15.6,4 V4.85 C15.6,6.25 14.75,7.45 13.6,7.95 L13.15,13.15 C13.1,13.85 12.55,14.35 11.85,14.35 H8 C7.3,14.35 6.8,13.9 6.85,13.2 L7.3,7.95 C6.15,7.45 5.3,6.25 5.3,4.85 V4 C5.3,3.4 5.7,3 6.3,3 H9.4 Z M11.4,14.35 H12.6 V19.3 L12,21 L11.4,19.3 Z"/>
+      <PathGeometry x:Key="IconEdit" FillRule="NonZero" Figures="M15.2,3.9 C16.05,3.05 17.4,3.05 18.25,3.9 L20,5.65 C20.85,6.5 20.85,7.85 20,8.7 L10.9,17.8 L6.9,18.85 C6.2,19.03 5.85,18.6 6.03,17.95 L7.1,13.9 Z M5.4,20 C5.4,19.62 5.71,19.3 6.1,19.3 H17.9 C18.29,19.3 18.6,19.62 18.6,20 C18.6,20.38 18.29,20.7 17.9,20.7 H6.1 C5.71,20.7 5.4,20.38 5.4,20 Z"/>
+      <PathGeometry x:Key="IconMore" FillRule="NonZero" Figures="M5.1,12 C5.1,10.88 6.0,9.98 7.12,9.98 C8.24,9.98 9.14,10.88 9.14,12 C9.14,13.12 8.24,14.02 7.12,14.02 C6.0,14.02 5.1,13.12 5.1,12 Z M9.98,12 C9.98,10.88 10.88,9.98 12,9.98 C13.12,9.98 14.02,10.88 14.02,12 C14.02,13.12 13.12,14.02 12,14.02 C10.88,14.02 9.98,13.12 9.98,12 Z M14.86,12 C14.86,10.88 15.76,9.98 16.88,9.98 C18.0,9.98 18.9,10.88 18.9,12 C18.9,13.12 18.0,14.02 16.88,14.02 C15.76,14.02 14.86,13.12 14.86,12 Z"/>
+      <StreamGeometry x:Key="IconChevronRight">M9.4,5.6 L15.8,12 L9.4,18.4</StreamGeometry>
+      <StreamGeometry x:Key="IconChevronLeft">M14.6,5.6 L8.2,12 L14.6,18.4</StreamGeometry>
+      <StreamGeometry x:Key="IconChevronDown">M5.6,9.4 L12,15.8 L18.4,9.4</StreamGeometry>
     </ResourceDictionary>
   </Application.Resources>
 
@@ -215,25 +281,37 @@
     <Style Selector="TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
     </Style>
+    <!-- 字号阶梯：档差拉开，避免 11/12/13.5 挤在一起导致"谁都不重要" -->
     <Style Selector="TextBlock.h1">
-      <Setter Property="FontSize" Value="25"/>
+      <Setter Property="FontSize" Value="28"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="LineHeight" Value="36"/>
+      <Setter Property="LetterSpacing" Value="-0.5"/>
+    </Style>
+    <Style Selector="TextBlock.display">
+      <Setter Property="FontSize" Value="30"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="LineHeight" Value="40"/>
+      <Setter Property="LetterSpacing" Value="-0.8"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     <Style Selector="TextBlock.h2">
-      <Setter Property="FontSize" Value="18"/>
+      <Setter Property="FontSize" Value="19"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="LineHeight" Value="26"/>
+      <Setter Property="LetterSpacing" Value="-0.2"/>
     </Style>
     <Style Selector="TextBlock.h3">
-      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="FontSize" Value="14"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="TextBlock.muted">
       <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
-      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="FontSize" Value="12.5"/>
     </Style>
     <Style Selector="TextBlock.caption">
       <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
-      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="FontSize" Value="11.5"/>
     </Style>
     <Style Selector="TextBlock.releaseHeading">
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
@@ -243,6 +321,34 @@
     </Style>
     <Style Selector="TextBlock.mono">
       <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, monospace"/>
+    </Style>
+    <Style Selector="TextBlock.eyebrow">
+      <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+      <Setter Property="FontSize" Value="10.5"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="LetterSpacing" Value="0.9"/>
+    </Style>
+
+    <!-- 页面切换动效在 MainWindow 的页面宿主上执行：只做 GPU 变换与透明度，不触发页面重新布局 -->
+    <Style Selector="ScrollViewer.page">
+      <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+    </Style>
+
+    <!-- 窗口底板：系统磨砂（Mica / AcrylicBlur）生效时透出桌面，否则回落到渐变底 -->
+    <Style Selector="Grid.shell">
+      <Setter Property="Background" Value="{DynamicResource AppBg}"/>
+    </Style>
+    <Style Selector="Grid.shell.frosted">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
+    <!-- 材质层：半透明亚克力面板（侧边栏状态卡 / 输入区） -->
+    <Style Selector="Border.glass">
+      <Setter Property="Background" Value="{DynamicResource MicaBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource MicaStroke}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="16"/>
+      <Setter Property="BoxShadow" Value="0 1 2 0 #0A0B1220, 0 12 32 0 #140B1220"/>
     </Style>
 
     <Style Selector="Border.codeBlock">
@@ -269,63 +375,102 @@
       <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
     </Style>
 
+    <!-- 图标：实心轮廓，颜色跟随按钮状态 -->
     <Style Selector="Path.icon">
-      <Setter Property="Width" Value="17"/>
-      <Setter Property="Height" Value="17"/>
+      <Setter Property="Width" Value="18"/>
+      <Setter Property="Height" Value="18"/>
       <Setter Property="Stretch" Value="Uniform"/>
+      <Setter Property="Fill" Value="{DynamicResource TextSecondary}"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Path.chev">
+      <Setter Property="Width" Value="14"/>
+      <Setter Property="Height" Value="14"/>
+      <Setter Property="Stretch" Value="Uniform"/>
+      <Setter Property="Stroke" Value="{DynamicResource TextSecondary}"/>
       <Setter Property="StrokeThickness" Value="1.7"/>
       <Setter Property="StrokeLineCap" Value="Round"/>
       <Setter Property="StrokeJoin" Value="Round"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Button.nav Path.icon">
-      <Setter Property="Stroke" Value="{DynamicResource TextSecondary}"/>
+      <Setter Property="Fill" Value="{DynamicResource TextSecondary}"/>
     </Style>
     <Style Selector="Button.nav:pointerover Path.icon">
-      <Setter Property="Stroke" Value="{DynamicResource TextPrimary}"/>
+      <Setter Property="Fill" Value="{DynamicResource TextPrimary}"/>
     </Style>
     <Style Selector="Button.nav.active Path.icon">
-      <Setter Property="Stroke" Value="{DynamicResource Accent}"/>
+      <Setter Property="Fill" Value="{DynamicResource Accent}"/>
     </Style>
     <Style Selector="Button.nav.active:pointerover Path.icon">
-      <Setter Property="Stroke" Value="{DynamicResource Accent}"/>
+      <Setter Property="Fill" Value="{DynamicResource Accent}"/>
     </Style>
     <Style Selector="Button.icon Path.icon">
-      <Setter Property="Stroke" Value="{DynamicResource TextSecondary}"/>
+      <Setter Property="Fill" Value="{DynamicResource TextSecondary}"/>
     </Style>
     <Style Selector="Button.icon:pointerover Path.icon">
-      <Setter Property="Stroke" Value="{DynamicResource TextPrimary}"/>
+      <Setter Property="Fill" Value="{DynamicResource TextPrimary}"/>
     </Style>
     <Style Selector="Button.primary Path.icon">
-      <Setter Property="Stroke" Value="{DynamicResource OnAccent}"/>
-      <Setter Property="StrokeThickness" Value="1.9"/>
+      <Setter Property="Fill" Value="{DynamicResource OnAccent}"/>
     </Style>
     <Style Selector="Button.ghost Path.icon">
-      <Setter Property="Stroke" Value="{DynamicResource TextPrimary}"/>
+      <Setter Property="Fill" Value="{DynamicResource TextPrimary}"/>
     </Style>
     <Style Selector="TextBlock.score">
-      <Setter Property="FontSize" Value="58"/>
+      <Setter Property="FontSize" Value="38"/>
       <Setter Property="FontWeight" Value="Bold"/>
-      <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-      <Setter Property="LineHeight" Value="62"/>
+      <Setter Property="Foreground" Value="{StaticResource PrimaryGradient}"/>
+      <Setter Property="LineHeight" Value="42"/>
+    </Style>
+    <Style Selector="TextBlock.metric">
+      <Setter Property="FontSize" Value="19"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
     </Style>
 
+    <!-- 材质卡片：半透明表面 + 内外两层柔光阴影，悬停时抬升 -->
     <Style Selector="Border.card">
       <Setter Property="Background" Value="{DynamicResource CardBg}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="CornerRadius" Value="18"/>
-      <Setter Property="Padding" Value="18"/>
+      <Setter Property="Padding" Value="20"/>
+      <Setter Property="BoxShadow" Value="0 1 2 0 #0A0B1220, 0 12 30 0 #0D0B1220"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+          <BrushTransition Property="Background" Duration="0:0:0.16"/>
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.16"/>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut"/>
+        </Transitions>
+      </Setter>
+    </Style>
+    <!-- 次级卡片：无阴影、下沉底色，只做信息承载，不与主卡片争视觉重量 -->
+    <Style Selector="Border.card.flat">
+      <Setter Property="Background" Value="{DynamicResource SegBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource StrokeSubtle}"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Border.flatHover:pointerover">
+      <Setter Property="Background" Value="{DynamicResource CardSunkenBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
     </Style>
     <Style Selector="Border.cardHover:pointerover">
       <Setter Property="Background" Value="{DynamicResource CardHoverBg}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource StrokeStrong}"/>
+      <Setter Property="RenderTransform" Value="translate(0px,-2px)"/>
+      <Setter Property="BoxShadow" Value="0 2 6 0 #140B1220, 0 22 48 0 #1C0B1220"/>
+    </Style>
+    <Style Selector="Border.hero">
+      <Setter Property="BoxShadow" Value="0 2 4 0 #140B1220, 0 26 56 0 #241E4FA8"/>
+      <Setter Property="CornerRadius" Value="22"/>
     </Style>
 
     <Style Selector="Border.badge">
       <Setter Property="Background" Value="{DynamicResource BadgeNeutralBg}"/>
-      <Setter Property="CornerRadius" Value="6"/>
-      <Setter Property="Padding" Value="8,2"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="9,3"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Border.badge TextBlock">
@@ -397,6 +542,30 @@
       <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
     </Style>
 
+    <!-- 适配状态点：表格里用色点表达结论，把横向空间让给模型名与参数 -->
+    <Style Selector="Border.fitDot">
+      <Setter Property="Width" Value="7"/>
+      <Setter Property="Height" Value="7"/>
+      <Setter Property="CornerRadius" Value="999"/>
+      <Setter Property="Background" Value="{DynamicResource TextMuted}"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Border.fitDot.fitPerfect">
+      <Setter Property="Background" Value="{DynamicResource FitPerfectFg}"/>
+    </Style>
+    <Style Selector="Border.fitDot.fitGood">
+      <Setter Property="Background" Value="{DynamicResource FitGoodFg}"/>
+    </Style>
+    <Style Selector="Border.fitDot.fitPlayable">
+      <Setter Property="Background" Value="{DynamicResource FitPlayableFg}"/>
+    </Style>
+    <Style Selector="Border.fitDot.fitTight">
+      <Setter Property="Background" Value="{DynamicResource FitTightFg}"/>
+    </Style>
+    <Style Selector="Border.fitDot.fitBad">
+      <Setter Property="Background" Value="{DynamicResource FitBadFg}"/>
+    </Style>
+
     <Style Selector="Border.tile">
       <Setter Property="Width" Value="36"/>
       <Setter Property="Height" Value="36"/>
@@ -438,6 +607,15 @@
       <Setter Property="Cursor" Value="Hand"/>
       <Setter Property="FontSize" Value="12.5"/>
       <Setter Property="MinHeight" Value="34"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+        </Transitions>
+      </Setter>
+    </Style>
+    <!-- 按压回弹：澎湃式轻量触感，不改变布局尺寸 -->
+    <Style Selector="Button:pressed">
+      <Setter Property="RenderTransform" Value="scale(0.98)"/>
     </Style>
 
     <Style Selector="Button.primary">
@@ -445,13 +623,19 @@
       <Setter Property="FontSize" Value="12.5"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
       <Setter Property="Padding" Value="20,9"/>
+      <Setter Property="MinHeight" Value="38"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="999"/>
+      <Setter Property="CornerRadius" Value="10"/>
     </Style>
     <Style Selector="Button.primary /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource Accent}"/>
+      <Setter Property="Background" Value="{StaticResource PrimaryGradient}"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="999"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.14"/>
+        </Transitions>
+      </Setter>
     </Style>
     <Style Selector="Button.primary TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource OnAccent}"/>
@@ -469,22 +653,29 @@
     <Style Selector="Button.ghost">
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
       <Setter Property="FontSize" Value="12.5"/>
-      <Setter Property="Padding" Value="16,8"/>
+      <Setter Property="Padding" Value="15,8"/>
+      <Setter Property="MinHeight" Value="36"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="999"/>
+      <Setter Property="CornerRadius" Value="10"/>
     </Style>
     <Style Selector="Button.ghost /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource StrokeStrong}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="999"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.14"/>
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.14"/>
+        </Transitions>
+      </Setter>
     </Style>
     <Style Selector="Button.ghost TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
     </Style>
     <Style Selector="Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource InputBg}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource StrokeStrong}"/>
     </Style>
     <Style Selector="Button.ghost:disabled /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Opacity" Value="0.4"/>
@@ -494,17 +685,18 @@
       <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
       <Setter Property="FontSize" Value="12.5"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Padding" Value="16,8"/>
+      <Setter Property="Padding" Value="15,8"/>
+      <Setter Property="MinHeight" Value="36"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="999"/>
+      <Setter Property="CornerRadius" Value="10"/>
     </Style>
     <Style Selector="Button.soft /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="999"/>
+      <Setter Property="CornerRadius" Value="10"/>
     </Style>
     <Style Selector="Button.soft TextBlock">
-      <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+      <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
     </Style>
     <Style Selector="Button.soft:pointerover /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource AccentSoftHover}"/>
@@ -516,14 +708,15 @@
     <Style Selector="Button.danger">
       <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
       <Setter Property="FontSize" Value="12.5"/>
-      <Setter Property="Padding" Value="16,8"/>
+      <Setter Property="Padding" Value="15,8"/>
+      <Setter Property="MinHeight" Value="36"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="999"/>
+      <Setter Property="CornerRadius" Value="10"/>
     </Style>
     <Style Selector="Button.danger /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource DangerSoft}"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="999"/>
+      <Setter Property="CornerRadius" Value="10"/>
     </Style>
     <Style Selector="Button.danger TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
@@ -536,12 +729,12 @@
     </Style>
 
     <Style Selector="Button.icon">
-      <Setter Property="Width" Value="36"/>
-      <Setter Property="Height" Value="36"/>
+      <Setter Property="Width" Value="34"/>
+      <Setter Property="Height" Value="34"/>
       <Setter Property="MinHeight" Value="0"/>
       <Setter Property="Padding" Value="0"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="12"/>
+      <Setter Property="CornerRadius" Value="9"/>
       <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
       <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -549,7 +742,12 @@
     <Style Selector="Button.icon /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="12"/>
+      <Setter Property="CornerRadius" Value="9"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.14"/>
+        </Transitions>
+      </Setter>
     </Style>
     <Style Selector="Button.icon TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
@@ -561,19 +759,27 @@
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
     </Style>
 
+    <!-- 一级入口：常态透明，选中时左侧 3px 强调条 + 胶囊底色（Fluent 指示条 × 澎湃圆角） -->
     <Style Selector="Button.nav">
       <Setter Property="HorizontalAlignment" Value="Stretch"/>
       <Setter Property="HorizontalContentAlignment" Value="Left"/>
       <Setter Property="Height" Value="44"/>
       <Setter Property="MinHeight" Value="0"/>
-      <Setter Property="Padding" Value="14,0"/>
+      <Setter Property="Padding" Value="12,0"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="14"/>
+      <Setter Property="CornerRadius" Value="10"/>
     </Style>
     <Style Selector="Button.nav /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="14"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="3,0,0,0"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.14"/>
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.18"/>
+        </Transitions>
+      </Setter>
     </Style>
     <Style Selector="Button.nav TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
@@ -587,16 +793,120 @@
     </Style>
     <Style Selector="Button.nav.active /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
     </Style>
     <Style Selector="Button.nav.active TextBlock">
-      <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+      <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="Button.nav.active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource AccentSoftHover}"/>
     </Style>
     <Style Selector="Button.nav.active:pointerover TextBlock">
-      <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+      <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
+    </Style>
+
+    <!-- 分组标题：承担折叠/展开与分组定位，不使用整块高亮避免与子项重复 -->
+    <Style Selector="Button.navGroup">
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="Height" Value="40"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="Padding" Value="12,0"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="10"/>
+    </Style>
+    <Style Selector="Button.navGroup /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="3,0,0,0"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.14"/>
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.18"/>
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.navGroup TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Button.navGroup Path.icon">
+      <Setter Property="Stroke" Value="{DynamicResource TextSecondary}"/>
+    </Style>
+    <Style Selector="Button.navGroup:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InputBg}"/>
+    </Style>
+    <Style Selector="Button.navGroup:pointerover TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+    </Style>
+    <Style Selector="Button.navGroup:pointerover Path.icon">
+      <Setter Property="Stroke" Value="{DynamicResource TextPrimary}"/>
+    </Style>
+    <Style Selector="Button.navGroup.active /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="Button.navGroup.active TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
+    </Style>
+    <Style Selector="Button.navGroup.active Path.icon">
+      <Setter Property="Stroke" Value="{DynamicResource Accent}"/>
+    </Style>
+
+    <!-- 二级菜单项：更紧凑的缩进条目 -->
+    <Style Selector="Button.navSub">
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="Height" Value="34"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="Padding" Value="12,0"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    <Style Selector="Button.navSub /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="2,0,0,0"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.14"/>
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.18"/>
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.navSub TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+      <Setter Property="FontSize" Value="12"/>
+    </Style>
+    <Style Selector="Button.navSub Path.icon">
+      <Setter Property="Stroke" Value="{DynamicResource TextMuted}"/>
+      <Setter Property="StrokeThickness" Value="1.15"/>
+    </Style>
+    <Style Selector="Button.navSub:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InputBg}"/>
+    </Style>
+    <Style Selector="Button.navSub:pointerover TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+    </Style>
+    <Style Selector="Button.navSub:pointerover Path.icon">
+      <Setter Property="Stroke" Value="{DynamicResource TextPrimary}"/>
+    </Style>
+    <Style Selector="Button.navSub.active /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="Button.navSub.active TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Button.navSub.active Path.icon">
+      <Setter Property="Stroke" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="Button.navSub.active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AccentSoftHover}"/>
     </Style>
 
     <Style Selector="ListBox.segments">
@@ -607,21 +917,25 @@
     </Style>
     <Style Selector="Border.segmentHost">
       <Setter Property="Background" Value="{DynamicResource SegBg}"/>
-      <Setter Property="CornerRadius" Value="999"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource StrokeSubtle}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="12"/>
       <Setter Property="Padding" Value="3"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="BoxShadow" Value="0 1 2 0 #080B1220"/>
     </Style>
     <Style Selector="Border.composer">
       <Setter Property="Background" Value="{DynamicResource CardBg}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="20"/>
+      <Setter Property="CornerRadius" Value="18"/>
       <Setter Property="Padding" Value="8,8,8,8"/>
+      <Setter Property="BoxShadow" Value="0 1 2 0 #0A0B1220, 0 14 32 0 #0E0B1220"/>
     </Style>
     <Style Selector="TextBox.chatInput">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="14"/>
+      <Setter Property="CornerRadius" Value="12"/>
       <Setter Property="Padding" Value="12,8"/>
       <Setter Property="MinHeight" Value="40"/>
     </Style>
@@ -630,17 +944,22 @@
       <Setter Property="BorderThickness" Value="0"/>
     </Style>
     <Style Selector="ListBox.segments ListBoxItem">
-      <Setter Property="CornerRadius" Value="999"/>
-      <Setter Property="Padding" Value="14,6"/>
+      <Setter Property="CornerRadius" Value="9"/>
+      <Setter Property="Padding" Value="14,7"/>
       <Setter Property="Margin" Value="1,0"/>
-      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="FontSize" Value="12"/>
       <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
       <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
     <Style Selector="ListBox.segments ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="CornerRadius" Value="999"/>
+      <Setter Property="CornerRadius" Value="9"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.14"/>
+        </Transitions>
+      </Setter>
     </Style>
     <Style Selector="ListBox.segments ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource SegSelectedBg}"/>
@@ -660,9 +979,9 @@
       <Setter Property="Background" Value="{DynamicResource InputBg}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="12"/>
-      <Setter Property="Padding" Value="12,8"/>
-      <Setter Property="MinHeight" Value="36"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Padding" Value="13,8"/>
+      <Setter Property="MinHeight" Value="38"/>
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
       <Setter Property="CaretBrush" Value="{DynamicResource TextPrimary}"/>
       <Setter Property="SelectionBrush" Value="{DynamicResource Accent}"/>
@@ -671,20 +990,23 @@
       <Setter Property="BorderBrush" Value="{DynamicResource StrokeStrong}"/>
       <Setter Property="Background" Value="{DynamicResource InputBg}"/>
     </Style>
+    <!-- 聚焦：Fluent 2px 焦点环 + 澎湃柔光外扩 -->
     <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
       <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
       <Setter Property="Background" Value="{DynamicResource InputBg}"/>
+      <Setter Property="BoxShadow" Value="0 0 0 3 #293482FF"/>
     </Style>
     <Style Selector="TextBox.search">
-      <Setter Property="CornerRadius" Value="999"/>
-      <Setter Property="Padding" Value="14,7"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Padding" Value="15,8"/>
     </Style>
 
     <Style Selector="ProgressBar">
       <Setter Property="Height" Value="6"/>
       <Setter Property="Background" Value="{DynamicResource ProgressBg}"/>
       <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-      <Setter Property="CornerRadius" Value="999"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="CornerRadius" Value="3"/>
     </Style>
 
     <Style Selector="CheckBox">
@@ -694,8 +1016,8 @@
     </Style>
 
     <Style Selector="ComboBox">
-      <Setter Property="MinHeight" Value="36"/>
-      <Setter Property="CornerRadius" Value="12"/>
+      <Setter Property="MinHeight" Value="38"/>
+      <Setter Property="CornerRadius" Value="10"/>
       <Setter Property="Padding" Value="12,7"/>
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
       <Setter Property="Background" Value="{DynamicResource InputBg}"/>
@@ -704,12 +1026,23 @@
     </Style>
 
     <Style Selector="NumericUpDown">
-      <Setter Property="MinHeight" Value="36"/>
-      <Setter Property="CornerRadius" Value="12"/>
+      <Setter Property="MinHeight" Value="38"/>
+      <Setter Property="CornerRadius" Value="10"/>
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
       <Setter Property="Background" Value="{DynamicResource InputBg}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
       <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <!-- 工具提示：与卡片同一材质语言，避免系统默认深色气泡破坏材质一致性 -->
+    <Style Selector="ToolTip">
+      <Setter Property="Background" Value="{DynamicResource CardBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="10,6"/>
+      <Setter Property="FontSize" Value="11.5"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
     </Style>
 
     <Style Selector="Separator.hairline">

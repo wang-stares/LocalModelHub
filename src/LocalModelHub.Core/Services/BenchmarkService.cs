@@ -9,7 +9,7 @@ using LocalModelHub.Core.Models;
 public sealed class BenchmarkService
 {
     private const int CpuMatrixSize = 256;
-    private const int CpuRounds = 3;
+    private const int CpuRounds = 5;
     private const int MemoryRounds = 5;
     private const int RoundMilliseconds = 300;
 

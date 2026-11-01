@@ -4,61 +4,86 @@
              x:Class="LocalModelHub.App.Views.ModelCardView"
              x:DataType="vm:ModelCardViewModel">
   <Border Classes="card cardHover" Padding="16" CornerRadius="18">
-    <StackPanel Spacing="10">
+    <StackPanel Spacing="11">
       <Grid ColumnDefinitions="Auto,*">
-        <Border Width="40" Height="40" CornerRadius="13" Background="{DynamicResource AvatarBg}">
+        <Border Width="38" Height="38" CornerRadius="10" Background="{DynamicResource AvatarBg}"
+                BorderBrush="{DynamicResource AccentSoftHover}" BorderThickness="1">
           <TextBlock Text="{Binding Initial}"
                      FontSize="13"
                      FontWeight="SemiBold"
-                     Foreground="{DynamicResource Accent}"
+                     Foreground="{DynamicResource AccentInk}"
                      HorizontalAlignment="Center"
                      VerticalAlignment="Center"/>
         </Border>
-        <StackPanel Grid.Column="1" Margin="11,0,0,0" Spacing="2" VerticalAlignment="Center">
+        <StackPanel Grid.Column="1" Margin="11,0,0,0" Spacing="1" VerticalAlignment="Center">
           <TextBlock Text="{Binding Title}" Classes="h3" TextTrimming="CharacterEllipsis"/>
           <TextBlock Text="{Binding Developer}" Classes="caption" TextTrimming="CharacterEllipsis"/>
         </StackPanel>
       </Grid>
 
-      <StackPanel Orientation="Horizontal" Spacing="6">
-        <Border Classes="badge"
+      <!-- 适配结论前置：先回答“这台机器能不能跑” -->
+      <Border Background="{DynamicResource CardSunkenBg}"
+              BorderBrush="{DynamicResource StrokeSubtle}"
+              BorderThickness="1"
+              CornerRadius="10"
+              Padding="11,9">
+        <StackPanel Spacing="4">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <Border Classes="badge"
+                    Classes.fitPerfect="{Binding IsFitPerfect}"
+                    Classes.fitGood="{Binding IsFitGood}"
+                    Classes.fitPlayable="{Binding IsFitPlayable}"
+                    Classes.fitTight="{Binding IsFitTight}"
+                    Classes.fitBad="{Binding IsFitBad}"
+                    ToolTip.Tip="{Binding FitTip}">
+              <TextBlock Text="{Binding FitLabel}"/>
+            </Border>
+            <TextBlock Grid.Column="2"
+                       Text="{Binding SpeedText}"
+                       Classes="caption"
+                       VerticalAlignment="Center"
+                       ToolTip.Tip="{Binding SpeedTip}"/>
+          </Grid>
+          <TextBlock Text="{Binding FitDetail}"
+                     TextWrapping="Wrap"
+                     MaxLines="2"
+                     LineHeight="16"
+                     TextTrimming="CharacterEllipsis"
+                     Classes="caption"/>
+        </StackPanel>
+      </Border>
+
+      <WrapPanel>
+        <Border Classes="badge" Margin="0,0,5,5"
                 Classes.cn="{Binding IsChinese}"
                 Classes.intl="{Binding !IsChinese}"
                 ToolTip.Tip="模型开发团队所在地区（国内 / 美国 / 法国 / 海外）。仅用于筛选，不影响本机运行速度。">
           <TextBlock Text="{Binding OriginText}"/>
         </Border>
-        <Border Classes="badge capability"
+        <Border Classes="badge capability" Margin="0,0,5,5"
                 IsVisible="{Binding HasCapability}"
                 ToolTip.Tip="{Binding CapabilityText, StringFormat='这个模型的主要能力：{0}'}">
           <TextBlock Text="{Binding PrimaryCapability}"/>
         </Border>
-        <Border Classes="badge"
-                Classes.fitPerfect="{Binding IsFitPerfect}"
-                Classes.fitGood="{Binding IsFitGood}"
-                Classes.fitPlayable="{Binding IsFitPlayable}"
-                Classes.fitTight="{Binding IsFitTight}"
-                Classes.fitBad="{Binding IsFitBad}"
-                ToolTip.Tip="{Binding FitTip}">
-          <TextBlock Text="{Binding FitLabel}"/>
+        <Border Classes="badge local" Margin="0,0,5,5"
+                IsVisible="{Binding HasRecommendation}"
+                ToolTip.Tip="{Binding ConfidenceTip}">
+          <TextBlock Text="{Binding ConfidenceBadgeText}"/>
         </Border>
-        <Border Classes="badge local" IsVisible="{Binding IsCustom}" ToolTip.Tip="通过「自定义模型」添加的条目">
+        <Border Classes="badge local" Margin="0,0,5,5" IsVisible="{Binding IsCustom}" ToolTip.Tip="通过「自定义模型」添加的条目">
           <TextBlock Text="自定义"/>
         </Border>
-        <Border Classes="badge accent"
+        <Border Classes="badge accent" Margin="0,0,5,5"
                 IsVisible="{Binding ShowSourceBadge}"
                 ToolTip.Tip="来源：内置清单 / HuggingFace / 魔搭 ModelScope / Ollama 官方库 / 远程 API">
           <TextBlock Text="{Binding SourceBadgeText}"/>
         </Border>
-        <Border Classes="badge local"
+        <Border Classes="badge local" Margin="0,0,5,5"
                 IsVisible="{Binding ShowToolModeBadge}"
                 ToolTip.Tip="{Binding ToolModeBadgeTip}">
           <TextBlock Text="{Binding ToolModeBadgeText}"/>
         </Border>
-        <TextBlock Text="{Binding SpeedText}"
-                   Classes="caption"
-                   VerticalAlignment="Center"
-                   ToolTip.Tip="{Binding SpeedTip}"/>
-      </StackPanel>
+      </WrapPanel>
 
       <TextBlock Text="{Binding Description}"
                  TextWrapping="Wrap"
@@ -69,37 +94,35 @@
                  Classes="muted"
                  ToolTip.Tip="{Binding DescriptionTip}"/>
 
-      <TextBlock Text="{Binding MetaText}"
-                 Classes="caption"
-                 TextWrapping="Wrap"
-                 MaxLines="2"
-                 TextTrimming="CharacterEllipsis"
-                 ToolTip.Tip="{Binding MetaTip}"/>
-
-      <ComboBox ItemsSource="{Binding QuantOptions}"
-                SelectedIndex="{Binding QuantIndex, Mode=TwoWay}"
-                IsVisible="{Binding HasQuantChoices}"
-                IsEnabled="{Binding !IsDownloading}"
-                HorizontalAlignment="Left"
-                Width="158"
-                Height="32"
-                FontSize="11.5"
-                ToolTip.Tip="{Binding QuantTip}"/>
-
-      <TextBlock Text="{Binding FitDetail}"
-                 TextWrapping="Wrap"
-                 MaxLines="2"
-                 LineHeight="16"
-                 MinHeight="32"
-                 TextTrimming="CharacterEllipsis"
-                 Classes="caption"/>
+      <StackPanel Spacing="7">
+        <TextBlock Text="{Binding MetaText}"
+                   Classes="caption"
+                   TextWrapping="Wrap"
+                   MaxLines="2"
+                   TextTrimming="CharacterEllipsis"
+                   ToolTip.Tip="{Binding MetaTip}"/>
+        <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding HasQuantChoices}">
+          <TextBlock Text="量化" Classes="eyebrow" VerticalAlignment="Center" Margin="0,0,9,0"/>
+          <ComboBox Grid.Column="1"
+                    ItemsSource="{Binding QuantOptions}"
+                    SelectedIndex="{Binding QuantIndex, Mode=TwoWay}"
+                    IsEnabled="{Binding !IsDownloading}"
+                    HorizontalAlignment="Left"
+                    Width="168"
+                    Height="30"
+                    FontSize="11.5"
+                    ToolTip.Tip="{Binding QuantTip}"/>
+        </Grid>
+      </StackPanel>
 
       <StackPanel IsVisible="{Binding ShowDownloadPanel}" Spacing="5">
-        <ProgressBar Value="{Binding Progress}" Maximum="100" Height="5"/>
+        <Border ClipToBounds="True" Height="5">
+          <ProgressBar Value="{Binding Progress}" Maximum="100" Height="5"/>
+        </Border>
         <TextBlock Text="{Binding DownloadStatus}" Classes="caption" TextWrapping="Wrap" MaxLines="2"/>
       </StackPanel>
 
-      <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,2,0,0">
+      <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,1,0,0">
         <Button Classes="primary"
                 Command="{Binding PrimaryCommand}"
                 IsEnabled="{Binding CanAct}"
@@ -113,21 +136,51 @@
         </Button>
         <Button Grid.Column="1"
                 Classes="icon"
-                Margin="8,0,0,0"
+                Margin="6,0,0,0"
                 Command="{Binding OpenFolderCommand}"
                 IsVisible="{Binding IsInstalled}"
                 ToolTip.Tip="打开模型目录">
-          <Path Classes="icon" Data="{StaticResource IconFolder}" Width="15" Height="15"/>
+          <Path Classes="icon" Data="{StaticResource IconFolder}" Width="16" Height="16"/>
         </Button>
         <Button Grid.Column="2"
                 Classes="icon"
-                Margin="8,0,0,0"
+                Margin="4,0,0,0"
                 Command="{Binding DeleteCustomCommand}"
                 IsVisible="{Binding IsCustom}"
                 ToolTip.Tip="移除自定义模型">
-          <Path Classes="icon" Data="{StaticResource IconTrash}" Width="15" Height="15"/>
+          <Path Classes="icon" Data="{StaticResource IconTrash}" Width="16" Height="16"/>
         </Button>
       </Grid>
+
+      <!-- 次级信息：收在底部，用细分割线弱化 -->
+      <StackPanel IsVisible="{Binding HasAlternatives}" Spacing="2">
+        <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="0,3,0,4"/>
+        <TextBlock Text="量化对比" Classes="eyebrow"/>
+        <TextBlock Text="{Binding AlternativesText}"
+                   Classes="caption"
+                   TextWrapping="Wrap"
+                   LineHeight="15"/>
+      </StackPanel>
+
+      <StackPanel IsVisible="{Binding HasLaunchCommand}" Spacing="2">
+        <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="0,3,0,4"/>
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="启动参数" Classes="eyebrow" VerticalAlignment="Center"/>
+          <Button Grid.Column="1"
+                  Classes="ghost"
+                  Content="复制"
+                  FontSize="10.5"
+                  MinHeight="0"
+                  Padding="9,2"
+                  Command="{Binding CopyLaunchCommandCommand}"
+                  ToolTip.Tip="复制这组参数，粘贴到 llama-server 命令行（模型路径需另行指定）"/>
+        </Grid>
+        <TextBlock Text="{Binding LaunchCommand}"
+                   Classes="caption"
+                   FontFamily="Consolas"
+                   TextWrapping="Wrap"
+                   LineHeight="15"/>
+      </StackPanel>
     </StackPanel>
   </Border>
 </UserControl>

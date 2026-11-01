@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Interactivity;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -50,10 +51,10 @@ public class UiSmokeTests
             Application.Current!.RequestedThemeVariant = variant;
             Dispatcher.UIThread.RunJobs();
 
-            for (var index = 0; index < 6; index++)
+            for (var index = 0; index < 5; index++)
             {
                 viewModel.NavigateCommand.Execute(index.ToString());
-                Dispatcher.UIThread.RunJobs();
+                SettleAnimation();
 
                 var frame = window.CaptureRenderedFrame();
                 Assert.NotNull(frame);
@@ -62,6 +63,16 @@ public class UiSmokeTests
         }
 
         window.Close();
+    }
+
+    // 页面切换带 0.26s 淡入动画，截图前需等动画结束，否则会拍到半透明中间帧。
+    private static void SettleAnimation()
+    {
+        Dispatcher.UIThread.RunJobs();
+        Thread.Sleep(340);
+        Dispatcher.UIThread.RunJobs();
+        AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        Dispatcher.UIThread.RunJobs();
     }
 
     [AvaloniaFact]
@@ -79,7 +90,7 @@ public class UiSmokeTests
         window.Show();
         Dispatcher.UIThread.RunJobs();
 
-        viewModel.NavigateCommand.Execute("4");
+        viewModel.NavigateCommand.Execute("3");
         Dispatcher.UIThread.RunJobs();
         Assert.True(viewModel.KnowledgeMemory.IsKnowledgeTab);
 
@@ -158,7 +169,8 @@ public class UiSmokeTests
         Directory.CreateDirectory(output);
 
         // 商店：已下载模型的卡片显示“启动模型”与目录按钮
-        viewModel.NavigateCommand.Execute("2");
+        viewModel.OpenRouteCommand.Execute("store");
+        viewModel.Models.TabIndex = 2;
         viewModel.Store.SearchText = "Qwen3-8B";
         Dispatcher.UIThread.RunJobs();
         Capture(window, Path.Combine(output, "state-store-installed.png"));
@@ -197,8 +209,9 @@ public class UiSmokeTests
         Dispatcher.UIThread.RunJobs();
         Capture(window, Path.Combine(output, "state-store-paused.png"));
 
-        // 我的模型：已下载行 + 推荐标签
+        // 模型库：已下载行 + 推荐标签
         viewModel.NavigateCommand.Execute("1");
+        viewModel.Models.TabIndex = 0;
         Dispatcher.UIThread.RunJobs();
         Assert.Single(viewModel.Library.Items);
         Assert.True(viewModel.Models.IsInstalledTab);
@@ -212,7 +225,7 @@ public class UiSmokeTests
         viewModel.Models.TabIndex = 0;
 
         // 对话：用户 / 助手气泡（Markdown + 代码块）
-        viewModel.NavigateCommand.Execute("3");
+        viewModel.NavigateCommand.Execute("2");
         viewModel.Chat.ModelName = "Qwen3-8B";
         viewModel.Chat.Sessions[0].Rename("C# 环形缓冲实现");
         viewModel.Chat.Messages.Add(ChatMessageViewModel.UserMessage("用 C# 写一个无锁的环形缓冲队列，并说明内存屏障的作用。"));
@@ -263,71 +276,48 @@ public class UiSmokeTests
         Assert.True(reasoningExpander!.IsExpanded);
         Capture(window, Path.Combine(output, "state-chat.png"));
 
-        // 设置页：版本更新公告
-        viewModel.NavigateCommand.Execute("5");
+        // 设置页：主从布局，左侧分类决定右侧表单
+        viewModel.NavigateCommand.Execute("4");
         Dispatcher.UIThread.RunJobs();
-        window.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault()?.ScrollToEnd();
+        var settingsView = window.GetVisualDescendants()
+            .OfType<LocalModelHub.App.Views.SettingsView>()
+            .FirstOrDefault();
+        Assert.NotNull(settingsView);
+        var categories = settingsView!.GetVisualDescendants()
+            .OfType<ListBox>()
+            .FirstOrDefault(list => list.Name == "CategoryList");
+        Assert.NotNull(categories);
+        Assert.Equal(7, categories!.ItemCount);
+
+        // 版本更新公告在「引擎与关于」
+        categories.SelectedIndex = 6;
         Dispatcher.UIThread.RunJobs();
+        Assert.True(viewModel.SettingsPage.PreviousReleases.Count > 0);
         Capture(window, Path.Combine(output, "state-settings-release-notes.png"));
 
-        // 设置页：展开「星河档案」查看往期公告
-        Assert.True(viewModel.SettingsPage.PreviousReleases.Count > 0);
         viewModel.SettingsPage.ToggleReleaseArchiveCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         Assert.True(viewModel.SettingsPage.IsReleaseArchiveOpen);
-
-        var archiveTitle = window.GetVisualDescendants()
-            .OfType<TextBlock>()
-            .FirstOrDefault(block => block.Text == "星河档案");
-        archiveTitle?.BringIntoView();
-        Dispatcher.UIThread.RunJobs();
-        var archiveScroll = window.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
-        if (archiveScroll is not null)
-        {
-            archiveScroll.Offset = new Vector(0, Math.Max(0, archiveScroll.Offset.Y - 32));
-        }
-
-        Dispatcher.UIThread.RunJobs();
         Capture(window, Path.Combine(output, "state-settings-release-archive.png"));
         viewModel.SettingsPage.IsReleaseArchiveOpen = false;
         Dispatcher.UIThread.RunJobs();
 
-        // 设置页：推理性能（KV 量化 / MoE / 并行槽位）
-        var inferenceTitle = window.GetVisualDescendants()
-            .OfType<TextBlock>()
-            .FirstOrDefault(block => block.Text == "推理性能");
-        Assert.NotNull(inferenceTitle);
-        inferenceTitle!.BringIntoView();
-        Dispatcher.UIThread.RunJobs();
-        var inferenceScroll = window.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
-        if (inferenceScroll is not null)
-        {
-            inferenceScroll.Offset = new Vector(0, Math.Max(0, inferenceScroll.Offset.Y - 32));
-        }
-
+        // 推理性能在「对话与推理」
+        categories.SelectedIndex = 5;
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(1, viewModel.SettingsPage.KvCacheIndex);
         Assert.Equal(1m, viewModel.SettingsPage.ParallelSlots);
         Capture(window, Path.Combine(output, "state-settings-inference.png"));
 
-        // 设置页：API 接入卡片
-        var apiTitle = window.GetVisualDescendants()
-            .OfType<TextBlock>()
-            .FirstOrDefault(block => block.Text == "API 接入");
-        apiTitle?.BringIntoView();
-        Dispatcher.UIThread.RunJobs();
-        var settingsScroll = window.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
-        if (settingsScroll is not null)
-        {
-            settingsScroll.Offset = new Vector(0, Math.Max(0, settingsScroll.Offset.Y - 32));
-        }
-
+        // API 接入在「API 接入」
+        categories.SelectedIndex = 4;
         Dispatcher.UIThread.RunJobs();
         Capture(window, Path.Combine(output, "state-settings-api.png"));
 
         // 深色主题下重复关键状态，验证主题字典切换
         Application.Current!.RequestedThemeVariant = ThemeVariant.Dark;
-        viewModel.NavigateCommand.Execute("2");
+        viewModel.OpenRouteCommand.Execute("store");
+        viewModel.Models.TabIndex = 2;
         viewModel.Store.SearchText = "Qwen3-8B";
         Dispatcher.UIThread.RunJobs();
         Capture(window, Path.Combine(output, "state-store-installed-dark.png"));
@@ -336,7 +326,7 @@ public class UiSmokeTests
         Dispatcher.UIThread.RunJobs();
         Capture(window, Path.Combine(output, "state-library-dark.png"));
 
-        viewModel.NavigateCommand.Execute("3");
+        viewModel.NavigateCommand.Execute("2");
         Dispatcher.UIThread.RunJobs();
         Capture(window, Path.Combine(output, "state-chat-dark.png"));
 
@@ -384,7 +374,8 @@ public class UiSmokeTests
         Dispatcher.UIThread.RunJobs();
 
         // 商店：分页渲染，首批不超过一页，且页脚「显示更多」与 HasMore 一致
-        viewModel.NavigateCommand.Execute("2");
+        viewModel.OpenRouteCommand.Execute("store");
+        viewModel.Models.TabIndex = 2;
         Dispatcher.UIThread.RunJobs();
         Assert.True(viewModel.Store.Cards.Count <= 48);
         Assert.Equal(viewModel.Store.HasMore, viewModel.Store.LoadMoreText.Length > 0);
@@ -620,10 +611,14 @@ public class UiSmokeTests
         var output = Path.Combine(AppContext.BaseDirectory, "shots");
         Directory.CreateDirectory(output);
 
+        // 记录用户原有状态，结束后原样复原，避免测试把真实 settings.json 改成折叠态
+        var navWasCollapsed = viewModel.IsNavCollapsed;
+        var sessionsWereCollapsed = viewModel.Chat.IsSessionsCollapsed;
+
         Application.Current!.RequestedThemeVariant = ThemeVariant.Dark;
-        viewModel.NavigateCommand.Execute("3");
-        viewModel.ToggleNavCommand.Execute(null);
-        viewModel.Chat.ToggleSessionsCommand.Execute(null);
+        viewModel.NavigateCommand.Execute("2");
+        if (!navWasCollapsed) viewModel.ToggleNavCommand.Execute(null);
+        if (!sessionsWereCollapsed) viewModel.Chat.ToggleSessionsCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
 
         Assert.True(viewModel.IsNavCollapsed);
@@ -632,17 +627,215 @@ public class UiSmokeTests
         Assert.Equal(0, viewModel.Chat.SessionsWidth.Value);
         Assert.Equal(0, viewModel.Chat.SessionsGap.Value);
 
+        // 等页面淡入动效走完再截图，避免截到半透明的中间帧
+        for (var tick = 0; tick < 12; tick++)
+        {
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            Dispatcher.UIThread.RunJobs();
+        }
+
         var frame = window.CaptureRenderedFrame();
         Assert.NotNull(frame);
         frame!.Save(Path.Combine(output, "state-chat-collapsed.png"));
 
-        viewModel.IsNavCollapsed = false;
-        viewModel.Chat.IsSessionsCollapsed = false;
+        viewModel.IsNavCollapsed = navWasCollapsed;
+        viewModel.Chat.IsSessionsCollapsed = sessionsWereCollapsed;
         Dispatcher.UIThread.RunJobs();
+    }
+
+    [AvaloniaFact]
+    public void Navigation_opens_five_workspaces_and_page_tabs_stay_inside_pages()
+    {
+        AppServices.Current.Initialize();
+
+        var viewModel = new MainWindowViewModel();
+        var window = new LocalModelHub.App.MainWindow
+        {
+            DataContext = viewModel,
+            Width = 1024,
+            Height = 768
+        };
+
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var cases = new (string Key, int Page, string Title, Type PageType)[]
+        {
+            ("dashboard", 0, "工作台", typeof(DashboardViewModel)),
+            ("models", 1, "模型库", typeof(ModelsViewModel)),
+            ("chat", 2, "对话", typeof(ChatViewModel)),
+            ("knowledge", 3, "知识", typeof(KnowledgeMemoryViewModel)),
+            ("settings", 4, "设置", typeof(SettingsViewModel))
+        };
+
+        foreach (var item in cases)
+        {
+            viewModel.OpenRouteCommand.Execute(item.Key);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(item.Page, viewModel.PageIndex);
+            Assert.Equal(item.Key, viewModel.CurrentRouteKey);
+            Assert.Equal(item.Title, viewModel.HeaderTitle);
+            Assert.IsType(item.PageType, viewModel.CurrentPage);
+        }
+
+        // 页内标签：路由别名落在同一工作区，只切标签，不再新增导航层级。
+        viewModel.OpenRouteCommand.Execute("models.recommend");
+        Assert.Equal(1, viewModel.PageIndex);
+        Assert.Equal("models", viewModel.CurrentRouteKey);
+        Assert.True(viewModel.IsRecommendActive);
+        Assert.False(viewModel.IsLibraryActive);
+
+        viewModel.OpenRouteCommand.Execute("store");
+        Assert.Equal(2, viewModel.Models.TabIndex);
+        Assert.True(viewModel.IsStoreActive);
+        Assert.False(viewModel.IsRecommendActive);
+
+        viewModel.OpenRouteCommand.Execute("knowledge.memory");
+        Assert.Equal(3, viewModel.PageIndex);
+        Assert.Equal("knowledge", viewModel.CurrentRouteKey);
+        Assert.True(viewModel.IsMemoryActive);
+        Assert.False(viewModel.IsKnowledgeDocActive);
+
+        viewModel.OpenRouteCommand.Execute("knowledge.skills");
+        Assert.True(viewModel.IsSkillsActive);
+        Assert.False(viewModel.IsMemoryActive);
+
+        // 五个工作区高亮互斥
+        viewModel.OpenRouteCommand.Execute("dashboard");
+        Assert.True(viewModel.IsDashboardActive);
+        Assert.False(viewModel.IsModelsActive);
+        Assert.False(viewModel.IsKnowledgeActive);
+
+        viewModel.OpenRouteCommand.Execute("knowledge");
+        Assert.True(viewModel.IsKnowledgeActive);
+        Assert.False(viewModel.IsChatActive);
+
+        window.Close();
+    }
+
+    // 设置页主从布局：7 个分类对应表单，「引擎与关于」同时展示引擎与关于两块。
+    [AvaloniaFact]
+    public void Settings_master_detail_shows_only_the_selected_section()
+    {
+        AppServices.Current.Initialize();
+
+        var viewModel = new MainWindowViewModel();
+        var window = new LocalModelHub.App.MainWindow
+        {
+            DataContext = viewModel,
+            Width = 1024,
+            Height = 768
+        };
+
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        viewModel.OpenRouteCommand.Execute("settings");
+        Dispatcher.UIThread.RunJobs();
+
+        var view = window.GetVisualDescendants()
+            .OfType<LocalModelHub.App.Views.SettingsView>()
+            .FirstOrDefault();
+        Assert.NotNull(view);
+
+        var categories = view!.GetVisualDescendants()
+            .OfType<ListBox>()
+            .FirstOrDefault(list => list.Name == "CategoryList");
+        Assert.NotNull(categories);
+        Assert.Equal(7, categories!.ItemCount);
+
+        var names = new[]
+        {
+            "AppearanceSection", "DownloadSection", "ModelSourceSection", "StorageSection",
+            "ApiAccessSection", "ChatParamsSection", "RuntimeSection"
+        };
+
+        for (var index = 0; index < categories.ItemCount; index++)
+        {
+            categories.SelectedIndex = index;
+            Dispatcher.UIThread.RunJobs();
+
+            var visible = view.GetVisualDescendants()
+                .OfType<Border>()
+                .Where(border => names.Contains(border.Name) && border.IsVisible)
+                .Select(border => border.Name)
+                .ToList();
+
+            Assert.NotEmpty(visible);
+            Assert.True(visible.Count <= 2, $"分类 {index} 同时显示了 {visible.Count} 块表单");
+        }
+
+        window.Close();
+    }
+
+    // 1080P / 2K / 4K：内容列保持最大阅读宽度并左右等距居中，页面自身不越界。
+    [AvaloniaFact]
+    public void Content_column_stays_centered_at_1080p_2k_and_4k()
+    {
+        var services = AppServices.Current;
+        services.Initialize();
+
+        var viewModel = new MainWindowViewModel();
+        var window = new LocalModelHub.App.MainWindow
+        {
+            DataContext = viewModel,
+            Width = 1920,
+            Height = 1080
+        };
+
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var output = Path.Combine(AppContext.BaseDirectory, "shots");
+        Directory.CreateDirectory(output);
+
+        var cases = new[] { (1920, 1080, "1080p"), (2560, 1440, "2k"), (3840, 2160, "4k") };
+
+        foreach (var (width, height, tag) in cases)
+        {
+            window.Width = width;
+            window.Height = height;
+            SettleAnimation();
+
+            var host = window.GetVisualDescendants()
+                .OfType<ContentControl>()
+                .First(control => control.Name == "PageHost");
+
+            Assert.True(host.Bounds.Width <= 1520.5, $"{tag} 内容列宽 {host.Bounds.Width} 超出 1520");
+            var origin = host.TranslatePoint(new Point(0, 0), window);
+            Assert.NotNull(origin);
+            var leftGap = origin!.Value.X - viewModel.NavColumnWidth.Value;
+            var rightGap = width - origin.Value.X - host.Bounds.Width;
+            Assert.True(
+                Math.Abs(leftGap - rightGap) <= 1,
+                $"{tag} 内容列未居中：左侧留白 {leftGap:f1}，右侧留白 {rightGap:f1}");
+
+            foreach (var page in new[] { 0, 1, 2, 4 })
+            {
+                viewModel.NavigateCommand.Execute(page.ToString());
+                SettleAnimation();
+
+                var pageView = host.GetVisualDescendants().OfType<UserControl>().FirstOrDefault();
+                Assert.NotNull(pageView);
+                Assert.True(
+                    pageView!.Bounds.Width <= host.Bounds.Width + 0.5,
+                    $"{tag} 第 {page} 页宽度 {pageView.Bounds.Width} 超出内容列 {host.Bounds.Width}");
+
+                var frame = window.CaptureRenderedFrame();
+                Assert.NotNull(frame);
+                Assert.Equal(width, frame!.PixelSize.Width);
+                Assert.Equal(height, frame.PixelSize.Height);
+                frame.Save(Path.Combine(output, $"res-{tag}-page{page}.png"));
+            }
+        }
+
+        window.Close();
     }
 
     private static void Capture(LocalModelHub.App.MainWindow window, string path)
     {
+        SettleAnimation();
         var frame = window.CaptureRenderedFrame();
         Assert.NotNull(frame);
         frame!.Save(path);

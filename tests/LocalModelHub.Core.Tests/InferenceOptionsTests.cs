@@ -91,9 +91,36 @@ public class InferenceOptionsTests
     }
 
     [Fact]
-    public void Api_key_is_quoted_when_present()
+    public void Api_key_never_appears_on_command_line()
     {
-        Assert.Contains("--api-key \"secret\"", LlamaServerService.BuildArguments("m.gguf", Options(apiKey: "secret")));
+        var arguments = LlamaServerService.BuildArguments("m.gguf", Options(apiKey: "secret"));
+        Assert.DoesNotContain("secret", arguments);
+        Assert.DoesNotContain("--api-key ", arguments);
+    }
+
+    [Fact]
+    public void Api_key_file_is_passed_instead_of_plain_key()
+    {
+        var arguments = LlamaServerService.BuildArguments(
+            "m.gguf", Options(apiKey: "secret"), @"C:\tmp\key.txt");
+        Assert.Contains("--api-key-file \"C:\\tmp\\key.txt\"", arguments);
+        Assert.DoesNotContain("secret", arguments);
+    }
+
+    [Fact]
+    public void Api_key_file_is_readable_and_deletable()
+    {
+        var path = LlamaServerService.CreateApiKeyFile("sk-test-123");
+        try
+        {
+            Assert.Equal("sk-test-123", File.ReadAllText(path).Trim());
+        }
+        finally
+        {
+            LlamaServerService.DeleteApiKeyFile(path);
+        }
+
+        Assert.False(File.Exists(path));
     }
 
     [Fact]

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>星坞 · UI 重构方案</title>
+<style>
+  :root{
+    --bg:#F2F3F5;
+    --panel:#FFFFFF;
+    --soft:#F7F8FA;
+    --stroke:#EBEDF0;
+    --stroke-strong:#DCE0E5;
+    --text:#0E1116;
+    --text-2:#5F6673;
+    --muted:#9AA0A9;
+    --accent:#3482FF;
+    --accent-soft:#E8F1FF;
+    --accent-hover:#D9E8FF;
+    --success:#14925C;
+    --success-soft:#E6F7EF;
+    --warn:#B26A00;
+    --warn-soft:#FFF4E0;
+    --radius:20px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    font-size:14px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:40px 32px 72px}
+  header.top{margin-bottom:28px}
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  h1{margin:8px 0 6px;font-size:34px;line-height:1.25;letter-spacing:-.02em;font-weight:700}
+  .lead{color:var(--text-2);font-size:15px;max-width:760px;margin:0}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:var(--panel);border:1px solid var(--stroke);font-size:12.5px;color:var(--text-2)}
+  .chip.ok{background:var(--success-soft);border-color:transparent;color:var(--success);font-weight:600}
+  .chip.accent{background:var(--accent-soft);border-color:transparent;color:var(--accent);font-weight:600}
+
+  section{margin-top:44px;scroll-margin-top:24px}
+  .sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:14px}
+  .sec-num{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:3px 9px;border-radius:8px}
+  h2{margin:0;font-size:20px;font-weight:650;letter-spacing:-.01em}
+  h3{font-size:15px;font-weight:650;margin:24px 0 10px}
+  p{margin:0 0 12px;color:var(--text-2)}
+  .panel{background:var(--panel);border:1px solid var(--stroke);border-radius:var(--radius);padding:22px}
+  .panel.tight{padding:16px}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  @media(max-width:820px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+  .kpi{background:var(--panel);border:1px solid var(--stroke);border-radius:16px;padding:16px 18px}
+  .kpi .v{font-size:26px;font-weight:700;letter-spacing:-.02em}
+  .kpi .v small{font-size:12px;font-weight:600;color:var(--muted);margin-left:4px}
+  .kpi .k{font-size:12px;color:var(--muted);margin-top:2px}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel);border-radius:16px;overflow:hidden;border:1px solid var(--stroke)}
+  th{background:var(--soft);text-align:left;font-weight:650;color:var(--text);padding:11px 14px;border-bottom:1px solid var(--stroke);font-size:12.5px}
+  td{padding:11px 14px;border-bottom:1px solid var(--stroke);color:var(--text-2);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  td strong{color:var(--text);font-weight:600}
+  code{font-family:"Cascadia Mono","SF Mono",Consolas,monospace;font-size:12px;background:var(--soft);border:1px solid var(--stroke);border-radius:6px;padding:1px 5px;color:var(--text)}
+  .pass{display:inline-flex;align-items:center;gap:5px;color:var(--success);font-weight:650;white-space:nowrap}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block}
+
+  figure{margin:0}
+  .fig{background:var(--panel);border:1px solid var(--stroke);border-radius:var(--radius);padding:18px 18px 10px}
+  .fig svg{width:100%;height:auto;display:block}
+  figcaption{font-size:12.5px;color:var(--muted);padding:10px 4px 6px}
+  figure.shot img{width:100%;border-radius:14px;border:1px solid var(--stroke-strong);display:block;background:var(--soft)}
+  figure.shot figcaption{padding-top:8px}
+
+  ul.rules{margin:0;padding-left:18px;color:var(--text-2)}
+  ul.rules li{margin:6px 0}
+  ul.rules li strong{color:var(--text)}
+
+  .swatches{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+  .sw{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);background:var(--soft);border:1px solid var(--stroke);border-radius:10px;padding:6px 10px}
+  .sw i{width:14px;height:14px;border-radius:5px;border:1px solid var(--stroke-strong);display:inline-block}
+
+  .check{list-style:none;margin:0;padding:0}
+  .check li{display:flex;gap:10px;padding:9px 0;border-bottom:1px dashed var(--stroke);color:var(--text-2);font-size:13.5px}
+  .check li:last-child{border-bottom:0}
+  .tick{flex:0 0 auto;width:18px;height:18px;border-radius:50%;background:var(--success-soft);color:var(--success);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px}
+
+  footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--stroke-strong);color:var(--muted);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">LocalModelHub · 星坞</div>
+  <h1>界面 UI 重构方案</h1>
+  <p class="lead">依据「功能归属 + 使用频率」重新规划菜单层级，将可归类的功能收敛为两组可折叠二级菜单，统一视觉规范与交互规则，并对全部功能入口做了可访问性验证。</p>
+  <div class="meta">
+    <span class="chip accent">Avalonia 11 · .NET 8</span>
+    <span class="chip">交付日期 2026-11-01</span>
+    <span class="chip ok"><span class="dot"></span>UI 测试 12 / 12 通过</span>
+    <span class="chip ok"><span class="dot"></span>核心测试 369 / 369 通过</span>
+    <span class="chip ok"><span class="dot"></span>编译 0 错误</span>
+  </div>
+</header>
+
+<!-- 摘要 -->
+<section id="summary" style="margin-top:34px">
+  <div class="grid g4">
+    <div class="kpi"><div class="v">3<small>个</small></div><div class="k">一级独立入口<br>概览 / 对话 / 设置</div></div>
+    <div class="kpi"><div class="v">2<small>组</small></div><div class="k">可折叠分组<br>模型 / 知识与记忆</div></div>
+    <div class="kpi"><div class="v">6<small>项</small></div><div class="k">二级菜单入口<br>全部经路由校验</div></div>
+    <div class="kpi"><div class="v">9<small>/9</small></div><div class="k">路由可达<br>含折叠态兜底</div></div>
+  </div>
+</section>
+
+<!-- 1 菜单结构树 -->
+<section id="tree">
+  <div class="sec-head"><span class="sec-num">01</span><h2>菜单结构树</h2></div>
+  <p>侧边栏由「6 个平铺入口」改为「3 个一级 + 2 个可折叠分组」。高频且独立的功能留在一级；资源管理类与知识类功能按域收敛到分组内，进入分组时才展开，避免一次性铺满 9 个条目。</p>
+
+  <div class="fig">
+    <figure>
+      <svg viewBox="0 0 960 566" role="img" aria-label="星坞侧边栏菜单结构树">
+        <defs>
+          <style>
+            .tp{fill:#FFFFFF;stroke:#EBEDF0;stroke-width:1.5;rx:14}
+            .grp{fill:#E8F1FF;stroke:#C8DDFF;stroke-width:1.5}
+            .sub{fill:#FFFFFF;stroke:#EBEDF0;stroke-width:1.2}
+            .lbl{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:14px;font-weight:600;fill:#0E1116}
+            .lbl2{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:13px;font-weight:600;fill:#0E1116}
+            .note{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:11.5px;fill:#5F6673}
+            .tag{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:11px;font-weight:700}
+            .spine{stroke:#D6DEEA;stroke-width:1.6}
+            .tickmark{stroke:#D6DEEA;stroke-width:1.6}
+            .glyph{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:11px;fill:#9AA0A9}
+          </style>
+        </defs>
+
+        <!-- 模型分组 -->
+        <rect class="grp" x="16" y="124" width="208" height="38" rx="14"/>
+        <text class="lbl" x="34" y="148">模型</text>
+        <text class="glyph" x="196" y="148">▾</text>
+
+        <path class="spine" d="M236 143 V269"/>
+        <path class="tickmark" d="M236 185 H252 M236 227 H252 M236 269 H252"/>
+
+        <rect class="sub" x="252" y="170" width="232" height="30" rx="12"/>
+        <text class="lbl2" x="268" y="190">已下载</text>
+        <rect class="sub" x="252" y="212" width="232" height="30" rx="12"/>
+        <text class="lbl2" x="268" y="232">为你推荐</text>
+        <rect class="sub" x="252" y="254" width="232" height="30" rx="12"/>
+        <text class="lbl2" x="268" y="274">模型商店</text>
+
+        <!-- 知识与记忆分组 -->
+        <rect class="grp" x="16" y="304" width="208" height="38" rx="14"/>
+        <text class="lbl" x="34" y="328">知识与记忆</text>
+        <text class="glyph" x="196" y="328">▾</text>
+
+        <path class="spine" d="M236 323 V449"/>
+        <path class="tickmark" d="M236 365 H252 M236 407 H252 M236 449 H252"/>
+
+        <rect class="sub" x="252" y="350" width="232" height="30" rx="12"/>
+        <text class="lbl2" x="268" y="370">知识库</text>
+        <rect class="sub" x="252" y="392" width="232" height="30" rx="12"/>
+        <text class="lbl2" x="268" y="412">长期记忆</text>
+        <rect class="sub" x="252" y="434" width="232" height="30" rx="12"/>
+        <text class="lbl2" x="268" y="454">技能</text>
+
+        <!-- 一级入口 -->
+        <rect class="tp" x="16" y="16" width="208" height="38" rx="14"/>
+        <text class="lbl" x="34" y="40">概览</text>
+        <rect class="tp" x="16" y="64" width="208" height="38" rx="14"/>
+        <text class="lbl" x="34" y="88">对话</text>
+        <rect class="tp" x="16" y="490" width="208" height="38" rx="14"/>
+        <text class="lbl" x="34" y="514">设置</text>
+
+        <!-- 分隔线示意 -->
+        <path d="M26 112 H214" stroke="#EBEDF0" stroke-width="1.4"/>
+        <path d="M26 478 H214" stroke="#EBEDF0" stroke-width="1.4"/>
+
+        <!-- 右侧注解 -->
+        <text class="note" x="556" y="40">一级 · 高频 · 硬件体检 + 适配推荐</text>
+        <text class="note" x="556" y="88">一级 · 高频 · 与本地模型对话</text>
+        <text class="tag" x="500" y="40" fill="#3482FF">一级</text>
+        <text class="tag" x="500" y="88" fill="#3482FF">一级</text>
+
+        <text class="tag" x="500" y="148" fill="#2067D4">分组</text>
+        <text class="note" x="556" y="148">可折叠 · 资源管理域 · 默认展开当前组</text>
+
+        <text class="note" x="556" y="190">二级 · 启动 / 管理已下载模型（组内默认落地页）</text>
+        <text class="note" x="556" y="232">二级 · 按硬件与显存排序推荐</text>
+        <text class="note" x="556" y="274">二级 · 搜索、下载、导入 GGUF</text>
+
+        <text class="tag" x="500" y="328" fill="#2067D4">分组</text>
+        <text class="note" x="556" y="328">可折叠 · RAG 与记忆域 · 与治理模型分离</text>
+
+        <text class="note" x="556" y="370">二级 · 文档导入与检索（组内默认落地页）</text>
+        <text class="note" x="556" y="412">二级 · 偏好与事实自动沉淀</text>
+        <text class="note" x="556" y="454">二级 · 目标模式步骤复用</text>
+
+        <text class="tag" x="500" y="514" fill="#3482FF">一级</text>
+        <text class="note" x="556" y="514">一级 · 独立 · 全局配置、存储与 API 接入</text>
+      </svg>
+      <figcaption>图 1 · 菜单结构树：实心蓝底为可折叠分组，白底为可导航入口，左侧竖线为分组父子关系。</figcaption>
+    </figure>
+  </div>
+
+  <h3>层级归属依据</h3>
+  <table>
+    <thead><tr><th style="width:130px">入口</th><th style="width:90px">层级</th><th style="width:150px">路由键</th><th>归位理由</th></tr></thead>
+    <tbody>
+      <tr><td><strong>概览</strong></td><td>一级</td><td><code>dashboard</code></td><td>打开应用后的第一落点，硬件检测与「查看全部推荐」是高频操作，保留独立入口。</td></tr>
+      <tr><td><strong>对话</strong></td><td>一级</td><td><code>chat</code></td><td>使用频率最高且无归属歧义，任何分组收纳都会增加一次点击。</td></tr>
+      <tr><td><strong>模型</strong></td><td>一级分组</td><td>—</td><td>三类操作都围绕「模型资源」这一同一心智：已下载（用）、推荐（挑）、商店（取）。</td></tr>
+      <tr><td>已下载</td><td>二级</td><td><code>models.installed</code></td><td>组内默认落地页；启动与删除服务属于「已有资源」的运维动作。</td></tr>
+      <tr><td>为你推荐</td><td>二级</td><td><code>models.recommend</code></td><td>与已下载同属「选型」，但依赖硬件评分结果，故与商店并列。</td></tr>
+      <tr><td>模型商店</td><td>二级</td><td><code>store</code></td><td>下载/导入属于「获取」环节，页面本身较重，不宜与一级入口抢注意力。</td></tr>
+      <tr><td><strong>知识与记忆</strong></td><td>一级分组</td><td>—</td><td>三者共同服务「对话增强」，且都属于低频配置型功能。</td></tr>
+      <tr><td>知识库</td><td>二级</td><td><code>knowledge.docs</code></td><td>组内默认落地页；文档导入与检索测试是知识域主入口。</td></tr>
+      <tr><td>长期记忆</td><td>二级</td><td><code>knowledge.memory</code></td><td>偏好与事实的沉淀，与知识库共享检索与注入链路。</td></tr>
+      <tr><td>技能</td><td>二级</td><td><code>knowledge.skills</code></td><td>由目标模式沉淀的执行步骤，属于「注入型」资料，与记忆同域。</td></tr>
+      <tr><td><strong>设置</strong></td><td>一级</td><td><code>settings</code></td><td>全局性配置，与任何业务分组都不构成从属关系，保持在底部独立入口。</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 2 布局示意 -->
+<section id="layout">
+  <div class="sec-head"><span class="sec-num">02</span><h2>界面布局示意图</h2></div>
+  <p>整体维持「侧边栏 + 页头 + 内容区」三段式。本轮把层级信息补进页头：二级页面显示面包屑（如「模型 · 已下载」），让用户不必回看侧边栏也能确认当前位置。</p>
+
+  <div class="fig">
+    <figure>
+      <svg viewBox="0 0 960 470" role="img" aria-label="展开态界面布局示意图">
+        <defs>
+          <style>
+            .win{fill:#F2F3F5;stroke:#DCE0E5;stroke-width:1.5}
+            .side{fill:#F7F8FA}
+            .cardw{fill:#FFFFFF;stroke:#EBEDF0;stroke-width:1.2}
+            .navitem{fill:#FFFFFF;stroke:#EDEFF3;stroke-width:1.1}
+            .navactive{fill:#E8F1FF;stroke:#C8DDFF;stroke-width:1.1}
+            .grpbox{fill:transparent}
+            .t{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:11px;fill:#0E1116}
+            .tm{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:10.5px;fill:#5F6673}
+            .tu{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:10.5px;fill:#9AA0A9}
+            .dim{font-family:"Cascadia Mono",Consolas,monospace;font-size:10px;fill:#9AA0A9}
+            .hair{stroke:#EBEDF0;stroke-width:1.2}
+          </style>
+        </defs>
+
+        <rect class="win" x="0" y="0" width="960" height="462" rx="16"/>
+        <rect class="side" x="0.75" y="0.75" width="242" height="460" rx="15"/>
+        <path d="M243 1 V461" stroke="#EBEDF0" stroke-width="1.2"/>
+
+        <!-- logo -->
+        <rect x="22" y="22" width="34" height="34" rx="11" fill="#3482FF"/>
+        <text x="39" y="44" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="700" fill="#FFF">星</text>
+        <text class="t" x="66" y="38" font-size="12" font-weight="600">星坞</text>
+        <text class="tu" x="66" y="52">本地模型启动器</text>
+
+        <!-- 导航标题 -->
+        <text class="tu" x="26" y="86">导航</text>
+        <text class="tu" x="222" y="86">‹</text>
+
+        <!-- 一级项 -->
+        <rect class="navitem" x="16" y="96" width="208" height="34" rx="12"/>
+        <text class="t" x="30" y="117" fill="#5F6673">概览</text>
+        <rect class="navitem" x="16" y="134" width="208" height="34" rx="12"/>
+        <text class="t" x="30" y="155" fill="#5F6673">对话</text>
+
+        <path d="M26 180 H214" class="hair"/>
+
+        <!-- 模型分组展开 -->
+        <rect class="navitem" x="16" y="186" width="208" height="32" rx="12"/>
+        <text class="t" x="30" y="206" font-weight="600" fill="#5F6673">模型　▾</text>
+        <rect class="navactive" x="16" y="220" width="208" height="30" rx="12"/>
+        <text class="t" x="44" y="239" fill="#3482FF" font-weight="600">已下载</text>
+        <rect class="navitem" x="16" y="252" width="208" height="30" rx="12"/>
+        <text class="t" x="44" y="271" fill="#5F6673">为你推荐</text>
+        <rect class="navitem" x="16" y="284" width="208" height="30" rx="12"/>
+        <text class="t" x="44" y="303" fill="#5F6673">模型商店</text>
+
+        <!-- 知识与记忆分组收起 -->
+        <rect class="navitem" x="16" y="320" width="208" height="32" rx="12"/>
+        <text class="t" x="30" y="340" font-weight="600" fill="#5F6673">知识与记忆　▸</text>
+
+        <path d="M26 360 H214" class="hair"/>
+
+        <rect class="navitem" x="16" y="368" width="208" height="34" rx="12"/>
+        <text class="t" x="30" y="389" fill="#5F6673">设置</text>
+
+        <!-- 底部状态卡（位于独立的底部行，不与导航项重叠） -->
+        <rect class="cardw" x="16" y="410" width="208" height="36" rx="14" fill="#FFFFFF"/>
+        <text class="tu" x="28" y="432">● 服务未运行 · 未加载模型</text>
+
+        <!-- 页头 -->
+        <text class="tu" x="270" y="34">模型 · 已下载</text>
+        <text x="270" y="64" font-family="sans-serif" font-size="22" font-weight="700" fill="#0E1116">已下载模型</text>
+        <text class="tm" x="270" y="82">启动推理服务，管理磁盘上的本地模型</text>
+        <rect class="cardw" x="800" y="44" width="136" height="26" rx="13"/>
+        <text class="tu" x="868" y="61" text-anchor="middle">● 运行中的模型</text>
+
+        <!-- 内容区：运行时条 -->
+        <rect class="cardw" x="258" y="100" width="678" height="56" rx="14"/>
+        <text class="tm" x="274" y="122">推理运行时 · llama.cpp</text>
+        <rect x="274" y="130" width="380" height="4" rx="2" fill="#EFF1F4"/>
+
+        <!-- 内容区：列表行 -->
+        <text x="258" y="186" font-family="sans-serif" font-size="14" font-weight="650" fill="#0E1116">本机模型</text>
+        <text class="tu" x="258" y="201">已下载 N 个模型 · 占用空间</text>
+        <rect class="cardw" x="258" y="212" width="678" height="60" rx="14"/>
+        <rect x="274" y="230" width="34" height="34" rx="11" fill="#E8F1FF"/>
+        <text class="tm" x="322" y="242">模型名称　·　量化 / 体积 / 来源</text>
+        <text class="tu" x="322" y="258">本地文件路径</text>
+        <rect x="790" y="230" width="120" height="26" rx="13" fill="#3482FF"/>
+        <text x="850" y="247" text-anchor="middle" font-family="sans-serif" font-size="10.5" font-weight="600" fill="#FFFFFF">启动模型</text>
+
+        <!-- 内容区：空态/说明卡 -->
+        <rect class="cardw" x="258" y="288" width="678" height="146" rx="14"/>
+        <text class="tu" x="274" y="310">页面内不再重复分段标签栏，切换统一由侧边栏二级菜单驱动</text>
+        <rect x="274" y="322" width="646" height="96" rx="12" fill="#FAFBFD" stroke="#EDEFF3" stroke-width="1"/>
+        <text class="tu" x="290" y="346">内容区（ScrollViewer）</text>
+
+        <!-- 尺寸标注 -->
+        <text class="dim" x="248" y="456" fill="#9AA0A9" font-size="9.5">侧边栏 244px</text>
+      </svg>
+      <figcaption>图 2 · 展开态（244px）：当前分组自动展开并高亮子项，另一分组收起；页头出现「模型 · 已下载」面包屑。</figcaption>
+    </figure>
+  </div>
+
+  <div class="fig" style="margin-top:16px">
+    <figure>
+      <svg viewBox="0 0 960 470" role="img" aria-label="折叠态界面布局示意图">
+        <defs>
+          <style>
+            .win2{fill:#F2F3F5;stroke:#DCE0E5;stroke-width:1.5}
+            .side2{fill:#F7F8FA}
+            .iconbox{fill:#FFFFFF;stroke:#EDEFF3;stroke-width:1.1}
+            .iconactive{fill:#E8F1FF;stroke:#C8DDFF;stroke-width:1.1}
+            .t2{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:11px;fill:#0E1116}
+            .tm2{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:10.5px;fill:#5F6673}
+            .tu2{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:10.5px;fill:#9AA0A9}
+            .dim2{font-family:"Cascadia Mono",Consolas,monospace;font-size:10px;fill:#9AA0A9}
+            .cw2{fill:#FFFFFF;stroke:#EBEDF0;stroke-width:1.2}
+            .ig{stroke:#9AA0A9;stroke-width:1.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+            .igA{stroke:#3482FF;stroke-width:1.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+          </style>
+        </defs>
+
+        <rect class="win2" x="0" y="0" width="960" height="462" rx="16"/>
+        <rect class="side2" x="0.75" y="0.75" width="74" height="460" rx="15"/>
+        <path d="M75 1 V461" stroke="#EBEDF0" stroke-width="1.2"/>
+
+        <rect x="18" y="18" width="40" height="40" rx="13" fill="#3482FF"/>
+        <text x="38" y="44" text-anchor="middle" font-family="sans-serif" font-size="15" font-weight="700" fill="#FFF">星</text>
+
+        <text class="tu2" x="38" y="94" text-anchor="middle" font-size="12">›</text>
+
+        <rect class="iconbox" x="20" y="106" width="36" height="36" rx="12"/>
+        <path class="ig" d="M30 127 L38 119 L46 127 L46 134 L30 134 Z"/>
+
+        <rect class="iconactive" x="20" y="150" width="36" height="36" rx="12"/>
+        <rect class="igA" x="30" y="161" width="16" height="11" rx="4"/>
+        <path class="igA" d="M34 172 L34 177 L39 172"/>
+
+        <rect class="iconbox" x="20" y="206" width="36" height="36" rx="12"/>
+        <path class="ig" d="M29 218 H35 L38 221 H47 V231 H29 Z"/>
+
+        <rect class="iconbox" x="20" y="250" width="36" height="36" rx="12"/>
+        <path class="ig" d="M31 259 V277 H37 V259 M39 259 V277 H45 V259"/>
+
+        <rect class="iconbox" x="20" y="294" width="36" height="36" rx="12"/>
+        <path class="ig" d="M30 306 H46 M34 301 V311 M30 318 H46 M42 313 V323"/>
+
+        <circle cx="38" cy="428" r="4" fill="#9AA0A9"/>
+
+        <!-- 右侧内容 -->
+        <text class="tu2" x="102" y="34">当前页面标题锚点</text>
+        <text x="102" y="66" font-family="sans-serif" font-size="22" font-weight="700" fill="#0E1116">对话 / 概览 / 设置</text>
+        <text class="tm2" x="102" y="84">与本地模型对话，所有内容都留在本机</text>
+
+        <rect class="cw2" x="102" y="104" width="834" height="196" rx="14"/>
+        <text class="tu2" x="120" y="130">内容区最大宽度随侧边栏收缩而增加（约 +168px）</text>
+        <rect x="120" y="144" width="798" height="138" rx="12" fill="#FAFBFD" stroke="#EDEFF3" stroke-width="1"/>
+
+        <rect class="cw2" x="102" y="316" width="834" height="118" rx="14"/>
+        <text class="tu2" x="120" y="342">输入区 / 底部操作栏</text>
+        <text class="dim2" x="84" y="456" fill="#9AA0A9" font-size="9.5">侧边栏 76px</text>
+      </svg>
+      <figcaption>图 3 · 折叠态（76px）：图标列仍覆盖全部入口，点击分组图标直接进入该组默认页（模型 → 已下载，知识与记忆 → 知识库）。</figcaption>
+    </figure>
+  </div>
+
+  <h3>实际渲染（Headless 截图，1024×768）</h3>
+  <div class="grid g2">
+    <figure class="shot"><img src=".screenshots/ui-rework/page0-light.png" alt="概览页浅色"><figcaption>概览：一级入口，两组菜单默认收起</figcaption></figure>
+    <figure class="shot"><img src=".screenshots/ui-rework/page1-light.png" alt="已下载模型页浅色"><figcaption>模型 · 已下载：分组展开 + 面包屑</figcaption></figure>
+    <figure class="shot"><img src=".screenshots/ui-rework/page4-light.png" alt="知识库页浅色"><figcaption>知识与记忆 · 知识库：组间手风琴切换</figcaption></figure>
+    <figure class="shot"><img src=".screenshots/ui-rework/page5-light.png" alt="设置页浅色"><figcaption>设置：页内「快速定位」跳转卡（7 个锚点）</figcaption></figure>
+    <figure class="shot"><img src=".screenshots/ui-rework/page5-dark.png" alt="设置页深色"><figcaption>深色主题：同一层级、同一高亮语义</figcaption></figure>
+    <figure class="shot"><img src=".screenshots/ui-rework/state-chat-collapsed.png" alt="折叠态"><figcaption>折叠态：图标列直达全部入口</figcaption></figure>
+  </div>
+</section>
+
+<!-- 3 前后对比 -->
+<section id="diff">
+  <div class="sec-head"><span class="sec-num">03</span><h2>重构前后对比</h2></div>
+  <table>
+    <thead><tr><th style="width:150px">维度</th><th style="width:300px">重构前</th><th>重构后</th></tr></thead>
+    <tbody>
+      <tr><td><strong>侧边栏条目</strong></td><td>6 个平铺入口，全部同权重</td><td>3 个一级入口 + 2 个可折叠分组（收纳 6 项二级）</td></tr>
+      <tr><td><strong>层级表达</strong></td><td>仅靠页面内分段标签栏，侧边栏无父级</td><td>父级标题 + 缩进子项 + 页头面包屑，三级信息一致</td></tr>
+      <tr><td><strong>切换成本</strong></td><td>模型相关需「我的模型 → 分段标签 → 目标页」两步</td><td>侧边栏一步直达；折叠态下再补一次展开</td></tr>
+      <tr><td><strong>视觉冗余</strong></td><td>页面内再放一组「已下载 / 为你推荐」标签，与侧边栏重复</td><td>页内标签栏移除，唯一切换入口收敛到侧边栏</td></tr>
+      <tr><td><strong>分组状态</strong></td><td>无折叠概念</td><td>手风琴：进入组自动展开并收起另一组；手动可独立收展</td></tr>
+      <tr><td><strong>长页导航</strong></td><td>设置页需长距离滚动</td><td>设置页顶部「快速定位」7 个锚点按钮，一键滚动到目标卡片</td></tr>
+      <tr><td><strong>兼容性</strong></td><td>—</td><td><code>NavigateCommand(0–5)</code>、<code>Models.TabIndex</code>、<code>KnowledgeMemory.TabIndex</code> 全部保留</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 4 设计规范 -->
+<section id="spec">
+  <div class="sec-head"><span class="sec-num">04</span><h2>设计规范</h2></div>
+
+  <h3>结构与尺寸</h3>
+  <table>
+    <thead><tr><th style="width:190px">元素</th><th style="width:150px">尺寸</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>侧边栏宽度</strong></td><td>244 / 76 px</td><td>折叠仅保留图标列，内容区自动获得宽度</td></tr>
+      <tr><td><strong>一级菜单项</strong></td><td>高 44 · 圆角 14 · 内边距 14</td><td>字号 13，激活态 <code>AccentSoft</code> 底 + Accent 文字 Semibold</td></tr>
+      <tr><td><strong>分组标题</strong></td><td>高 40 · 圆角 14 · 字号 12.5 Semibold</td><td>不整块高亮，激活时仅图标与文字转 Accent，避免与子项高亮重复</td></tr>
+      <tr><td><strong>二级菜单项</strong></td><td>高 36 · 圆角 12 · 左缩进 20</td><td>图标 14×14，激活态 <code>AccentSoft</code> 底 + Accent 文字 + Accent 图标</td></tr>
+      <tr><td><strong>页头</strong></td><td>外边距 30,24,30,10</td><td>面包屑 11px / 标题 28px / 副标题 muted，行距 3</td></tr>
+      <tr><td><strong>内容区</strong></td><td>左右内边距 30</td><td>卡片圆角 16–20，卡片间间距 14–18</td></tr>
+      <tr><td><strong>分隔线</strong></td><td>高 1 · 外边距 10,9</td><td>仅展开态显示，折叠态隐藏以保持图标列整洁</td></tr>
+    </tbody>
+  </table>
+
+  <h3>色彩与状态</h3>
+  <div class="panel tight" style="margin-bottom:14px">
+    <div class="swatches">
+      <span class="sw"><i style="background:#3482FF"></i>Accent #3482FF</span>
+      <span class="sw"><i style="background:#E8F1FF"></i>AccentSoft #E8F1FF</span>
+      <span class="sw"><i style="background:#D9E8FF"></i>AccentSoftHover #D9E8FF</span>
+      <span class="sw"><i style="background:#F7F8FA"></i>SidebarBg #F7F8FA</span>
+      <span class="sw"><i style="background:#F4F5F7"></i>InputBg #F4F5F7</span>
+      <span class="sw"><i style="background:#EBEDF0"></i>Stroke #EBEDF0</span>
+      <span class="sw"><i style="background:#0E1116"></i>TextPrimary #0E1116</span>
+      <span class="sw"><i style="background:#5F6673"></i>TextSecondary #5F6673</span>
+      <span class="sw"><i style="background:#9AA0A9"></i>TextMuted #9AA0A9</span>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th style="width:130px">状态</th><th style="width:250px">一级项</th><th>分组标题 / 二级项</th></tr></thead>
+    <tbody>
+      <tr><td>默认</td><td>透明底 · TextSecondary</td><td>分组：TextSecondary Semibold；二级：TextSecondary</td></tr>
+      <tr><td>悬停</td><td><code>InputBg</code> 底 · TextPrimary</td><td>分组与二级同规则；二级图标同步转 TextPrimary</td></tr>
+      <tr><td>激活</td><td><code>AccentSoft</code> 底 · Accent 文字 Semibold</td><td>分组仅文字/图标转 Accent；二级整块 <code>AccentSoft</code> + Accent 图标</td></tr>
+      <tr><td>激活悬停</td><td><code>AccentSoftHover</code> 底</td><td>二级同规则，保证连续悬停不闪烁</td></tr>
+      <tr><td>禁用</td><td>降低不透明度，保持 44px 点击区</td><td>适用于「打开 WebUI / 停止服务」等依赖运行时状态的按钮</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:12px">深色主题使用同一套语义：Accent 提亮为 <code>#4D8DFF</code>，<code>AccentSoft</code> 改为 <code>#1B2A44</code>，其余通过 <code>DynamicResource</code> 自动切换，无需在视图层写条件分支。</p>
+</section>
+
+<!-- 5 交互规则 -->
+<section id="interaction">
+  <div class="sec-head"><span class="sec-num">05</span><h2>交互规则</h2></div>
+  <div class="grid g2">
+    <div class="panel">
+      <h3 style="margin-top:0">分组折叠（手风琴）</h3>
+      <ul class="rules">
+        <li><strong>进入即展开</strong>：导航到模型域任一页，自动展开「模型」并收起「知识与记忆」；反向同理。</li>
+        <li><strong>一级页面全收起</strong>：概览 / 对话 / 设置不携带子项，进入时两组均收起，避免空展开。</li>
+        <li><strong>手动可并行</strong>：点击分组标题可独立收展，不会强制关闭另一组，避免当前高亮子项被隐藏。</li>
+        <li><strong>折叠态兜底</strong>：侧边栏 76px 时点击分组图标不再折叠，而是直接进入该组默认页；「设置」等一级项照常直达。</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">高亮与位置感</h3>
+      <ul class="rules">
+        <li><strong>双通道高亮</strong>：分组标题转 Accent 表示「我在这个域」，子项整块 <code>AccentSoft</code> 表示「我在这一页」。</li>
+        <li><strong>面包屑同步</strong>：二级页页头显示「父级 · 子级」；一级页自动隐藏面包屑，不占版面。</li>
+        <li><strong>单源路由</strong>：所有入口共用 <code>OpenRouteCommand</code> + 路由字典，页面索引、页签、标题、面包屑均从同一处推导，避免状态漂移。</li>
+        <li><strong>零重复入口</strong>：模型页与知识页内的分段标签栏已移除，页内不再出现第二套切换控件。</li>
+      </ul>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:14px">
+    <h3 style="margin-top:0">设置页「快速定位」</h3>
+    <p>设置页内容较长，顶部新增一张「快速定位」卡片，内含 7 个胶囊按钮：外观、下载设置、模型源、存储与工作区、API 接入、对话与推理、引擎与更新。点击调用对应卡片的 <code>BringIntoView()</code> 平滑滚动到目标区块，按钮位于滚动容器顶部，不会因滚动而丢失。</p>
+    <ul class="rules">
+      <li><strong>可扩展</strong>：新增设置分组时，只需给目标卡片加 <code>x:Name</code> 并在 <code>JumpToSection</code> 的分支中补一条映射。</li>
+      <li><strong>不改变原有保存逻辑</strong>：锚点仅控制视口位置，不触碰任何设置项的读写路径。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 6 验证 -->
+<section id="verify">
+  <div class="sec-head"><span class="sec-num">06</span><h2>功能入口可访问性验证</h2></div>
+  <p>以下 9 个路由由 UI 测试逐条打开并断言：页面索引、当前路由键、页头标题、当前页面视图类型、分组激活态与子项高亮态。任何一项不符即失败。</p>
+
+  <table>
+    <thead>
+      <tr><th style="width:130px">入口</th><th style="width:150px">路由键</th><th style="width:120px">索引 / 页签</th><th>断言项</th><th style="width:74px">结果</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>概览</strong></td><td><code>dashboard</code></td><td>PageIndex 0</td><td>CurrentPage = Dashboard；两组均收起</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+      <tr><td><strong>对话</strong></td><td><code>chat</code></td><td>PageIndex 3</td><td>CurrentPage = Chat；IsChatActive</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+      <tr><td>已下载</td><td><code>models.installed</code></td><td>1 · Tab 0</td><td>IsLibraryActive；ShowModelsChildren = true</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+      <tr><td>为你推荐</td><td><code>models.recommend</code></td><td>1 · Tab 1</td><td>IsRecommendActive；组保持展开</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+      <tr><td>模型商店</td><td><code>store</code></td><td>PageIndex 2</td><td>IsStoreActive；IsModelsGroupActive</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+      <tr><td>知识库</td><td><code>knowledge.docs</code></td><td>4 · Tab 0</td><td>IsKnowledgeDocActive；ShowKnowledgeChildren = true</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+      <tr><td>长期记忆</td><td><code>knowledge.memory</code></td><td>4 · Tab 1</td><td>IsMemoryActive；IsKnowledgeGroupActive</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+      <tr><td>技能</td><td><code>knowledge.skills</code></td><td>4 · Tab 2</td><td>IsSkillsActive；组保持展开</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+      <tr><td><strong>设置</strong></td><td><code>settings</code></td><td>PageIndex 5</td><td>IsSettingsActive；两组收起</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>附加交互验证</h3>
+  <table>
+    <thead><tr><th style="width:210px">场景</th><th>验证内容</th><th style="width:74px">结果</th></tr></thead>
+    <tbody>
+      <tr><td>分组手动折叠 / 展开</td><td>折叠后子项隐藏、图标切换 ▸ / ▾，再次展开恢复且不丢失当前高亮</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+      <tr><td>折叠态（76px）导航</td><td>点击分组图标直接落到组默认页，<code>PageIndex</code> 与子页签同步正确</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+      <tr><td>组间切换一致性</td><td>进入模型域时知识组自动收起，进入知识域时模型组自动收起</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+      <tr><td>页头面包屑</td><td>二级页显示「父级 · 子级」；一级页 <code>HasHeaderCrumb = false</code></td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+      <tr><td>设置快速定位</td><td>7 个锚点按钮均能滚动到对应卡片（外观 / 下载 / 模型源 / 存储 / API / 对话与推理 / 引擎与更新）</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+      <tr><td>浅色 / 深色</td><td>6 个页面 × 2 主题 + 多组业务状态截图渲染成功</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+      <tr><td>旧接口兼容</td><td><code>NavigateCommand(0–5)</code> 与原有页签属性语义不变，既有测试全部保留通过</td><td><span class="pass"><span class="dot"></span>通过</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>验证命令与结果</h3>
+  <div class="panel tight">
+    <p style="margin:0 0 8px"><code>dotnet build LocalModelHub.sln -c Release</code> → <strong>0 错误</strong>（2 条既有警告，与本次改动无关）</p>
+    <p style="margin:0 0 8px"><code>dotnet test tests\LocalModelHub.Ui.Tests -c Release</code> → <strong>12 / 12 通过</strong>（含新增导航路由测试 <code>Navigation_entries_open_every_route_and_keep_groups_consistent</code> 与快速定位测试 <code>Settings_quick_jump_buttons_are_wired_to_sections</code>）</p>
+    <p style="margin:0"><code>dotnet test tests\LocalModelHub.Core.Tests -c Release</code> → <strong>369 / 369 通过</strong></p>
+  </div>
+</section>
+
+<!-- 7 验收 -->
+<section id="accept">
+  <div class="sec-head"><span class="sec-num">07</span><h2>验收清单</h2></div>
+  <div class="grid g2">
+    <div class="panel">
+      <h3 style="margin-top:0">菜单与层级</h3>
+      <ul class="check">
+        <li><span class="tick">✓</span>一级仅保留高频与独立功能（概览 / 对话 / 设置）</li>
+        <li><span class="tick">✓</span>可归类功能全部下沉至二级菜单（模型 3 项、知识与记忆 3 项）</li>
+        <li><span class="tick">✓</span>页面内重复标签栏移除，菜单成为唯一切换入口</li>
+        <li><span class="tick">✓</span>页头面包屑与侧边栏层级保持一致</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">交互与视觉</h3>
+      <ul class="check">
+        <li><span class="tick">✓</span>分组默认收起，进入分组自动展开、另一组自动收起</li>
+        <li><span class="tick">✓</span>展开 / 收起无重排跳动，图标列与文字列宽度固定</li>
+        <li><span class="tick">✓</span>悬停、激活、激活悬停三态一致，深浅主题同语义</li>
+        <li><span class="tick">✓</span>长文本（版本号、路径）截断并提供 ToolTip，不撑破布局</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">功能与稳定性</h3>
+      <ul class="check">
+        <li><span class="tick">✓</span>9 个路由全部可达，折叠态具备兜底路径</li>
+        <li><span class="tick">✓</span>启动模型、停止服务、WebUI 等运行时状态入口行为不变</li>
+        <li><span class="tick">✓</span>设置项读写、下载源、API 接入等逻辑未改动</li>
+        <li><span class="tick">✓</span>编译 0 错误；UI 测试 12/12、核心测试 369/369 通过</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">交付物</h3>
+      <ul class="check">
+        <li><span class="tick">✓</span>菜单结构树（图 1）</li>
+        <li><span class="tick">✓</span>界面布局示意图（图 2 展开态 / 图 3 折叠态）</li>
+        <li><span class="tick">✓</span>功能入口可访问性验证表（9 路由 + 7 项附加场景）</li>
+        <li><span class="tick">✓</span>实机渲染截图（浅色 / 深色 / 折叠态）</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- 8 Fluent 材质视觉升级 -->
+<section id="fluent">
+  <div class="sec-head"><span class="sec-num">08</span><h2>Fluent 材质视觉升级（v2）</h2></div>
+
+  <p class="lead">第一版只做了层级与信息结构，界面依然偏「普通扁平」。这一版在不动菜单层级、不新增功能的前提下，把视觉层换成 Windows 11 Fluent 的材质语言：渐变桌面底 + 柔光晕 + 半透明材质面板 + 细描边 + 双层柔阴影 + 克制的微动效。</p>
+
+  <h3>材质配方（系统 Mica 为主，自绘材质作回退）</h3>
+  <div class="panel tight">
+    <ul class="rules">
+      <li><strong>层 0 · 真磨砂（系统材质）</strong>：窗口声明 <code>TransparencyLevelHint="Mica, AcrylicBlur, Blur, Transparent"</code>，实际生效时底板完全透明并隐藏自绘光晕，桌面壁纸经 DWM 模糊后直接透出；不支持时自动回落到下面的自绘材质，任何系统版本都可读。深色主题同步 <code>DWMWA_USE_IMMERSIVE_DARK_MODE</code>，避免磨砂底发白。</li>
+      <li><strong>层 1 · 桌面底板</strong>：<code>AppBg</code> 为三停靠点冷调线性渐变（浅色 <code>#F9FAFE → #F1F3F9 → #E8ECF6</code>）。</li>
+      <li><strong>层 2 · 环境光</strong>：两枚 <code>RadialGradientBrush</code> 光晕（右上蓝、左下青紫），透明度从 0x24 渐变到 0x00，营造 Mica 的「背景透出」感。</li>
+      <li><strong>层 3 · 材质面板</strong>：侧边栏与工具条用 <code>MicaBg</code>（浅色 <code>#A6FBFCFF</code> ≈ 65% / 深色 <code>#9914171C</code> ≈ 60%）+ <code>MicaStroke</code> 1px 高光描边，形成可透出磨砂底的真半透明层。</li>
+      <li><strong>层 4 · 卡片与阴影</strong>：卡片 <code>CardBg</code> 为 92% 白（深色 86%），叠加「近距 1px 硬边 + 远距 26px 柔光」双层 <code>BoxShadow</code>；悬停时阴影加深并上浮，既保留磨砂透感又保证文字对比度。</li>
+    </ul>
+  </div>
+
+  <h3>视觉 Token（浅色 / 深色）</h3>
+  <div class="panel tight" style="margin-bottom:14px">
+    <div class="swatches">
+      <span class="sw"><i style="background:#3482FF"></i>Accent #3482FF</span>
+      <span class="sw"><i style="background:#5A96FF"></i>PrimaryGradient 起</span>
+      <span class="sw"><i style="background:#2B6DE8"></i>PrimaryGradient 止</span>
+      <span class="sw"><i style="background:rgba(52,130,255,.12)"></i>AccentSoft 12%</span>
+      <span class="sw"><i style="background:#FFFFFF"></i>CardBg 92%</span>
+      <span class="sw"><i style="background:#FBFCFF"></i>MicaBg 65%</span>
+      <span class="sw"><i style="background:rgba(11,18,32,.08)"></i>CardSunkenBg</span>
+      <span class="sw"><i style="background:rgba(11,18,32,.09)"></i>Stroke 9%</span>
+      <span class="sw"><i style="background:#12161F"></i>TextPrimary</span>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th style="width:160px">Token</th><th style="width:250px">浅色</th><th>深色 / 用途</th></tr></thead>
+    <tbody>
+      <tr><td><code>AppBg</code></td><td>#F9FAFE → #F1F3F9 → #E8ECF6</td><td>#191C23 → #121419 → #0C0E12，窗口底板渐变</td></tr>
+      <tr><td><code>MicaBg</code></td><td>#A6FBFCFF</td><td>#9914171C，侧边栏 / 工具条材质层（真半透明）</td></tr>
+      <tr><td><code>CardBg</code> / <code>CardHoverBg</code></td><td>#EBFFFFFF / #F7FFFFFF</td><td>#DC1C2028 / #EA222731，卡片默认与悬停</td></tr>
+      <tr><td><code>CardSunkenBg</code></td><td>#080B1220</td><td>#1A000000，卡片内嵌数据块（适配结论、推理轨迹）</td></tr>
+      <tr><td><code>Stroke</code> 系列</td><td>#170B1220 / #0C0B1220 / #2E0B1220</td><td>#20FFFFFF / #12FFFFFF / #33FFFFFF，常规 / 细分隔 / 强描边</td></tr>
+      <tr><td><code>AccentInk</code></td><td>#1657C8</td><td>#9CC3FF，深底上的强调文字</td></tr>
+    </tbody>
+  </table>
+
+  <h3>圆角 / 阴影 / 动效</h3>
+  <table>
+    <thead><tr><th style="width:170px">层级</th><th style="width:200px">圆角</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>控件（按钮 / 输入 / 下拉）</td><td>9</td><td>替代原有大药丸圆角，贴近 Win11 控件手感</td></tr>
+      <tr><td>内嵌数据块 / 图标底板</td><td>10–12</td><td>卡片里的第二层容器，用 <code>CardSunkenBg</code> 下沉</td></tr>
+      <tr><td>材质面板</td><td>14</td><td>侧边栏、筛选工具条、会话列表、模式条</td></tr>
+      <tr><td>卡片 / hero</td><td>16–18</td><td>统一为 16，hero 用 18 强调主结论</td></tr>
+      <tr><td>页面切换</td><td>—</td><td>0.26s CubicEaseOut 淡入（<code>ScrollViewer.page</code> / <code>Grid.page</code>）</td></tr>
+      <tr><td>悬停</td><td>—</td><td>卡片背景 + 阴影 0.14s 过渡；按钮底色 0.12s 过渡，无位移动画保证不抖动</td></tr>
+    </tbody>
+  </table>
+
+  <h3>关键页的信息层级调整</h3>
+  <div class="grid g3">
+    <div class="panel tight"><div class="eyebrow">概览</div><p>结论前置：「流畅运行 8B」替代原来的硬件清单，评分卡右置佐证；四张硬件卡只留数值 + 一条 4px 进度；使用流程收进 hero 底部。</p></div>
+    <div class="panel tight"><div class="eyebrow">模型卡片</div><p>先回答「这台机器能不能跑」：适配结论与预估 tok/s 放进下沉数据块并置顶；徽标改 WrapPanel 换行，下载参数、量化对比、启动参数全部下移到卡片底部并加细分隔线弱化。</p></div>
+    <div class="panel tight"><div class="eyebrow">商店 / 对话</div><p>商店把三行筛选改成带「来源 / 地区 / 能力」标签的统一工具栏；对话页会话列表升为材质面板，用户气泡改用强调渐变，输入区与模式条统一为 12–14 圆角。</p></div>
+  </div>
+
+  <h3>升级后渲染（1024×768，浅色 / 深色）</h3>
+  <div class="grid g2">
+    <figure class="shot"><img src=".screenshots/ui-rework/page0-light.png" alt="概览页浅色"><figcaption>概览：hero 结论 + 评分佐证 + 一行四卡</figcaption></figure>
+    <figure class="shot"><img src=".screenshots/ui-rework/page2-light.png" alt="模型商店浅色"><figcaption>模型商店：三段筛选合并为带标签的统一工具条</figcaption></figure>
+    <figure class="shot"><img src=".screenshots/ui-rework/page1-light.png" alt="已下载模型浅色"><figcaption>已下载：材质运行时卡 + 单行模型卡，次要操作为图标按钮</figcaption></figure>
+    <figure class="shot"><img src=".screenshots/ui-rework/page0-dark.png" alt="概览页深色"><figcaption>深色：同一套 token 自动换肤，光晕改为蓝紫色</figcaption></figure>
+    <figure class="shot"><img src=".screenshots/ui-rework/page2-dark.png" alt="模型商店深色"><figcaption>深色商店：细描边保证卡片在深底上仍有边界</figcaption></figure>
+    <figure class="shot"><img src=".screenshots/ui-rework/state-chat.png" alt="对话页"><figcaption>对话：会话材质面板 + 渐变用户气泡 + 材质输入区</figcaption></figure>
+  </div>
+
+  <p class="note">说明：静态截图无法反映悬停与切换动效；动效仅在 0.12–0.26s 内完成且不改变布局尺寸，因此不会造成点击错位或渲染抖动。所有改动只涉及 XAML 样式与布局，ViewModel 绑定与命令未做任何删改，功能入口可访问性验证（第 06 节）仍然全部通过。</p>
+</section>
+
+<footer>
+  <span>LocalModelHub · 星坞　UI 重构方案</span>
+  <span>2026-11-01　·　Avalonia 11 / .NET 8</span>
+</footer>
+
+</div>
+</body>
+</html>

@@ -23,6 +23,32 @@ public class RuntimeManagerTests
     }
 
     [Fact]
+    public void SelectObsolete_keeps_current_and_newest_fallback()
+    {
+        var installed = new (string Directory, bool IsCurrent, DateTime ModifiedUtc)[]
+        {
+            ("b1-cpu", false, new DateTime(2026, 1, 1)),
+            ("b2-cpu", false, new DateTime(2026, 3, 1)),
+            ("b3-cuda", true, new DateTime(2026, 2, 1)),
+            ("b4-vulkan", false, new DateTime(2026, 4, 1))
+        };
+
+        Assert.Equal(["b1-cpu", "b2-cpu"], RuntimeManager.SelectObsolete(installed));
+    }
+
+    [Fact]
+    public void SelectObsolete_without_current_version_keeps_only_newest()
+    {
+        var installed = new (string Directory, bool IsCurrent, DateTime ModifiedUtc)[]
+        {
+            ("b1-cpu", false, new DateTime(2026, 1, 1)),
+            ("b2-cpu", false, new DateTime(2026, 2, 1))
+        };
+
+        Assert.Equal(["b1-cpu"], RuntimeManager.SelectObsolete(installed));
+    }
+
+    [Fact]
     public void CudaCandidates_prefers_cuda13_for_blackwell_with_new_driver()
     {
         Assert.Equal(

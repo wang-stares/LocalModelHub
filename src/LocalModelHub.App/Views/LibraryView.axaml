@@ -3,73 +3,91 @@
              xmlns:vm="using:LocalModelHub.App.ViewModels"
              x:Class="LocalModelHub.App.Views.LibraryView"
              x:DataType="vm:LibraryViewModel">
-  <ScrollViewer VerticalScrollBarVisibility="Auto">
-    <StackPanel Margin="30,0,30,30" Spacing="16">
+  <ScrollViewer Classes="page" VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="32,12,32,32" Spacing="18">
 
-      <Border Classes="card" CornerRadius="20" Padding="20">
-        <Grid ColumnDefinitions="*,Auto">
-          <StackPanel Spacing="7">
+      <!-- 运行时：材质面板，状态与操作同级 -->
+      <Border Classes="glass" Padding="20,18">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Border Width="40" Height="40" CornerRadius="11" Background="{DynamicResource TileCpuBg}"
+                  VerticalAlignment="Top">
+            <Path Data="{StaticResource IconSliders}" Width="18" Height="18"
+                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                  Fill="{DynamicResource TileCpuFg}"/>
+          </Border>
+          <StackPanel Grid.Column="1" Margin="14,0,16,0" Spacing="6">
             <StackPanel Orientation="Horizontal" Spacing="9">
-              <TextBlock Text="推理运行时 · llama.cpp" Classes="h3"/>
+              <TextBlock Text="推理运行时" Classes="h3" VerticalAlignment="Center"/>
               <Border Classes="badge" Classes.accent="{Binding RuntimeInstalled}">
                 <TextBlock Text="{Binding RuntimeStateText}"/>
               </Border>
             </StackPanel>
-            <TextBlock Text="{Binding RuntimePath}" Classes="caption" TextTrimming="CharacterEllipsis" MaxWidth="620"/>
-            <TextBlock Text="{Binding RuntimeStatus}" Classes="caption" TextWrapping="Wrap" MaxWidth="620"/>
-            <ProgressBar Value="{Binding RuntimeProgress}" Maximum="100" Height="5" IsVisible="{Binding IsInstallingRuntime}" MaxWidth="420" HorizontalAlignment="Left"/>
+            <TextBlock Text="{Binding RuntimePath}" Classes="caption"
+                       TextTrimming="CharacterEllipsis" MaxWidth="620"/>
+            <TextBlock Text="{Binding RuntimeStatus}" Classes="caption"
+                       TextWrapping="Wrap" MaxWidth="620"/>
+            <Border ClipToBounds="True" Height="4" MaxWidth="420"
+                    HorizontalAlignment="Left"
+                    IsVisible="{Binding IsInstallingRuntime}">
+              <ProgressBar Value="{Binding RuntimeProgress}" Maximum="100" Height="4"/>
+            </Border>
           </StackPanel>
-          <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto">
-            <Button Classes="ghost"
-                    Content="查看日志"
-                    Command="{Binding ViewLogsCommand}"
-                    Margin="0,0,8,0"/>
-            <Button Grid.Column="1"
-                    Classes="ghost"
-                    Content="安装 / 修复运行时"
-                    Command="{Binding InstallRuntimeCommand}"
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="ghost" Content="查看日志" Command="{Binding ViewLogsCommand}"/>
+            <Button Classes="ghost" Content="安装 / 修复" Command="{Binding InstallRuntimeCommand}"
                     IsEnabled="{Binding !IsInstallingRuntime}"
-                    VerticalAlignment="Center"/>
-          </Grid>
+                    ToolTip.Tip="下载并配置 llama.cpp 运行时"/>
+          </StackPanel>
         </Grid>
       </Border>
 
-      <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0">
-        <StackPanel Spacing="3">
-          <TextBlock Text="本机模型" Classes="h2"/>
-          <TextBlock Text="{Binding CountText}" Classes="caption"/>
+      <!-- 段落标题：数据前置 -->
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="2,2,2,0">
+        <StackPanel Spacing="2">
+          <TextBlock Text="本机模型" Classes="eyebrow"/>
+          <TextBlock Text="{Binding CountText}" Classes="muted" FontSize="12"/>
         </StackPanel>
-        <Button Grid.Column="1" Classes="ghost" Content="刷新" Command="{Binding RefreshModelsCommand}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-        <Button Grid.Column="2" Classes="ghost" Content="打开模型目录" Command="{Binding OpenModelsFolderCommand}" VerticalAlignment="Center"/>
+        <Button Grid.Column="1" Classes="ghost" Content="刷新"
+                Command="{Binding RefreshModelsCommand}" Margin="0,0,8,0"
+                VerticalAlignment="Center"/>
+        <Button Grid.Column="2" Classes="ghost" Content="打开目录"
+                Command="{Binding OpenModelsFolderCommand}" VerticalAlignment="Center"/>
       </Grid>
 
-      <Border Classes="card" Padding="16" CornerRadius="16" IsVisible="{Binding IsServerRunning}">
+      <Border Classes="glass" CornerRadius="12" Padding="14,12" IsVisible="{Binding IsServerRunning}">
         <Grid ColumnDefinitions="Auto,*,Auto">
-          <Ellipse Width="8" Height="8" Fill="{DynamicResource Success}" VerticalAlignment="Center"/>
-          <StackPanel Grid.Column="1" Margin="10,0,10,0" Spacing="2" VerticalAlignment="Center">
-            <TextBlock Text="当前推理服务运行中" Classes="h3" FontSize="12.5"/>
+          <Border Width="18" Height="18" CornerRadius="9" Background="{DynamicResource SuccessSoft}"
+                  VerticalAlignment="Center">
+            <Ellipse Width="7" Height="7" Fill="{DynamicResource Success}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <StackPanel Grid.Column="1" Margin="11,0,10,0" Spacing="1" VerticalAlignment="Center">
+            <TextBlock Text="推理服务运行中" Classes="h3" FontSize="12.5"/>
             <TextBlock Text="{Binding ServerText}" Classes="caption"/>
           </StackPanel>
-          <Button Grid.Column="2" Classes="danger" Content="停止服务" Command="{Binding StopServerCommand}"/>
+          <Button Grid.Column="2" Classes="danger" Content="停止服务"
+                  Command="{Binding StopServerCommand}"/>
         </Grid>
       </Border>
 
       <ItemsControl ItemsSource="{Binding Items}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:LibraryItemViewModel">
-            <Border Classes="card cardHover" Padding="16" Margin="0,0,0,10" CornerRadius="16">
+            <Border Classes="card cardHover" Padding="16" Margin="0,0,0,10" CornerRadius="18">
               <Grid ColumnDefinitions="Auto,*,Auto">
-                <Border Width="42" Height="42" CornerRadius="13" Background="{DynamicResource AvatarBg}">
+                <Border Width="42" Height="42" CornerRadius="12" Background="{DynamicResource AvatarBg}"
+                        BorderBrush="{DynamicResource AccentSoftHover}" BorderThickness="1">
                   <TextBlock Text="{Binding Initial}"
                              FontSize="13"
                              FontWeight="SemiBold"
-                             Foreground="{DynamicResource Accent}"
+                             Foreground="{DynamicResource AccentInk}"
                              HorizontalAlignment="Center"
                              VerticalAlignment="Center"/>
                 </Border>
-                <StackPanel Grid.Column="1" Margin="13,0,13,0" Spacing="4" VerticalAlignment="Center">
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <TextBlock Text="{Binding Title}" Classes="h3" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Margin="13,0,13,0" Spacing="5" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <TextBlock Text="{Binding Title}" Classes="h3" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
                     <Border Classes="badge"
                             Classes.cn="{Binding IsChinese}"
                             Classes.intl="{Binding !IsChinese}"
@@ -81,9 +99,12 @@
                     </Border>
                   </StackPanel>
                   <TextBlock Text="{Binding StatusText}" Classes="muted" FontSize="11.5"/>
-                  <TextBlock Text="{Binding PathText}" Classes="caption" TextTrimming="CharacterEllipsis" MaxWidth="520"/>
+                  <TextBlock Text="{Binding PathText}" Classes="caption"
+                             TextTrimming="CharacterEllipsis" MaxWidth="520"
+                             ToolTip.Tip="{Binding PathText}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                            VerticalAlignment="Center">
                   <Button Classes="primary"
                           Content="启动模型"
                           Command="{Binding LaunchCommand}"
@@ -98,8 +119,12 @@
                           MinWidth="96"
                           HorizontalContentAlignment="Center"
                           ToolTip.Tip="停止推理服务，释放显存与内存"/>
-                  <Button Classes="ghost" Content="目录" Command="{Binding RevealCommand}" ToolTip.Tip="在文件管理器中打开模型文件夹"/>
-                  <Button Classes="danger" Content="删除" Command="{Binding DeleteCommand}" ToolTip.Tip="从磁盘删除模型文件"/>
+                  <Button Classes="icon" Command="{Binding RevealCommand}" ToolTip.Tip="在文件管理器中打开模型文件夹">
+                    <Path Classes="icon" Data="{StaticResource IconFolder}" Width="16" Height="16"/>
+                  </Button>
+                  <Button Classes="icon" Command="{Binding DeleteCommand}" ToolTip.Tip="从磁盘删除模型文件">
+                    <Path Classes="icon" Data="{StaticResource IconTrash}" Width="16" Height="16"/>
+                  </Button>
                 </StackPanel>
               </Grid>
             </Border>
@@ -107,15 +132,22 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
-      <Border Classes="card" Padding="36" CornerRadius="20" IsVisible="{Binding IsEmpty}">
+      <Border Classes="card" Padding="40,36" CornerRadius="18" IsVisible="{Binding IsEmpty}">
         <StackPanel Spacing="10" HorizontalAlignment="Center">
+          <Border Width="46" Height="46" CornerRadius="13" Background="{DynamicResource CardSunkenBg}"
+                  HorizontalAlignment="Center">
+            <Path Classes="icon" Data="{StaticResource IconFolder}" Width="20" Height="20"
+                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                  Fill="{DynamicResource TextMuted}"/>
+          </Border>
           <TextBlock Text="还没有本地模型" Classes="h3" HorizontalAlignment="Center"/>
           <TextBlock Text="先去模型商店挑一个适合这台电脑的模型；已经下载好的 GGUF 也可以在商店页导入。"
                      Classes="muted"
                      HorizontalAlignment="Center"
                      TextWrapping="Wrap"
-                     MaxWidth="480"/>
-          <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,6,0,0">
+                     MaxWidth="480"
+                     TextAlignment="Center"/>
+          <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,8,0,0">
             <Button Classes="primary" Content="去模型商店下载" Command="{Binding OpenStoreCommand}"/>
             <Button Classes="ghost" Content="打开模型目录" Command="{Binding OpenModelsFolderCommand}"/>
           </StackPanel>

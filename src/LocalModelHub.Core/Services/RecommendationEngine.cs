@@ -57,9 +57,11 @@ public sealed class RecommendationEngine
         options ??= new RecommendationOptions();
         var bestIndex = 0;
         ModelRecommendation? best = null;
+        var evaluated = new List<ModelRecommendation>(model.Quants.Length);
         for (var index = 0; index < model.Quants.Length; index++)
         {
             var candidate = Evaluate(hw, performance, model, model.Quants[index], options);
+            evaluated.Add(candidate);
             if (best is null || IsBetter(candidate, best))
             {
                 best = candidate;
@@ -67,7 +69,29 @@ public sealed class RecommendationEngine
             }
         }
 
-        return (bestIndex, best ?? Evaluate(hw, performance, model, model.PrimaryQuant, options));
+        if (best is null)
+        {
+            best = Evaluate(hw, performance, model, model.PrimaryQuant, options);
+            evaluated.Add(best);
+        }
+
+        // 同模型其它量化的对比行：体积 / 速度 / 质量 / 结论，供卡片并排展示。
+        if (evaluated.Count > 1)
+        {
+            var alternatives = evaluated
+                .Select((item, index) => new QuantTradeoff(
+                    item.Quant.Label,
+                    Math.Round(item.Quant.TotalBytes / Formatters.Gib, 1),
+                    Math.Max(0.1, Math.Round(item.EstimatedTokensPerSecond * 0.75, 1)),
+                    Math.Round(item.EstimatedTokensPerSecond * 1.25, 1),
+                    QuantQuality(item.Quant.Label),
+                    item.Fit,
+                    index == bestIndex))
+                .ToList();
+            best = best with { Alternatives = alternatives };
+        }
+
+        return (bestIndex, best);
     }
 
     private static bool IsBetter(ModelRecommendation candidate, ModelRecommendation current)
@@ -309,7 +333,7 @@ public sealed class RecommendationEngine
             + contextBoost
             - QualityPenalty(model);
 
-        return new ModelRecommendation(
+        var recommendation = new ModelRecommendation(
             model,
             quant,
             fit,
@@ -323,6 +347,105 @@ public sealed class RecommendationEngine
             contextNote,
             reservedVramGb,
             contextLimited);
+
+        // 速度区间与依据、启动参数、场景标签、结构化理由、置信度：让推荐从「一个结论」变成「可决策」。
+        var measured = options.CpuGflops > 0;
+        var speedBasis = fit switch
+        {
+            FitLevel.Perfect => "显存带宽查表",
+            FitLevel.Good => "按卸载比例估算",
+            _ => measured ? "实测带宽" : "默认带宽估算"
+        };
+        var confidence = 0.45;
+        if (measured) confidence += 0.2;
+        if (measured && options.CpuMemoryBandwidthGBps > 10) confidence += 0.1;
+        if (gpu is not null && !gpu.Gpu.VramEstimated && !gpu.IsIntegrated) confidence += 0.15;
+        if (quant.TotalBytes > 0) confidence += 0.05;
+        if (model.ParametersB > 0) confidence += 0.05;
+
+        var blocks = EstimateBlockCount(model.ParametersB);
+        var gpuLayers = discrete
+            ? fit == FitLevel.Perfect
+                ? 999
+                : ComputeGpuLayers(
+                    performance, quant.TotalBytes, blocks, suggestedCtx,
+                    options.KvCacheTypeK, EffectiveKvTypeV(options), options.FlashAttention)
+            : 0;
+        var kvV = EffectiveKvTypeV(options);
+        var commandLine = $"-ngl {gpuLayers} -c {suggestedCtx} -ctk {options.KvCacheTypeK} -ctv {kvV}"
+                          + $" -fa {(options.FlashAttention ? "on" : "off")} -b 256 -ub 128"
+                          + (options.CpuMoeLayers > 0 ? $" --n-cpu-moe {options.CpuMoeLayers}" : "");
+
+        var overheadGb = Math.Max(0, plan.FullVramGb - sizeGb * 1.08);
+        var reasons = new List<string>
+        {
+            fit switch
+            {
+                FitLevel.Perfect => $"权重 {sizeGb:0.#} GB + KV/缓冲 {overheadGb:0.#} GB，可完整装入 {usableVramGb:0.#} GB 显存",
+                FitLevel.Good => $"显存差 {Math.Max(0, plan.FullVramGb - vramBudgetGb):0.#} GB，需卸载部分层到内存",
+                FitLevel.Playable => gpu is null
+                    ? $"无独显，{sizeGb:0.#} GB 权重走 CPU + 内存"
+                    : $"显存不足以完整卸载，{sizeGb:0.#} GB 权重走 CPU + 内存",
+                _ => $"内存预算不足：需要约 {plan.NeedRamGb:0.#} GB"
+            },
+            measured
+                ? $"速度按实测 CPU {options.CpuGflops:0.#} GFLOPS / 带宽 {options.CpuMemoryBandwidthGBps:0.#} GB/s 估算"
+                : "速度按 DDR4 双通道 51 GB/s 的默认带宽估算"
+        };
+        if (model.IsMoe && model.ActiveParametersB > 0)
+        {
+            reasons.Add($"MoE 每 token 只激活 {model.ActiveParametersB:0.#}B，速度快于同等总参数模型");
+        }
+
+        if (contextLimited)
+        {
+            reasons.Add(contextNote);
+        }
+
+        return recommendation with
+        {
+            Speed = new SpeedRange(
+                Math.Max(0.1, Math.Round(estimated * 0.75, 1)),
+                Math.Round(estimated * 1.25, 1),
+                speedBasis),
+            Launch = new LaunchSuggestion(
+                gpuLayers, suggestedCtx, options.KvCacheTypeK, kvV,
+                options.FlashAttention, options.CpuMoeLayers, commandLine),
+            Scenarios = BuildScenarios(model),
+            Reasons = reasons,
+            Confidence = Math.Clamp(confidence, 0.35, 0.95)
+        };
+    }
+
+    /// <summary>按常见模型规模估算层数，仅用于启动参数的 -ngl 建议。</summary>
+    public static int EstimateBlockCount(double parametersB) => parametersB switch
+    {
+        < 1 => 24,
+        < 3.5 => 28,
+        < 9 => 32,
+        < 16 => 40,
+        < 32 => 56,
+        < 80 => 64,
+        _ => 80
+    };
+
+    /// <summary>场景标签优先取模型自带的 Capabilities，再按上下文与参数量补足。</summary>
+    private static IReadOnlyList<string> BuildScenarios(ModelEntry model)
+    {
+        var scenarios = new List<string>();
+        foreach (var capability in model.Capabilities)
+        {
+            if (scenarios.Count >= 3) break;
+            if (string.IsNullOrWhiteSpace(capability)) continue;
+            if (capability.Equals(ModelCapabilities.Chat, StringComparison.Ordinal)) continue;
+            if (scenarios.Contains(capability)) continue;
+            scenarios.Add(capability);
+        }
+
+        if (model.ContextLength >= 32768) scenarios.Add("长文档");
+        if (model.ParametersB is > 0 and < 3.5 && scenarios.Count < 4) scenarios.Add("轻量设备");
+        if (scenarios.Count == 0) scenarios.Add(model.IsMoe ? "MoE 性价比" : "通用对话");
+        return scenarios.Count > 4 ? scenarios[..4] : scenarios;
     }
 
     private readonly record struct FitPlan(FitLevel Fit, double FullVramGb, double NeedRamGb);

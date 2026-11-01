@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using LocalModelHub.App.Services;
 using LocalModelHub.Core.Models;
 using LocalModelHub.Core.Services;
+using LocalModelHub.Core.Services.Abstractions;
 
 namespace LocalModelHub.App.ViewModels;
 
@@ -169,6 +170,8 @@ public sealed partial class ChatViewModel : ObservableObject
     private CancellationTokenSource? _cancellation;
     private bool _suppressSessionChange;
     private bool _isWaking;
+    /// <summary>隐式授权只对当前消息生效：记录已确认授权的用户消息下标（-1 表示没有）。</summary>
+    private int _implicitGrantMessageIndex = -1;
 
     public ChatViewModel()
     {
@@ -346,6 +349,7 @@ public sealed partial class ChatViewModel : ObservableObject
     {
         Messages.Clear();
         KnowledgeStatus = "";
+        _implicitGrantMessageIndex = -1;
         foreach (var message in session.Messages)
         {
             var viewModel = ChatMessageViewModel.Stored(message);
@@ -530,19 +534,25 @@ public sealed partial class ChatViewModel : ObservableObject
         .Select(message => new ChatMessage(message.Role, message.Text))
         .ToList();
 
-    private (string Text, int KnowledgeHits) BuildContextAdditions(string query)
+    private async Task<(string Text, int KnowledgeHits, IReadOnlyList<string> SkillIds)> BuildContextAdditionsAsync(
+        string query)
     {
         var memoryContext = _services.Settings.MemoryEnabled
             ? _services.Memory.BuildContext(query)
             : "";
         var knowledgeContext = _services.Settings.KnowledgeEnabled
-            ? _services.Knowledge.BuildContext(query, Math.Clamp(_services.Settings.KnowledgeTopK, 1, 8))
+            ? await _services.Knowledge.BuildContextAsync(
+                query,
+                Math.Clamp(_services.Settings.KnowledgeTopK, 1, 8),
+                _services.Settings.KnowledgeHybridSearch)
             : KnowledgeContext.Empty;
-        var skillContext = _services.Settings.SkillsEnabled ? _services.Skills.BuildContext(query) : "";
+        var skillContext = _services.Settings.SkillsEnabled
+            ? _services.Skills.SelectContext(query)
+            : SkillContext.Empty;
         var customPrompt = _services.Settings.SystemPrompt.Trim();
-        var text = string.Join("\n\n", new[] { customPrompt, memoryContext, skillContext, knowledgeContext.Text }
+        var text = string.Join("\n\n", new[] { customPrompt, memoryContext, skillContext.Text, knowledgeContext.Text }
             .Where(part => !string.IsNullOrWhiteSpace(part)));
-        return (text, knowledgeContext.Hits.Count);
+        return (text, knowledgeContext.Hits.Count, skillContext.SkillIds);
     }
 
     [RelayCommand]
@@ -600,27 +610,60 @@ public sealed partial class ChatViewModel : ObservableObject
             return;
         }
 
+        // 隐式授权（P1-8）：识别到文件操作后先征得同意，授权仅对这条消息生效。
+        var grantDenied = false;
+        if (fileRequest)
+        {
+            var approved = await DialogService.ConfirmAsync(
+                "允许本次读写工作文件夹？",
+                "这条消息看起来需要读取或修改工作文件夹中的文件。授权只对本次消息生效，之后的消息会再次询问。",
+                "本次允许");
+            if (approved)
+            {
+                _implicitGrantMessageIndex = Messages.Count;
+            }
+            else
+            {
+                fileRequest = false;
+                agentMode = null;
+                grantDenied = true;
+            }
+        }
+
         Input = "";
-        var remembered = _services.Settings.AutoMemoryEnabled ? RememberFacts(text) : 0;
+        var remembered = _services.Settings.AutoMemoryEnabled
+            ? RememberFacts(text)
+            : (Count: 0, Conflicts: (IReadOnlyList<MemoryEntry>)Array.Empty<MemoryEntry>());
         var user = ChatMessageViewModel.UserMessage(text);
         AttachActions(user);
         Messages.Add(user);
         if (fileRequest)
         {
-            Messages.Add(ChatMessageViewModel.ToolMessage("已识别为文件操作请求 · 自动启用工作区工具"));
+            Messages.Add(ChatMessageViewModel.ToolMessage("已识别为文件操作请求 · 本次已授权读写工作区工具"));
+        }
+        else if (grantDenied)
+        {
+            Messages.Add(ChatMessageViewModel.ToolMessage(
+                "已保持「对话」模式 · 如需读写文件，可切换到「目标」模式，或下一条消息再次确认授权"));
         }
 
         HasMessages = true;
         SyncCurrentSession();
 
         var history = BuildHistory();
-        var (contextAdditions, knowledgeHits) = BuildContextAdditions(text);
+        var (contextAdditions, knowledgeHits, injectedSkills) = await BuildContextAdditionsAsync(text);
         KnowledgeStatus = knowledgeHits > 0 ? $"本次回答引用知识库 {knowledgeHits} 个片段" : "";
-        if (remembered > 0)
+        if (remembered.Item1 > 0)
         {
             KnowledgeStatus = KnowledgeStatus.Length > 0
-                ? $"已自动记忆 {remembered} 条 · {KnowledgeStatus}"
-                : $"已自动记忆 {remembered} 条偏好";
+                ? $"已自动记忆 {remembered.Item1} 条 · {KnowledgeStatus}"
+                : $"已自动记忆 {remembered.Item1} 条偏好";
+        }
+
+        if (remembered.Item2.Count > 0)
+        {
+            // 新旧偏好可能互相矛盾：提示用户确认，而不是把两条冲突记忆同时注入上下文。
+            KnowledgeStatus += $" · 检测到 {remembered.Item2.Count} 条可能冲突的记忆，请在「记忆」页确认";
         }
 
         if (ModeIndex == 0 && contextAdditions.Length > 0)
@@ -633,20 +676,23 @@ public sealed partial class ChatViewModel : ObservableObject
         Messages.Add(assistant);
         ScrollRequested?.Invoke();
 
-        await RunAssistantAsync(history, text, assistant, Messages.Count - 1, contextAdditions, agentMode);
+        await RunAssistantAsync(history, text, assistant, Messages.Count - 1, contextAdditions, agentMode,
+            injectedSkills);
     }
 
-    private int RememberFacts(string text)
+    private (int Count, IReadOnlyList<MemoryEntry> Conflicts) RememberFacts(string text)
     {
         var count = 0;
+        var conflicts = new List<MemoryEntry>();
         foreach (var fact in AutoMemoryExtractor.Extract(text))
         {
             if (_services.Memory.Contains(fact)) continue;
+            conflicts.AddRange(_services.Memory.FindConflicts(fact));
             _services.Memory.Add(fact, "chat");
             count++;
         }
 
-        return count;
+        return (count, conflicts.DistinctBy(entry => entry.Id).ToArray());
     }
 
     /// <summary>把生命周期阶段的内部名称换成用户能看懂的标签。</summary>
@@ -686,17 +732,23 @@ public sealed partial class ChatViewModel : ObservableObject
         ChatMessageViewModel assistant,
         int assistantIndex,
         string contextAdditions,
-        AgentMode? agentMode = null)
+        AgentMode? agentMode = null,
+        IReadOnlyList<string>? injectedSkills = null)
     {
         _services.IdleSleep.Stop();
         IsStreaming = true;
         _cancellation = new CancellationTokenSource();
+        var started = System.Diagnostics.Stopwatch.StartNew();
         try
         {
             if (agentMode is not null)
             {
+                AgentResult? agentResult = null;
+                MultiAgentResult? multiResult = null;
+
                 void OnActivity(ToolActivity activity)
                 {
+                    AppLog.Info("tool", $"{activity.Name} · {activity.Summary}");
                     Messages.Insert(assistantIndex, ChatMessageViewModel.ToolMessage(
                         $"{ActivityLabel(activity.Name)} · {activity.Summary}"));
                     assistantIndex++;
@@ -721,9 +773,14 @@ public sealed partial class ChatViewModel : ObservableObject
                         _services.Memory,
                         _services.Settings.MemoryAllowModelWrites,
                         _services.Settings.AgentAllowCommands,
-                        textToolProtocol: _services.TextToolProtocol);
+                        textToolProtocol: _services.TextToolProtocol,
+                        agentMaxTokens: _services.Settings.AgentMaxTokens,
+                        agentObservationChars: _services.Settings.AgentObservationChars,
+                        agentPlanRounds: _services.Settings.AgentPlanRounds,
+                        agentGoalRounds: _services.Settings.AgentGoalRounds);
                     var multi = await coordinator.RunAsync(
                         history, contextAdditions, OnActivity, _cancellation.Token, OnDelta);
+                    multiResult = multi;
                     resultText = multi.Text;
                     resultActivities = multi.Coder?.Activities ?? [];
                     if (resultActivities.Count == 0)
@@ -735,16 +792,18 @@ public sealed partial class ChatViewModel : ObservableObject
                 }
                 else
                 {
-                    var agent = new WorkspaceAgent(
-                        _services.Server,
-                        _services.Workspace,
-                        _services.Memory,
+                    var runner = _services.Services.Resolve<IAgentRunner>();
+                    var runRequest = new AgentRunRequest(
                         agentMode.Value,
-                        _services.Settings.MemoryAllowModelWrites,
-                        _services.Settings.AgentAllowCommands,
-                        textToolProtocol: _services.TextToolProtocol);
-                    var result = await agent.RunAsync(
-                        history, contextAdditions, OnActivity, _cancellation.Token, onDelta: OnDelta);
+                        history,
+                        contextAdditions,
+                        AllowMemoryWrites: _services.Settings.MemoryAllowModelWrites,
+                        AllowCommands: _services.Settings.AgentAllowCommands,
+                        TextToolProtocol: _services.TextToolProtocol,
+                        OnActivity: OnActivity,
+                        OnDelta: OnDelta);
+                    var result = await runner.RunAsync(runRequest, _cancellation.Token);
+                    agentResult = result;
                     resultText = result.Text;
                     resultActivities = result.Activities;
 
@@ -758,6 +817,17 @@ public sealed partial class ChatViewModel : ObservableObject
 
                 assistant.SetText(string.IsNullOrWhiteSpace(resultText) ? "（模型没有返回内容）" : resultText);
                 MaybeSaveSkill(request, resultActivities.Select(item => (item.Name, item.Summary)), assistantIndex);
+
+                // 轨迹落盘（P1-6）：请求、工具序列、验收结论、过程分、最终回答哈希与耗时。
+                started.Stop();
+                TrajectoryLog.Append(
+                    multiResult is null ? "agent" : "multi",
+                    request,
+                    resultText,
+                    agentResult ?? multiResult?.Coder,
+                    started.Elapsed,
+                    multiResult?.Review?.Summary,
+                    multiResult?.Review?.Passed);
             }
             else
             {
@@ -777,6 +847,12 @@ public sealed partial class ChatViewModel : ObservableObject
 
                 if (assistant.IsEmpty) assistant.SetText("（模型没有返回内容）");
             }
+
+            // 技能记账放在回答成功之后：读取上下文不再写盘，真正用上才累加使用次数。
+            if (injectedSkills is { Count: > 0 })
+            {
+                _services.Skills.MarkUsed(injectedSkills);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -785,6 +861,7 @@ public sealed partial class ChatViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            AppLog.Error("chat", "生成失败", ex);
             assistant.SetText($"生成失败：{ex.Message}");
         }
         finally
@@ -815,7 +892,8 @@ public sealed partial class ChatViewModel : ObservableObject
         while (Messages.Count > index) Messages.RemoveAt(Messages.Count - 1);
 
         var query = Messages[userIndex].Text;
-        var fileRequest = ModeIndex == 0 && HasWorkspace && FileRequestDetector.Matches(query);
+        // 隐式授权只对已确认的那条消息生效，重新生成不再弹窗。
+        var fileRequest = ModeIndex == 0 && HasWorkspace && _implicitGrantMessageIndex == userIndex;
         AgentMode? agentMode = ModeIndex > 0 ? CurrentMode : fileRequest ? AgentMode.Goal : null;
         if (agentMode is not null && _services.RemoteApi.IsActive)
         {
@@ -824,7 +902,7 @@ public sealed partial class ChatViewModel : ObservableObject
         }
 
         var history = BuildHistory();
-        var (contextAdditions, knowledgeHits) = BuildContextAdditions(query);
+        var (contextAdditions, knowledgeHits, injectedSkills) = await BuildContextAdditionsAsync(query);
         KnowledgeStatus = knowledgeHits > 0 ? $"本次回答引用知识库 {knowledgeHits} 个片段" : "";
         if (ModeIndex == 0 && contextAdditions.Length > 0)
         {
@@ -836,7 +914,8 @@ public sealed partial class ChatViewModel : ObservableObject
         Messages.Add(assistant);
         ScrollRequested?.Invoke();
 
-        await RunAssistantAsync(history, query, assistant, Messages.Count - 1, contextAdditions, agentMode);
+        await RunAssistantAsync(history, query, assistant, Messages.Count - 1, contextAdditions, agentMode,
+            injectedSkills);
     }
 
     private void EditMessage(ChatMessageViewModel message)
@@ -877,6 +956,7 @@ public sealed partial class ChatViewModel : ObservableObject
         Messages.Clear();
         HasMessages = false;
         KnowledgeStatus = "";
+        _implicitGrantMessageIndex = -1;
 
         if (SelectedSession is { } item)
         {

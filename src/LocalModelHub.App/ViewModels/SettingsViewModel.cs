@@ -70,6 +70,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private decimal? _temperature;
     [ObservableProperty] private decimal? _topP;
     [ObservableProperty] private decimal? _maxTokens;
+    [ObservableProperty] private decimal? _agentPlanRounds;
+    [ObservableProperty] private decimal? _agentGoalRounds;
+    [ObservableProperty] private decimal? _agentReadLines;
+    [ObservableProperty] private decimal? _agentMaxReadWindow;
+    [ObservableProperty] private decimal? _agentObservationChars;
+    [ObservableProperty] private decimal? _agentMaxTokens;
     [ObservableProperty] private decimal? _idleSleepMinutes;
     [ObservableProperty] private bool? _autoWake;
     [ObservableProperty] private string _runtimePathText = "";
@@ -88,6 +94,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool? _reasoningEnabled = true;
     [ObservableProperty] private bool? _metricsEnabled;
     [ObservableProperty] private string _runtimeStatusText = "";
+    [ObservableProperty] private string _runtimeStorageText = "";
+    [ObservableProperty] private bool _canCleanupRuntime;
     [ObservableProperty] private bool _hasRuntimeUpdate;
     [ObservableProperty] private bool _isRuntimeBusy;
     [ObservableProperty] private string _runtimeUpdateText = "";
@@ -199,6 +207,49 @@ public sealed partial class SettingsViewModel : ObservableObject
             ? "尚未安装推理引擎；首次启动模型时会自动下载官方 llama.cpp 预编译包。"
             : $"已安装 llama.cpp {installed} · 后端 {variant}" +
               (string.IsNullOrWhiteSpace(_services.Settings.RuntimePath) ? "" : " · 使用自定义 llama-server 路径");
+        RefreshRuntimeStorage();
+    }
+
+    private void RefreshRuntimeStorage()
+    {
+        var report = _services.Runtime.ScanStorage();
+        var obsolete = report.Obsolete;
+        CanCleanupRuntime = obsolete.Count > 0;
+        RuntimeStorageText = report.Entries.Count == 0
+            ? ""
+            : $"运行时占用 {Formatters.Bytes(report.TotalBytes)} · 保留当前版本 + 最近 1 个旧版本" +
+              (obsolete.Count == 0
+                  ? ""
+                  : $"；另有 {obsolete.Count} 个旧版本可清理，约 {Formatters.Bytes(report.ObsoleteBytes)}");
+    }
+
+    [RelayCommand]
+    private async Task CleanupRuntimeAsync()
+    {
+        if (IsRuntimeBusy || !CanCleanupRuntime) return;
+
+        var report = _services.Runtime.ScanStorage();
+        var confirmed = await DialogService.ConfirmAsync(
+            "清理旧版本推理引擎",
+            $"将删除 {report.Obsolete.Count} 个旧版本运行时，释放约 {Formatters.Bytes(report.ObsoleteBytes)}。" +
+            "当前使用的版本和最近 1 个旧版本会保留，删除后可重新下载。",
+            "清理");
+        if (!confirmed) return;
+
+        IsRuntimeBusy = true;
+        try
+        {
+            var result = _services.Runtime.CleanupObsolete();
+            RuntimeUpdateText = result.Deleted == 0
+                ? "没有可清理的旧版本"
+                : $"已清理 {result.Deleted} 个旧版本，释放 {Formatters.Bytes(result.FreedBytes)}" +
+                  (result.Failed.Count > 0 ? $"；{result.Failed.Count} 个被占用未能删除" : "");
+        }
+        finally
+        {
+            IsRuntimeBusy = false;
+            RefreshRuntimeStatus();
+        }
     }
 
     [RelayCommand]
@@ -647,7 +698,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         try
         {
-            _services.Backup.Export(path, AppInfo.Version);
+            _services.Backup.Export(path, AppInfo.Version, _services.HardwareFingerprint());
             var size = new FileInfo(path).Length / 1024.0;
             await DialogService.AlertAsync("导出成功",
                 $"已导出设置、自定义模型、记忆、会话与知识库：\n{path}\n（{size:0.#} KB）");
@@ -671,10 +722,13 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         try
         {
-            var result = _services.Backup.Import(path);
+            var result = _services.Backup.Import(path, _services.HardwareFingerprint());
             _services.InvalidateEvaluation("import");
+            var resetNote = result.MachineBoundReset
+                ? $"\n检测到备份来自另一台设备：{result.ResetFields} 项硬件相关设置已重置为默认（已按当前设备重新评估）。"
+                : "";
             await DialogService.AlertAsync("导入成功",
-                $"{Describe(result)}\n请重启应用以使用导入的数据。");
+                $"{Describe(result)}{resetNote}\n请重启应用以使用导入的数据。");
         }
         catch (Exception ex)
         {
@@ -736,9 +790,32 @@ public sealed partial class SettingsViewModel : ObservableObject
         settings.TopP = (double)Math.Clamp(TopP ?? 0.95m, 0m, 1m);
         settings.MaxTokens = (int)Math.Clamp(MaxTokens ?? 1024m, 64m, 8192m);
 
+        // Agent 资源预算（P2-6）：统一走 AgentTuningLimits，保证界面与运行时口径一致。
+        settings.AgentPlanRounds = (int)Math.Clamp(
+            AgentPlanRounds ?? AgentTuningLimits.DefaultPlanRounds, AgentTuningLimits.PlanRoundsMin, AgentTuningLimits.PlanRoundsMax);
+        settings.AgentGoalRounds = (int)Math.Clamp(
+            AgentGoalRounds ?? AgentTuningLimits.DefaultGoalRounds, AgentTuningLimits.GoalRoundsMin, AgentTuningLimits.GoalRoundsMax);
+        settings.AgentReadLines = (int)Math.Clamp(
+            AgentReadLines ?? AgentTuningLimits.DefaultReadLines, AgentTuningLimits.ReadLinesMin, AgentTuningLimits.ReadLinesMax);
+        settings.AgentMaxReadWindow = (int)Math.Clamp(
+            AgentMaxReadWindow ?? AgentTuningLimits.DefaultMaxReadWindow, AgentTuningLimits.ReadLinesMin, AgentTuningLimits.MaxReadWindowMax);
+        settings.AgentObservationChars = (int)Math.Clamp(
+            AgentObservationChars ?? AgentTuningLimits.DefaultObservationChars, AgentTuningLimits.ObservationCharsMin, AgentTuningLimits.ObservationCharsMax);
+        settings.AgentMaxTokens = (int)Math.Clamp(
+            AgentMaxTokens ?? AgentTuningLimits.DefaultMaxTokens, AgentTuningLimits.MaxTokensMin, AgentTuningLimits.MaxTokensMax);
+        AgentTuningLimits.ApplyTo(settings);
+
         Temperature = (decimal)settings.Temperature;
         TopP = (decimal)settings.TopP;
         MaxTokens = settings.MaxTokens;
+        AgentPlanRounds = settings.AgentPlanRounds;
+        AgentGoalRounds = settings.AgentGoalRounds;
+        AgentReadLines = settings.AgentReadLines;
+        AgentMaxReadWindow = settings.AgentMaxReadWindow;
+        AgentObservationChars = settings.AgentObservationChars;
+        AgentMaxTokens = settings.AgentMaxTokens;
+        _services.Workspace.DefaultReadLines = settings.AgentReadLines;
+        _services.Workspace.MaxReadWindow = settings.AgentMaxReadWindow;
         settings.IdleSleepMinutes = (int)Math.Clamp(IdleSleepMinutes ?? 10m, 0m, 240m);
         settings.AutoWake = AutoWake != false;
         IdleSleepMinutes = settings.IdleSleepMinutes;
@@ -823,6 +900,12 @@ public sealed partial class SettingsViewModel : ObservableObject
         Temperature = (decimal)settings.Temperature;
         TopP = (decimal)settings.TopP;
         MaxTokens = settings.MaxTokens;
+        AgentPlanRounds = settings.AgentPlanRounds;
+        AgentGoalRounds = settings.AgentGoalRounds;
+        AgentReadLines = settings.AgentReadLines;
+        AgentMaxReadWindow = settings.AgentMaxReadWindow;
+        AgentObservationChars = settings.AgentObservationChars;
+        AgentMaxTokens = settings.AgentMaxTokens;
         IdleSleepMinutes = settings.IdleSleepMinutes;
         AutoWake = settings.AutoWake;
         RuntimePathText = settings.RuntimePath ?? "";

@@ -5,9 +5,12 @@
              x:Class="LocalModelHub.App.Views.KnowledgeMemoryView"
              x:DataType="vm:KnowledgeMemoryViewModel">
   <Grid RowDefinitions="Auto,*">
-    <Border Classes="card" Padding="12" CornerRadius="16" Margin="30,0,30,14">
+    <Border Grid.Row="0"
+            Padding="32,8,32,12"
+            BorderBrush="{DynamicResource StrokeSubtle}"
+            BorderThickness="0,0,0,1">
       <Grid ColumnDefinitions="Auto,*">
-        <Border Classes="segmentHost">
+        <Border Classes="segmentHost" VerticalAlignment="Center">
           <ListBox Classes="segments"
                    ItemsSource="{Binding Tabs}"
                    SelectedIndex="{Binding TabIndex, Mode=TwoWay}">
@@ -22,19 +25,21 @@
                    Text="{Binding TabHint}"
                    Classes="caption"
                    VerticalAlignment="Center"
-                   Margin="14,0,4,0"
-                   TextWrapping="Wrap"/>
+                   TextTrimming="CharacterEllipsis"
+                   Margin="16,0,0,0"/>
       </Grid>
     </Border>
 
-    <Panel Grid.Row="1" IsVisible="{Binding IsKnowledgeTab}">
-      <views:KnowledgeView DataContext="{Binding Knowledge}"/>
-    </Panel>
-    <Panel Grid.Row="1" IsVisible="{Binding IsMemoryTab}">
-      <views:MemoryView DataContext="{Binding Memory}"/>
-    </Panel>
-    <Panel Grid.Row="1" IsVisible="{Binding IsSkillsTab}">
-      <views:SkillsView DataContext="{Binding Skills}"/>
+    <Panel Grid.Row="1">
+      <Panel IsVisible="{Binding IsKnowledgeTab}">
+        <views:KnowledgeView DataContext="{Binding Knowledge}"/>
+      </Panel>
+      <Panel IsVisible="{Binding IsMemoryTab}">
+        <views:MemoryView DataContext="{Binding Memory}"/>
+      </Panel>
+      <Panel IsVisible="{Binding IsSkillsTab}">
+        <views:SkillsView DataContext="{Binding Skills}"/>
+      </Panel>
     </Panel>
   </Grid>
 </UserControl>

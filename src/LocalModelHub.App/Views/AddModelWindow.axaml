@@ -8,7 +8,7 @@
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AppBg}"
         ShowInTaskbar="False">
-  <StackPanel Margin="26,22" Spacing="14">
+  <StackPanel Margin="28,24" Spacing="16">
     <StackPanel Spacing="3">
       <TextBlock Text="添加自定义模型" Classes="h2"/>
       <TextBlock Text="粘贴 HuggingFace / 魔搭仓库链接后点「解析」，会自动列出可选的 GGUF 文件并填好大小、参数量；也可以直接手动填写。"
@@ -16,7 +16,7 @@
                  TextWrapping="Wrap"/>
     </StackPanel>
 
-    <Border Classes="card" CornerRadius="16" Padding="16">
+    <Border Classes="card" CornerRadius="18" Padding="18">
       <Grid ColumnDefinitions="120,*"
             RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
             ColumnSpacing="12"
@@ -120,6 +120,7 @@
                TextWrapping="Wrap"
                IsVisible="False"/>
 
+    <Border Height="1" Background="{DynamicResource StrokeSubtle}" Margin="0,2"/>
     <Grid ColumnDefinitions="*,Auto">
       <TextBlock Text="带 * 为必填；分片模型请先合并为单个 GGUF 文件。"
                  Classes="caption"

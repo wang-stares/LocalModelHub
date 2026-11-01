@@ -1,5 +1,6 @@
 using System.Text;
 using LocalModelHub.Core.Models;
+using LocalModelHub.Core.Services.Abstractions;
 
 namespace LocalModelHub.Core.Services;
 
@@ -29,31 +30,34 @@ public sealed class MultiAgentCoordinator
     private const int MaxDigestFiles = 12;
     private const int MaxHunksPerFile = 3;
 
-    private static readonly string ReviewerSystemPrompt = """
-        你是独立评审角色（Reviewer），与负责改代码的 Coder 分离。
-        只依据工具轨迹和真实补丁判断，不相信 Coder 的自我声明，也不要给出泛泛的建议。
-        只输出 JSON，不要输出其它文字：
-        {"pass": true/false, "summary": "一句话结论", "issues": ["具体问题"], "evidence": ["文件名或工具调用"]}
-        """;
+    private static string ReviewerPrompt(string? model) => PromptLibrary.Default.Render(PromptLibrary.Reviewer, model);
 
     private readonly IChatCompletion _server;
-    private readonly WorkspaceService _workspace;
-    private readonly MemoryService _memory;
+    private readonly IWorkspace _workspace;
+    private readonly IMemoryStore _memory;
     private readonly bool _allowMemoryWrites;
     private readonly bool _allowCommands;
     private readonly ICommandRunner _commands;
     private readonly int _maxRounds;
     private readonly bool _textToolProtocol;
+    private readonly int _agentMaxTokens;
+    private readonly int _agentObservationChars;
+    private readonly int _agentPlanRounds;
+    private readonly int _agentGoalRounds;
 
     public MultiAgentCoordinator(
         IChatCompletion server,
-        WorkspaceService workspace,
-        MemoryService memory,
+        IWorkspace workspace,
+        IMemoryStore memory,
         bool allowMemoryWrites,
         bool allowCommands = false,
         ICommandRunner? commands = null,
         int maxRounds = 2,
-        bool textToolProtocol = false)
+        bool textToolProtocol = false,
+        int agentMaxTokens = AgentTuningLimits.DefaultMaxTokens,
+        int agentObservationChars = AgentTuningLimits.DefaultObservationChars,
+        int agentPlanRounds = AgentTuningLimits.DefaultPlanRounds,
+        int agentGoalRounds = AgentTuningLimits.DefaultGoalRounds)
     {
         _server = server;
         _workspace = workspace;
@@ -63,6 +67,10 @@ public sealed class MultiAgentCoordinator
         _commands = commands ?? new CommandService();
         _maxRounds = Math.Clamp(maxRounds, 1, 3);
         _textToolProtocol = textToolProtocol;
+        _agentMaxTokens = agentMaxTokens;
+        _agentObservationChars = agentObservationChars;
+        _agentPlanRounds = agentPlanRounds;
+        _agentGoalRounds = agentGoalRounds;
     }
 
     public async Task<MultiAgentResult> RunAsync(
@@ -91,7 +99,7 @@ public sealed class MultiAgentCoordinator
         {
             var turn = await _server.ChatAsync(
                 [
-                    ChatMessage.System(AgentProtocol.BuildPlanSystemPrompt() +
+                    ChatMessage.System(AgentProtocol.BuildPlanSystemPrompt(_server.ModelName) +
                         "\n你是多 Agent 协作中的 Planner，输出计划后交给 Coder 执行。"),
                     ChatMessage.User(AgentProtocol.BuildPlanRequest(request))
                 ],
@@ -134,7 +142,9 @@ public sealed class MultiAgentCoordinator
             var agent = new WorkspaceAgent(
                 _server, _workspace, _memory, AgentMode.Goal,
                 _allowMemoryWrites, _allowCommands, _commands,
-                textToolProtocol: _textToolProtocol, selfVerify: false);
+                textToolProtocol: _textToolProtocol, selfVerify: false,
+                maxTokens: _agentMaxTokens, observationChars: _agentObservationChars,
+                planRounds: _agentPlanRounds, goalRounds: _agentGoalRounds);
             coder = await agent.RunAsync(
                 coderHistory, coderMemory, onActivity, cancellationToken, plan, onDelta);
             roles.Add(new MultiAgentRoleOutput("coder", coder.Text));
@@ -220,7 +230,7 @@ public sealed class MultiAgentCoordinator
 
             var turn = await _server.ChatAsync(
                 [
-                    ChatMessage.System(ReviewerSystemPrompt),
+                    ChatMessage.System(ReviewerPrompt(_server.ModelName)),
                     ChatMessage.User(prompt.ToString().TrimEnd())
                 ],
                 null, ReviewerTokens, cancellationToken);

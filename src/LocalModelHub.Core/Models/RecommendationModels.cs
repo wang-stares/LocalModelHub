@@ -33,6 +33,34 @@ public sealed record ModelRecommendation(
     /// <summary>当前被其它程序占用的显存是否大到需要在提示里说明。</summary>
     public bool HasReservedVram => ReservedVramGb >= 0.5;
 
+    /// <summary>0–1：输入可信度（实测带宽 / 显存是否实测 / 元数据是否完整）。</summary>
+    public double Confidence { get; init; } = 0.5;
+
+    /// <summary>速度区间与依据，替代单点值。</summary>
+    public SpeedRange? Speed { get; init; }
+
+    /// <summary>可直接复制的启动参数。</summary>
+    public LaunchSuggestion? Launch { get; init; }
+
+    /// <summary>场景标签（编码 / 长文档 / 多语言…）。</summary>
+    public IReadOnlyList<string> Scenarios { get; init; } = [];
+
+    /// <summary>结构化推荐理由，而不是一段散文。</summary>
+    public IReadOnlyList<string> Reasons { get; init; } = [];
+
+    /// <summary>同模型其它量化的体积 / 速度 / 质量对比。</summary>
+    public IReadOnlyList<QuantTradeoff> Alternatives { get; init; } = [];
+
+    public string ConfidenceText => Confidence >= 0.8 ? "高" : Confidence >= 0.6 ? "中" : "低";
+
+    public string ConfidenceDetail => $"置信度 {ConfidenceText}（{Math.Round(Confidence * 100)}%）";
+
+    public bool HasAlternatives => Alternatives.Count > 1;
+
+    public string ScenariosText => Scenarios.Count == 0 ? "" : string.Join(" · ", Scenarios);
+
+    public string LaunchCommand => Launch?.CommandLine ?? "";
+
     public string FitLabel => Fit switch
     {
         FitLevel.Perfect => "完美运行",
@@ -79,6 +107,9 @@ public sealed class RecommendationOptions
 
     public bool FlashAttention { get; set; } = true;
 
+    /// <summary>MoE 留在 CPU 的专家层数（--n-cpu-moe），仅用于启动参数建议。</summary>
+    public int CpuMoeLayers { get; set; }
+
     public int ParallelSlots { get; set; } = 1;
 
     /// <summary>当前运行时后端（cuda / vulkan / cpu），仅用于展示与诊断。</summary>
@@ -104,4 +135,60 @@ public sealed class RecommendationOptions
     /// 未知时为 0，不改变原有结论。
     /// </summary>
     public double ReservedVramGb { get; set; }
+}
+
+/// <summary>速度区间：带宽、驱动与上下文都会让实测偏离估算，因此不给单点值。</summary>
+public sealed record SpeedRange(double Low, double High, string Basis)
+{
+    public string Label => High >= 1
+        ? $"{Low:0}–{High:0} tok/s（{Basis}）"
+        : $"< 1 tok/s（{Basis}）";
+}
+
+/// <summary>可直接复制的 llama-server 启动参数；模型路径由调用方拼接。</summary>
+public sealed record LaunchSuggestion(
+    int GpuLayers,
+    int ContextSize,
+    string KvTypeK,
+    string KvTypeV,
+    bool FlashAttention,
+    int CpuMoeLayers,
+    string CommandLine)
+{
+    public string LayersText => GpuLayers >= 999 ? "全部卸载" : GpuLayers <= 0 ? "CPU 推理" : $"{GpuLayers} 层";
+}
+
+/// <summary>同模型另一档量化的对比行：体积 / 速度 / 质量 / 结论。</summary>
+public sealed record QuantTradeoff(
+    string Label,
+    double SizeGb,
+    double SpeedLow,
+    double SpeedHigh,
+    double QualityScore,
+    FitLevel Fit,
+    bool IsRecommended)
+{
+    public string SpeedText => SpeedHigh >= 1 ? $"{SpeedLow:0}–{SpeedHigh:0} t/s" : "< 1 t/s";
+
+    public string QualityStars
+    {
+        get
+        {
+            var stars = Math.Clamp((int)Math.Round(QualityScore / 2), 1, 4);
+            return new string('★', stars) + new string('☆', 4 - stars);
+        }
+    }
+
+    public string FitText => Fit switch
+    {
+        FitLevel.Perfect => "完整装入",
+        FitLevel.Good => "部分卸载",
+        FitLevel.Playable => "CPU",
+        FitLevel.Tight => "勉强",
+        _ => "不足"
+    };
+
+    public string Conclusion => IsRecommended
+        ? "推荐"
+        : Fit == FitLevel.Insufficient ? "显存/内存不足" : "备选";
 }

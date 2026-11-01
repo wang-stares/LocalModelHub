@@ -4,8 +4,8 @@
              xmlns:views="using:LocalModelHub.App.Views"
              x:Class="LocalModelHub.App.Views.RecommendView"
              x:DataType="vm:RecommendViewModel">
-  <Grid RowDefinitions="Auto,*">
-    <Border Classes="card" Padding="12" CornerRadius="16" Margin="30,0,30,14">
+  <Grid Classes="page" RowDefinitions="Auto,*">
+    <Border Classes="card" Padding="12" CornerRadius="18" Margin="32,12,32,14">
       <StackPanel Spacing="9">
         <Grid ColumnDefinitions="Auto,*,Auto">
           <Border Classes="segmentHost">
@@ -51,7 +51,7 @@
     </Border>
 
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-      <StackPanel Margin="30,0,14,22">
+      <StackPanel Margin="32,4,14,24">
         <ItemsControl ItemsSource="{Binding Cards}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>

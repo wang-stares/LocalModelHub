@@ -22,6 +22,9 @@ public static class AppPaths
     public static string SkillsFile => Path.Combine(RootDirectory, "skills.json");
     public static string ModelProfilesFile => Path.Combine(RootDirectory, "model-profiles.json");
 
+    /// <summary>本机实测的 CPU 算力 / 内存带宽（带硬件指纹），用于重启后保持同一评分口径。</summary>
+    public static string MeasuredProfileFile => Path.Combine(RootDirectory, "measured-profile.json");
+
     public static void EnsureCreated()
     {
         Directory.CreateDirectory(RootDirectory);
@@ -62,6 +65,8 @@ public sealed class AppSettings
     public bool MemoryAllowModelWrites { get; set; } = true;
     public bool KnowledgeEnabled { get; set; } = true;
     public int KnowledgeTopK { get; set; } = 4;
+    /// <summary>知识库混合检索：BM25 + /v1/embeddings 向量（RRF 融合），默认关闭，失败自动回退。</summary>
+    public bool KnowledgeHybridSearch { get; set; }
     /// <summary>从用户消息中自动提取偏好与事实写入长期记忆（规则版，不额外调用模型）。</summary>
     public bool AutoMemoryEnabled { get; set; } = true;
     /// <summary>任务完成后自动把执行过程总结为技能。</summary>
@@ -98,6 +103,20 @@ public sealed class AppSettings
     public string RemoteApiBaseUrl { get; set; } = "";
     public string RemoteApiKey { get; set; } = "";
     public string? LastModelPath { get; set; }
+
+    // —— Agent 资源预算（P2-6）：默认值与旧常量一致，可在设置页「高级」调整 ——
+    /// <summary>Plan 模式的工具轮次上限。</summary>
+    public int AgentPlanRounds { get; set; } = AgentTuningLimits.DefaultPlanRounds;
+    /// <summary>Goal 模式的工具轮次上限；轮次越多越耗 token 与时延。</summary>
+    public int AgentGoalRounds { get; set; } = AgentTuningLimits.DefaultGoalRounds;
+    /// <summary>read_file 默认返回行数。</summary>
+    public int AgentReadLines { get; set; } = AgentTuningLimits.DefaultReadLines;
+    /// <summary>read_file 单次返回的最大行数。</summary>
+    public int AgentMaxReadWindow { get; set; } = AgentTuningLimits.DefaultMaxReadWindow;
+    /// <summary>工具结果写入上下文前的裁剪字符数。</summary>
+    public int AgentObservationChars { get; set; } = AgentTuningLimits.DefaultObservationChars;
+    /// <summary>Agent 每一步回答的 max_tokens。</summary>
+    public int AgentMaxTokens { get; set; } = AgentTuningLimits.DefaultMaxTokens;
 }
 
 public sealed class SettingsService

@@ -1,0 +1,168 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "py-fix-operator",
+      "prompt": "calc.py 里的 multiply 写错了，请修正为乘法。",
+      "files": {
+        "calc.py": "def multiply(a, b):\n    return a + b\n"
+      },
+      "script": [
+        { "tool": "read_file", "args": { "path": "calc.py" } },
+        { "tool": "replace_in_file", "args": { "path": "calc.py", "old_text": "return a + b", "new_text": "return a * b" } },
+        { "text": "已把 multiply 修正为乘法。" }
+      ],
+      "assertions": [
+        { "path": "calc.py", "contains": "return a * b", "notContains": "return a + b" }
+      ]
+    },
+    {
+      "id": "js-rename-function",
+      "prompt": "把 app.js 里的 fetchData 重命名为 loadData，包含导出。",
+      "files": {
+        "app.js": "function fetchData() {\n  return 42;\n}\n\nexport default fetchData;\n"
+      },
+      "script": [
+        { "tool": "read_file", "args": { "path": "app.js" } },
+        { "tool": "replace_in_file", "args": { "path": "app.js", "old_text": "fetchData", "new_text": "loadData" } },
+        { "text": "已完成重命名。" }
+      ],
+      "assertions": [
+        { "path": "app.js", "contains": "function loadData()", "notContains": "fetchData" }
+      ]
+    },
+    {
+      "id": "cs-null-guard",
+      "prompt": "Service.Name 在 user 为 null 时会抛异常，请改成空安全写法。",
+      "files": {
+        "Service.cs": "public class Service\n{\n    public string Name(User user) => user.Name;\n}\n"
+      },
+      "script": [
+        { "tool": "read_file", "args": { "path": "Service.cs" } },
+        { "tool": "replace_in_file", "args": { "path": "Service.cs", "old_text": "=> user.Name;", "new_text": "=> user?.Name ?? string.Empty;" } },
+        { "text": "已改为空安全写法。" }
+      ],
+      "assertions": [
+        { "path": "Service.cs", "contains": "user?.Name ?? string.Empty", "notContains": "=> user.Name;" }
+      ]
+    },
+    {
+      "id": "md-append-section",
+      "prompt": "在 README.md 末尾补一节「安装」说明，并删掉旧说明。",
+      "files": {
+        "README.md": "# Demo\n\n旧说明\n"
+      },
+      "script": [
+        { "tool": "read_file", "args": { "path": "README.md" } },
+        { "tool": "write_file", "args": { "path": "README.md", "content": "# Demo\n\n## 安装\n\n运行 dotnet build。\n" } },
+        { "text": "README 已更新。" }
+      ],
+      "assertions": [
+        { "path": "README.md", "contains": "## 安装", "notContains": "旧说明" }
+      ]
+    },
+    {
+      "id": "yaml-fix-port",
+      "prompt": "config.yaml 的端口要改成 9090。",
+      "files": {
+        "config.yaml": "server:\n  port: 8080\n"
+      },
+      "script": [
+        { "tool": "read_file", "args": { "path": "config.yaml" } },
+        { "tool": "replace_in_file", "args": { "path": "config.yaml", "old_text": "port: 8080", "new_text": "port: 9090" } },
+        { "text": "端口已改为 9090。" }
+      ],
+      "assertions": [
+        { "path": "config.yaml", "contains": "port: 9090", "notContains": "port: 8080" }
+      ]
+    },
+    {
+      "id": "go-fix-bound",
+      "prompt": "main.go 的循环少算了一次，请把边界改成包含 10。",
+      "files": {
+        "main.go": "package main\n\nfunc count() int {\n    total := 0\n    for i := 0; i < 10; i++ {\n        total += i\n    }\n    return total\n}\n"
+      },
+      "script": [
+        { "tool": "read_file", "args": { "path": "main.go" } },
+        { "tool": "replace_in_file", "args": { "path": "main.go", "old_text": "i < 10", "new_text": "i <= 10" } },
+        { "text": "循环边界已修正。" }
+      ],
+      "assertions": [
+        { "path": "main.go", "contains": "i <= 10", "notContains": "i < 10" }
+      ]
+    },
+    {
+      "id": "ts-apply-patch",
+      "prompt": "把 util.ts 的 sum 方法改名为 total。",
+      "files": {
+        "util.ts": "namespace Demo;\n\nexport class Util\n{\n    public static sum(a: number, b: number): number { return a + b; }\n}\n"
+      },
+      "script": [
+        { "tool": "read_file", "args": { "path": "util.ts" } },
+        {
+          "tool": "apply_patch",
+          "args": {
+            "patch": "--- a/util.ts\n+++ b/util.ts\n@@ -1,6 +1,6 @@\n namespace Demo;\n \n export class Util\n {\n-    public static sum(a: number, b: number): number { return a + b; }\n+    public static total(a: number, b: number): number { return a + b; }\n }\n"
+          }
+        },
+        { "text": "已通过补丁改名。" }
+      ],
+      "assertions": [
+        { "path": "util.ts", "contains": "static total", "notContains": "static sum" }
+      ]
+    },
+    {
+      "id": "cs-multi-file-patch",
+      "prompt": "用一次性补丁把 Api.cs 和 Client.cs 里的 old 都替换成 api。",
+      "files": {
+        "Api.cs": "public class Api\n{\n    public string Name = \"old\";\n}\n",
+        "Client.cs": "public class Client\n{\n    public string Endpoint = \"/old\";\n}\n"
+      },
+      "script": [
+        { "tool": "read_file", "args": { "path": "Api.cs" } },
+        { "tool": "read_file", "args": { "path": "Client.cs" } },
+        {
+          "tool": "apply_patch",
+          "args": {
+            "patch": "--- a/Api.cs\n+++ b/Api.cs\n@@ -1,4 +1,4 @@\n public class Api\n {\n-    public string Name = \"old\";\n+    public string Name = \"api\";\n }\n--- a/Client.cs\n+++ b/Client.cs\n@@ -1,4 +1,4 @@\n public class Client\n {\n-    public string Endpoint = \"/old\";\n+    public string Endpoint = \"/api\";\n }\n"
+          }
+        },
+        { "text": "两个文件已一起更新。" }
+      ],
+      "assertions": [
+        { "path": "Api.cs", "contains": "Name = \"api\"", "notContains": "old" },
+        { "path": "Client.cs", "contains": "Endpoint = \"/api\"", "notContains": "/old" }
+      ]
+    },
+    {
+      "id": "new-file-test",
+      "prompt": "为 src/calc.py 新建一个测试文件 tests/test_calc.py，验证 2 × 3 = 6。",
+      "files": {
+        "src/calc.py": "def multiply(a, b):\n    return a * b\n"
+      },
+      "script": [
+        { "tool": "read_file", "args": { "path": "src/calc.py" } },
+        { "tool": "write_file", "args": { "path": "tests/test_calc.py", "content": "from src.calc import multiply\n\n\ndef test_multiply():\n    assert multiply(2, 3) == 6\n" } },
+        { "text": "已新建测试文件。" }
+      ],
+      "assertions": [
+        { "path": "tests/test_calc.py", "contains": "assert multiply(2, 3) == 6" }
+      ]
+    },
+    {
+      "id": "sql-fix-filter",
+      "prompt": "query.sql 只应查活跃用户，请修正过滤条件。",
+      "files": {
+        "query.sql": "SELECT id, name\nFROM users\nWHERE active = 0;\n"
+      },
+      "script": [
+        { "tool": "read_file", "args": { "path": "query.sql" } },
+        { "tool": "replace_in_file", "args": { "path": "query.sql", "old_text": "WHERE active = 0", "new_text": "WHERE active = 1" } },
+        { "text": "过滤条件已修正。" }
+      ],
+      "assertions": [
+        { "path": "query.sql", "contains": "WHERE active = 1", "notContains": "active = 0" }
+      ]
+    }
+  ]
+}

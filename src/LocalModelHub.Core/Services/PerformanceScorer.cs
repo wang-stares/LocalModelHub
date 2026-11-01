@@ -15,9 +15,15 @@ public static class PerformanceScoreScale
 /// <summary>
 /// 把硬件规格与实测跑分折算成 0-100 的综合能力分（v2）：CPU 30 + 内存 20 + 显卡 35 + 存储 15。
 /// 评分面向本地 LLM 推理：指令集、内存带宽、可用显存与磁盘余量比单纯的核心数更重要。
+/// 只使用稳定量（总内存、总显存、实测带宽），不含「当前可用内存 / 当前显存占用」，
+/// 否则开个浏览器再点检测，同一台机器就会得到不同的分数。
 /// </summary>
 public sealed class PerformanceScorer
 {
+    public const string CalibrationVersion = "v2.1";
+
+    private const double AssumedMemoryBandwidthGBps = 51;
+
     public PerformanceScore Score(HardwareProfile hw, BenchmarkResult? benchmark = null)
     {
         var cpu = hw.Cpu;
@@ -29,6 +35,7 @@ public sealed class PerformanceScorer
             ? 0.45 * coresNorm + 0.3 * clockNorm + 0.25 * instructionNorm
             : 0;
 
+        var measuredCpu = benchmark is { CpuGflops: > 0 };
         double cpuNorm;
         if (benchmark is { CpuGflops: > 0 })
         {
@@ -40,15 +47,13 @@ public sealed class PerformanceScorer
             cpuNorm = specCpuNorm;
         }
 
-        // 内存：容量决定能装多大模型，可用比例反映系统压力，带宽决定 CPU 推理的解码速度。
+        // 内存：容量决定能装多大模型，带宽决定 CPU 推理的解码速度；不再计入瞬时可用比例。
         var capacityNorm = Math.Clamp(hw.TotalRamGb / 64d, 0, 1);
-        var availableNorm = hw.TotalRamGb > 0
-            ? Math.Clamp(hw.AvailableRamGb / hw.TotalRamGb / 0.75, 0, 1)
-            : 0;
-        var memoryBandwidthNorm = benchmark is { MemoryBandwidthGBps: > 0 }
-            ? Math.Clamp(benchmark.MemoryBandwidthGBps / 90d, 0, 1)
+        var measuredBandwidth = benchmark is { MemoryBandwidthGBps: > 0 } ? benchmark.MemoryBandwidthGBps : 0;
+        var memoryBandwidthNorm = measuredBandwidth > 0
+            ? Math.Clamp(measuredBandwidth / 90d, 0, 1)
             : 0.55; // 没有实测时按 DDR4 双通道中位值
-        var memoryNorm = 0.55 * capacityNorm + 0.25 * availableNorm + 0.2 * memoryBandwidthNorm;
+        var memoryNorm = 0.65 * capacityNorm + 0.35 * memoryBandwidthNorm;
 
         // 显卡：独显按带宽（解码速度）与可用显存（可加载规模）计分；核显只按带宽给少量分，不参与显存卸载。
         var bestGpu = GpuDatabase.GetBestGpu(hw);
@@ -83,7 +88,17 @@ public sealed class PerformanceScorer
             _ => "入门"
         };
 
+        var bandwidthGb = measuredBandwidth > 0 ? measuredBandwidth : AssumedMemoryBandwidthGBps;
+        var bandwidthSource = measuredBandwidth > 0 ? Provenance.Measured : Provenance.Assumed;
+        var capability = BuildCapability(hw, bestGpu, bandwidthGb, cpuNorm);
+        var components = BuildComponents(
+            hw, bestGpu, benchmark, cpuPoints, memoryPoints, gpuPoints, storagePoints,
+            bandwidthGb, bandwidthSource);
         var summary = BuildSummary(hw, bestGpu, benchmark, total);
+
+        var confidence = measuredCpu && measuredBandwidth > 0 ? 0.9 : measuredCpu || measuredBandwidth > 0 ? 0.7 : 0.5;
+        if (bestGpu?.Gpu.VramEstimated == true) confidence -= 0.1;
+
         return new PerformanceScore(
             total,
             Math.Round(cpuPoints, 1),
@@ -92,7 +107,117 @@ public sealed class PerformanceScorer
             Math.Round(storagePoints, 1),
             tier,
             summary,
-            bestGpu);
+            bestGpu)
+        {
+            Components = components,
+            Capability = capability,
+            Confidence = Math.Clamp(confidence, 0.3, 1.0),
+            ScoredAt = hw.DetectedAt,
+            CalibrationVersion = CalibrationVersion
+        };
+    }
+
+    private static IReadOnlyList<ScoreComponent> BuildComponents(
+        HardwareProfile hw,
+        GpuCapability? gpu,
+        BenchmarkResult? benchmark,
+        double cpuPoints,
+        double memoryPoints,
+        double gpuPoints,
+        double storagePoints,
+        double bandwidthGb,
+        Provenance bandwidthSource)
+    {
+        var cpu = hw.Cpu;
+        var features = string.Join(" / ", new[]
+        {
+            hw.HasAvx2 ? "AVX2" : null,
+            hw.HasAvx512 ? "AVX512" : null
+        }.Where(text => text is not null));
+        var cpuMetric = $"{cpu.PhysicalCores} 核 {cpu.LogicalCores} 线程 · {cpu.MaxClockMhz} MHz"
+                        + (features.Length > 0 ? $" · {features}" : "")
+                        + (benchmark is { CpuGflops: > 0 } measured ? $" · 实测 {measured.CpuGflops:0.#} GFLOPS" : " · 未实测");
+        var usableBandwidth = Math.Min(bandwidthGb, Math.Max(2, cpu.PhysicalCores) * 9d);
+        var speed7B = Math.Clamp(usableBandwidth * (gpu is { IsIntegrated: false } ? 0.55 : 0.58) / 4.4, 0.5, 200);
+        var cpuMeaning = $"7B Q4 {((gpu is { IsIntegrated: false }) ? "满显存" : "纯 CPU")}约 {Math.Round(speed7B)} tok/s";
+
+        var memoryMetric = $"{hw.TotalRamGb:0.#} GB · "
+                           + (bandwidthSource == Provenance.Measured
+                               ? $"实测带宽 {bandwidthGb:0.#} GB/s"
+                               : "带宽未实测（按 DDR4 双通道 51 GB/s）");
+        var memoryMeaning = $"可容纳约 {MaxParamsB(hw.TotalRamGb * 0.8):0.#}B 模型（Q4_K_M · 8K）";
+
+        var gpuMetric = gpu is null
+            ? "未检测到可用显存"
+            : $"{gpu.Gpu.Name} · {gpu.UsableVramGb:0.#} GB 可用显存 · 带宽 {gpu.BandwidthGBps:0} GB/s";
+        var gpuMeaning = gpu is { IsIntegrated: false }
+            ? $"全量卸载上限约 {MaxParamsB(gpu.UsableVramGb * 0.9):0.#}B Q4"
+            : "核显不参与显存卸载，模型走 CPU + 内存";
+        var gpuSource = gpu is null
+            ? Provenance.Assumed
+            : gpu.Gpu.VramEstimated ? Provenance.Estimated : Provenance.Lookup;
+
+        var storageMetric = hw.DiskTotalBytes > 0
+            ? $"{Formatters.Bytes(hw.DiskFreeBytes)} 可用 / 共 {Formatters.Bytes(hw.DiskTotalBytes)}"
+            : "未能读取磁盘信息";
+        var count7B = hw.DiskFreeBytes > 0 ? hw.DiskFreeBytes / (4.4 * Formatters.Gib) : 0;
+        var storageMeaning = count7B > 0 ? $"可存约 {count7B:0} 个 7B Q4 模型" : "磁盘空间未知";
+
+        return
+        [
+            new ScoreComponent("CPU", cpuPoints, PerformanceScoreScale.Cpu,
+                benchmark is { CpuGflops: > 0 } ? Provenance.Measured : Provenance.Estimated,
+                cpuMetric, cpuMeaning),
+            new ScoreComponent("内存", memoryPoints, PerformanceScoreScale.Memory, bandwidthSource,
+                memoryMetric, memoryMeaning),
+            new ScoreComponent("显卡", gpuPoints, PerformanceScoreScale.Gpu, gpuSource,
+                gpuMetric, gpuMeaning),
+            new ScoreComponent("存储", storagePoints, PerformanceScoreScale.Storage,
+                hw.DiskTotalBytes > 0 ? Provenance.Measured : Provenance.Assumed,
+                storageMetric, storageMeaning)
+        ];
+    }
+
+    /// <summary>能力画像：只依赖稳定预算，回答「能跑多大的模型」而不是「多少分」。</summary>
+    private static CapabilityProfile BuildCapability(
+        HardwareProfile hw,
+        GpuCapability? gpu,
+        double bandwidthGb,
+        double cpuNorm)
+    {
+        var discrete = gpu is { IsIntegrated: false };
+        var vramBudgetGb = discrete ? gpu!.UsableVramGb * 0.9 : 0;
+        var comfortable = discrete ? (int)Math.Floor(MaxParamsB(vramBudgetGb)) : 0;
+        var playable = (int)Math.Floor(MaxParamsB(hw.TotalRamGb * 0.8));
+
+        var maxContext = 2048;
+        if (comfortable > 0)
+        {
+            for (var context = 2048; context <= 32768; context += 2048)
+            {
+                var weight = 0.62 * comfortable;
+                var kv = RecommendationEngine.EstimateKvCacheGb(comfortable, context);
+                var compute = 0.3 + weight * 0.03;
+                if (weight + kv + compute + 0.6 > vramBudgetGb) break;
+                maxContext = context;
+            }
+        }
+
+        var bottleneck = !discrete
+            ? $"内存带宽 {bandwidthGb:0} GB/s"
+            : comfortable < playable
+                ? $"显存 {gpu!.UsableVramGb:0.#} GB"
+                : cpuNorm < 0.45 ? "CPU" : "无";
+
+        var hint = !discrete
+            ? "加装独立显卡可显著提速；当前只能 CPU + 内存推理。"
+            : comfortable < playable
+                ? "更大显存的显卡可把「部分卸载」变成「完整装入」。"
+                : cpuNorm < 0.45
+                    ? "处理器较旧，建议降低上下文或选择更小的模型。"
+                    : "当前配置没有明显短板，可优先选择质量更高的量化。";
+
+        return new CapabilityProfile(comfortable, playable, maxContext, bottleneck, hint);
     }
 
     private static string BuildSummary(

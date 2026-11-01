@@ -1,18 +1,22 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using LocalModelHub.Core.Models;
+using LocalModelHub.Core.Services.Abstractions;
 
 namespace LocalModelHub.Core.Services;
 
 /// <summary>工作文件夹沙箱：模型的文件操作只能落在这个根目录内。</summary>
-public sealed class WorkspaceService
+public sealed class WorkspaceService : IWorkspace
 {
     private const long MaxReadBytes = 256 * 1024;
     private const long MaxWriteBytes = 512 * 1024;
     private const int MaxListEntries = 300;
     private const int MaxListDepth = 3;
-    private const int DefaultReadLines = 200;
-    private const int MaxReadWindow = 400;
+    /// <summary>read_file 默认返回行数；可在设置页「高级」调整，默认 200。</summary>
+    public int DefaultReadLines { get; set; } = AgentTuningLimits.DefaultReadLines;
+    /// <summary>read_file 单次返回的最大行数；可在设置页「高级」调整，默认 400。</summary>
+    public int MaxReadWindow { get; set; } = AgentTuningLimits.DefaultMaxReadWindow;
     private const int MaxSearchResults = 40;
     private const int MaxSymbolResults = 40;
     private const int MaxContextLines = 3;
@@ -24,18 +28,6 @@ public sealed class WorkspaceService
     private const int MaxIndexFiles = 4000;
     /// <summary>索引占用内存上限：超出预算的文件不进缓存，仍按次读盘参与搜索。</summary>
     private const long MaxIndexBytes = 64 * 1024 * 1024;
-
-    private static readonly string[] IgnoredDirectories =
-    [
-        ".git", ".svn", ".hg", "node_modules", "bin", "obj", "dist", "build", "target", "vendor",
-        ".venv", "venv", "__pycache__", ".idea", ".vs", "packages", "coverage", ".next", ".cache"
-    ];
-
-    private static readonly string[] BinaryExtensions =
-    [
-        ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".bmp", ".pdf", ".zip", ".gz", ".7z", ".rar",
-        ".exe", ".dll", ".so", ".dylib", ".pdb", ".class", ".jar", ".gguf", ".bin", ".mp4", ".mov", ".woff", ".woff2"
-    ];
 
     private static readonly StringComparison PathComparison =
         OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
@@ -144,9 +136,11 @@ public sealed class WorkspaceService
         var from = startLine ?? 1;
         if (from > total) return new(false, $"文件只有 {total} 行，start_line 超出范围");
 
-        var to = endLine ?? from + DefaultReadLines - 1;
+        var defaultLines = Math.Clamp(DefaultReadLines, 1, AgentTuningLimits.ReadLinesMax);
+        var maxWindow = Math.Clamp(MaxReadWindow, defaultLines, 4000);
+        var to = endLine ?? from + defaultLines - 1;
         if (to < from) to = from;
-        to = Math.Min(to, Math.Min(total, from + MaxReadWindow - 1));
+        to = Math.Min(to, Math.Min(total, from + maxWindow - 1));
 
         var builder = new StringBuilder();
         for (var index = from; index <= to; index++)
@@ -159,7 +153,7 @@ public sealed class WorkspaceService
         result.AppendLine(heading).AppendLine("```").Append(builder).AppendLine("```");
         if (to < total)
         {
-            result.AppendLine($"（已截断，可指定 start_line / end_line 继续读取，单次最多 {MaxReadWindow} 行）");
+            result.AppendLine($"（已截断，可指定 start_line / end_line 继续读取，单次最多 {maxWindow} 行）");
         }
 
         return new(true, result.ToString().TrimEnd());
@@ -539,21 +533,118 @@ public sealed class WorkspaceService
 
         try
         {
-            foreach (var (full, content, crlf, bom) in pending)
+            var staged = StagePatch(pending);
+
+            // 全部内容先落到同目录的临时文件，再逐个原子替换；替换中途失败按备份回滚。
+            var committed = new List<(string FullPath, string? Backup)>();
+            try
             {
-                var parent = Path.GetDirectoryName(full);
-                if (parent is not null) Directory.CreateDirectory(parent);
-                SaveText(full, content, crlf, bom);
-                InvalidateIndex(full);
+                foreach (var item in staged)
+                {
+                    string? backup = null;
+                    if (File.Exists(item.FullPath))
+                    {
+                        backup = item.FullPath + TempSuffix(".bak");
+                        File.Copy(item.FullPath, backup, overwrite: true);
+                    }
+
+                    File.Move(item.TempPath, item.FullPath, overwrite: true);
+                    committed.Add((item.FullPath, backup));
+                }
             }
+            catch (Exception ex)
+            {
+                var rollback = RollbackPatches(committed);
+                DeleteTemporary(committed.Select(entry => entry.Backup));
+                DeleteTemporary(staged.Select(entry => entry.TempPath));
+                return new(false, $"写入失败：{ex.Message}{rollback}");
+            }
+
+            DeleteTemporary(committed.Select(entry => entry.Backup));
+            foreach (var item in staged) InvalidateIndex(item.FullPath);
         }
         catch (Exception ex)
         {
-            return new(false, $"写入失败：{ex.Message}");
+            return new(false, $"写入临时文件失败：{ex.Message}");
         }
 
         var names = pending.Select((entry, index) => $"{Relative(entry.FullPath)}（{files[index].Hunks.Count} 个 hunk）");
         return new(true, $"已应用补丁：{string.Join('、', names)}");
+    }
+
+    private sealed record StagedPatch(string FullPath, string TempPath);
+
+    /// <summary>把补丁结果写入同目录临时文件；任一文件失败时清理已写临时文件并抛回异常。</summary>
+    private static List<StagedPatch> StagePatch(
+        IReadOnlyList<(string FullPath, string Content, bool Crlf, bool Bom)> pending)
+    {
+        var staged = new List<StagedPatch>(pending.Count);
+        try
+        {
+            foreach (var (fullPath, content, crlf, bom) in pending)
+            {
+                var parent = Path.GetDirectoryName(fullPath);
+                if (parent is not null) Directory.CreateDirectory(parent);
+
+                var temp = fullPath + TempSuffix(".tmp");
+                File.WriteAllBytes(temp, EncodeText(content, crlf, bom));
+                staged.Add(new StagedPatch(fullPath, temp));
+            }
+        }
+        catch
+        {
+            DeleteTemporary(staged.Select(entry => entry.TempPath));
+            throw;
+        }
+
+        return staged;
+    }
+
+    /// <summary>回滚已替换的文件：有备份的用备份还原，新建的删除；返回无法回滚项的可读提示。</summary>
+    private static string RollbackPatches(IReadOnlyList<(string FullPath, string? Backup)> committed)
+    {
+        var problems = new List<string>();
+        for (var index = committed.Count - 1; index >= 0; index--)
+        {
+            var (fullPath, backup) = committed[index];
+            try
+            {
+                if (backup is null)
+                {
+                    if (File.Exists(fullPath)) File.Delete(fullPath);
+                }
+                else if (File.Exists(backup))
+                {
+                    File.Move(backup, fullPath, overwrite: true);
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Debug.WriteLine($"[WorkspaceService] 回滚失败 {fullPath}：{ex.Message}");
+                problems.Add(Path.GetFileName(fullPath));
+            }
+        }
+
+        return problems.Count == 0 ? "" : $"；未能回滚：{string.Join('、', problems)}";
+    }
+
+    private static string TempSuffix(string suffix) =>
+        $".lmh-{Guid.NewGuid().ToString("N")[..8]}{suffix}";
+
+    private static void DeleteTemporary(IEnumerable<string?> paths)
+    {
+        foreach (var path in paths)
+        {
+            if (string.IsNullOrEmpty(path)) continue;
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Debug.WriteLine($"[WorkspaceService] 清理临时文件失败 {path}：{ex.Message}");
+            }
+        }
     }
 
     private static bool TryParsePatch(string text, out List<PatchFile> files, out string error)
@@ -1124,6 +1215,7 @@ public sealed class WorkspaceService
         truncated = false;
         if (!IsConfigured) return files;
 
+        var rules = WorkspaceRules.ForRoot(_root);
         var stack = new Stack<(string Directory, int Depth)>();
         stack.Push((_root!, 0));
 
@@ -1148,13 +1240,12 @@ public sealed class WorkspaceService
                 {
                     if (depth + 1 > maxDepth) continue;
                     var name = Path.GetFileName(entry);
-                    if (IgnoredDirectories.Contains(name, StringComparer.OrdinalIgnoreCase)) continue;
+                    if (rules.IsIgnoredDirectory(name)) continue;
                     stack.Push((entry, depth + 1));
                     continue;
                 }
 
-                var extension = Path.GetExtension(entry);
-                if (BinaryExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase)) continue;
+                if (rules.IsBinaryFile(entry)) continue;
 
                 if (files.Count >= MaxIndexFiles)
                 {
@@ -1187,13 +1278,26 @@ public sealed class WorkspaceService
     private static (string Text, bool Crlf, bool Bom) LoadText(string fullPath) =>
         DecodeText(File.ReadAllBytes(fullPath));
 
-    /// <summary>按原文件的行尾与 BOM 风格写回，避免把 CRLF 仓库整体改成 LF。</summary>
-    private static void SaveText(string fullPath, string text, bool crlf, bool bom)
+    /// <summary>按原文件的行尾与 BOM 风格编码为字节，供直接写入与临时文件共用。</summary>
+    private static byte[] EncodeText(string text, bool crlf, bool bom)
     {
         var normalized = text.Replace("\r\n", "\n");
         if (crlf) normalized = normalized.Replace("\n", "\r\n");
-        File.WriteAllText(fullPath, normalized, new UTF8Encoding(bom));
+        var payload = new UTF8Encoding(false).GetBytes(normalized);
+        if (!bom) return payload;
+
+        // GetBytes 不会写出 BOM，需要显式拼接 3 字节前缀。
+        var withBom = new byte[payload.Length + 3];
+        withBom[0] = 0xEF;
+        withBom[1] = 0xBB;
+        withBom[2] = 0xBF;
+        payload.CopyTo(withBom, 3);
+        return withBom;
     }
+
+    /// <summary>按原文件的行尾与 BOM 风格写回，避免把 CRLF 仓库整体改成 LF。</summary>
+    private static void SaveText(string fullPath, string text, bool crlf, bool bom) =>
+        File.WriteAllBytes(fullPath, EncodeText(text, crlf, bom));
 
     private static (bool Crlf, bool Bom) ProbeTextStyle(string fullPath)
     {

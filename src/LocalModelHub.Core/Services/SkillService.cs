@@ -5,10 +5,19 @@ namespace LocalModelHub.Core.Services;
 
 using LocalModelHub.Core.Models;
 
+/// <summary>注入的技能块与本次实际注入的技能 Id（用于回答完成后记账）。</summary>
+public sealed record SkillContext(string Text, IReadOnlyList<string> SkillIds)
+{
+    public static SkillContext Empty { get; } = new("", []);
+}
+
 /// <summary>技能库：保存在本机 skills.json，对话时把相关技能注入上下文。</summary>
 public sealed class SkillService
 {
     public const int MaxEntries = 100;
+
+    /// <summary>注入的最低相关度分数：低于该分数的技能视为无关，宁可不注入（两个中文二元组或一个文件名 + 一个二元组）。</summary>
+    public const int DefaultMinScore = 4;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -130,15 +139,24 @@ public sealed class SkillService
     }
 
     /// <summary>
-    /// 构造注入提示词的技能块：启用中的技能按关键词命中优先，其次按最近使用/更新时间补足。
+    /// 构造注入提示词的技能块。纯读操作：不累加 Uses、不写盘；低于 minScore 的无关技能直接跳过。
     /// </summary>
-    public string BuildContext(string? query, int maxEntries = 3, int maxChars = 700)
+    public string BuildContext(string? query, int maxEntries = 3, int maxChars = 700) =>
+        SelectContext(query, maxEntries, maxChars).Text;
+
+    /// <summary>按相关度挑选技能并构造提示词块，同时返回实际注入的技能 Id。</summary>
+    public SkillContext SelectContext(
+        string? query,
+        int maxEntries = 3,
+        int maxChars = 700,
+        int minScore = DefaultMinScore)
     {
         var enabled = _entries.Where(entry => entry.Enabled).ToList();
-        if (enabled.Count == 0) return "";
+        if (enabled.Count == 0) return SkillContext.Empty;
 
         var scored = enabled
             .Select(entry => (Entry: entry, Score: Score(entry, query)))
+            .Where(item => item.Score >= minScore)
             .OrderByDescending(item => item.Score)
             .ThenByDescending(item => item.Entry.Uses)
             .ThenByDescending(item => item.Entry.UpdatedAt)
@@ -146,10 +164,13 @@ public sealed class SkillService
             .Take(Math.Clamp(maxEntries, 1, 6))
             .ToList();
 
+        if (scored.Count == 0) return SkillContext.Empty;
+
         var builder = new System.Text.StringBuilder();
         builder.AppendLine("【已沉淀技能】以下步骤来自本机之前完成过的类似任务，可参考执行：");
         var used = 0;
         var index = 0;
+        var ids = new List<string>();
         foreach (var entry in scored)
         {
             var block = $"{index + 1}. {entry.Name}｜适用：{entry.Trigger}\n   步骤：{entry.Steps}\n";
@@ -157,11 +178,31 @@ public sealed class SkillService
             builder.Append(block);
             used += block.Length;
             index++;
-            entry.Uses++;
+            ids.Add(entry.Id);
         }
 
-        if (index > 0) Save();
-        return index == 0 ? "" : builder.ToString().TrimEnd();
+        return index == 0 ? SkillContext.Empty : new SkillContext(builder.ToString().TrimEnd(), ids);
+    }
+
+    /// <summary>
+    /// 记账：回答确实用上了注入的技能后累加使用次数，并只写一次盘。
+    /// 与 <see cref="SelectContext"/> 分离，保证「读上下文」不再产生副作用。
+    /// </summary>
+    public int MarkUsed(IEnumerable<string>? skillIds)
+    {
+        if (skillIds is null) return 0;
+
+        var changed = 0;
+        foreach (var id in skillIds)
+        {
+            var entry = _entries.FirstOrDefault(item => item.Id == id);
+            if (entry is null) continue;
+            entry.Uses++;
+            changed++;
+        }
+
+        if (changed > 0) Save();
+        return changed;
     }
 
     private static int Score(SkillEntry entry, string? query)

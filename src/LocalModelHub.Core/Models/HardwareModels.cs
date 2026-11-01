@@ -94,7 +94,27 @@ public sealed record PerformanceScore(
     double StoragePoints,
     string Tier,
     string Summary,
-    GpuCapability? BestGpu);
+    GpuCapability? BestGpu)
+{
+    /// <summary>四项能力分，带绝对指标、含义与来源（P1-20）。</summary>
+    public IReadOnlyList<ScoreComponent> Components { get; init; } = [];
+
+    /// <summary>能力画像；未检测时为空。</summary>
+    public CapabilityProfile? Capability { get; init; }
+
+    /// <summary>0–1：有实测基准约 0.9，纯查表 / 估算约 0.5。</summary>
+    public double Confidence { get; init; } = 0.5;
+
+    /// <summary>评分对应的采样时间；从缓存加载时是上次实测时间。</summary>
+    public DateTime ScoredAt { get; init; }
+
+    /// <summary>评分口径版本：常数或算法变化时递增，用于让缓存失效。</summary>
+    public string CalibrationVersion { get; init; } = "v2.1";
+
+    public string ConfidenceText => Confidence >= 0.8
+        ? "实测口径"
+        : Confidence >= 0.55 ? "部分实测" : "估算口径";
+}
 
 public static class Formatters
 {

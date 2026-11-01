@@ -47,6 +47,7 @@ public sealed partial class KnowledgeViewModel : ObservableObject
     public KnowledgeViewModel()
     {
         KnowledgeEnabled = _services.Settings.KnowledgeEnabled;
+        HybridSearch = _services.Settings.KnowledgeHybridSearch;
         Refresh();
     }
 
@@ -54,6 +55,7 @@ public sealed partial class KnowledgeViewModel : ObservableObject
     public ObservableCollection<KnowledgeHitItemViewModel> Results { get; } = [];
 
     [ObservableProperty] private bool? _knowledgeEnabled;
+    [ObservableProperty] private bool _hybridSearch;
     [ObservableProperty] private string _countText = "";
     [ObservableProperty] private string _importStatus = "";
     [ObservableProperty] private bool _isImporting;
@@ -71,6 +73,17 @@ public sealed partial class KnowledgeViewModel : ObservableObject
         _services.Settings.KnowledgeEnabled = enabled;
         _services.SettingsService.Save();
         ImportStatus = enabled ? "已开启对话检索" : "已关闭对话检索";
+    }
+
+    partial void OnHybridSearchChanged(bool value)
+    {
+        if (_services.Settings.KnowledgeHybridSearch == value) return;
+
+        _services.Settings.KnowledgeHybridSearch = value;
+        _services.SettingsService.Save();
+        ImportStatus = value
+            ? "已开启混合检索：需要本地模型支持 /v1/embeddings，失败时自动回退关键词检索"
+            : "已关闭混合检索，仅使用关键词检索";
     }
 
     [RelayCommand]

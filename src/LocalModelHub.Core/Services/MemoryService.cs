@@ -2,11 +2,12 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using LocalModelHub.Core.Models;
+using LocalModelHub.Core.Services.Abstractions;
 
 namespace LocalModelHub.Core.Services;
 
 /// <summary>长期记忆：保存在本机 memory.json，对话时按关键词召回并注入上下文。</summary>
-public sealed class MemoryService
+public sealed class MemoryService : IMemoryStore
 {
     public const int MaxEntries = 200;
     public const int MaxTextLength = 500;
@@ -19,6 +20,9 @@ public sealed class MemoryService
 
     private static readonly Regex LatinToken = new("[a-z0-9_.-]{2,}", RegexOptions.Compiled);
     private static readonly Regex Whitespace = new(@"\s+", RegexOptions.Compiled);
+    private static readonly Regex NegationPattern = new(
+        @"不要|不需要|不用|别|禁止|不能|避免|不是|\bnot\b|\bnever\b|\bdon't\b|\bdo not\b",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private readonly string? _filePath;
     private readonly List<MemoryEntry> _entries = [];
@@ -135,19 +139,48 @@ public sealed class MemoryService
         Save();
     }
 
-    /// <summary>按关键词（英文单词 + 中文二元组）打分召回，最多返回 limit 条。</summary>
-    public IReadOnlyList<MemoryEntry> Search(string? query, int limit = 5)
+    /// <summary>
+    /// 按关键词（英文单词 + 中文二元组）打分召回，叠加时间衰减与置顶权重：越新的偏好越优先，
+    /// 置顶记忆额外加权；最多返回 limit 条。
+    /// </summary>
+    public IReadOnlyList<MemoryEntry> Search(string? query, int limit = 5, DateTime? now = null)
     {
         if (limit <= 0 || _entries.Count == 0) return [];
         if (string.IsNullOrWhiteSpace(query)) return _entries.Take(limit).ToArray();
 
+        var current = now ?? DateTime.Now;
         return _entries
-            .Select(entry => (Entry: entry, Score: Score(entry.Text, query)))
+            .Select(entry => (Entry: entry, Score: Score(entry, query, current)))
             .Where(x => x.Score > 0)
             .OrderByDescending(x => x.Score)
             .ThenByDescending(x => x.Entry.CreatedAt)
             .Take(limit)
             .Select(x => x.Entry)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// 找可能冲突的旧记忆：与候选文本共享至少两个词，但否定语义相反
+    /// （如「不要用深色主题」与「使用深色主题」）。界面据此提示用户确认，而不是静默叠加。
+    /// </summary>
+    public IReadOnlyList<MemoryEntry> FindConflicts(string? text)
+    {
+        var normalized = Normalize((text ?? "").Trim());
+        if (normalized.Length == 0) return [];
+
+        var candidateNegation = NegationPattern.IsMatch(normalized);
+        var candidateTokens = Tokens(normalized);
+        if (candidateTokens.Count == 0) return [];
+
+        return _entries
+            .Select(entry => (Entry: entry, Normalized: Normalize(entry.Text), Tokens: Tokens(Normalize(entry.Text))))
+            .Where(pair => NegationPattern.IsMatch(pair.Normalized) != candidateNegation)
+            .Select(pair => (pair.Entry, Overlap: Overlap(pair.Tokens, candidateTokens)))
+            .Where(pair => pair.Overlap >= 2)
+            .OrderByDescending(pair => pair.Overlap)
+            .ThenByDescending(pair => pair.Entry.UpdatedAt)
+            .Take(3)
+            .Select(pair => pair.Entry)
             .ToArray();
     }
 
@@ -213,25 +246,54 @@ public sealed class MemoryService
     private static string Normalize(string text) =>
         Whitespace.Replace(text.Trim(), " ").ToLowerInvariant();
 
-    private static int Score(string text, string query)
+    /// <summary>
+    /// 关键词基础分 × 时间衰减（<c>1 + 0.5 × exp(-ageDays / 30)</c>）× 置顶加权（1.3）。
+    /// 新旧偏好冲突时，新记忆靠衰减自然胜出，而不是靠条目顺序。
+    /// </summary>
+    private static double Score(MemoryEntry entry, string query, DateTime now)
     {
-        var haystack = text.ToLowerInvariant();
-        var score = 0;
+        var haystack = Normalize(entry.Text);
+        double baseScore = 0;
 
         foreach (Match match in LatinToken.Matches(query.ToLowerInvariant()))
         {
-            if (haystack.Contains(match.Value)) score += 3;
+            if (haystack.Contains(match.Value)) baseScore += 3;
         }
 
         var cjk = query.Where(IsCjk).ToArray();
         for (var index = 0; index + 1 < cjk.Length; index++)
         {
             var gram = new string([cjk[index], cjk[index + 1]]);
-            if (haystack.Contains(gram)) score++;
+            if (haystack.Contains(gram)) baseScore++;
         }
 
-        return score;
+        if (baseScore <= 0) return 0;
+
+        var stamp = entry.UpdatedAt == default ? entry.CreatedAt : entry.UpdatedAt;
+        var ageDays = stamp == default ? 0 : Math.Max(0, (now - stamp).TotalDays);
+        var recency = 1 + 0.5 * Math.Exp(-ageDays / 30);
+        return baseScore * recency * (entry.Pinned ? 1.3 : 1.0);
     }
+
+    private static HashSet<string> Tokens(string normalized)
+    {
+        var tokens = new HashSet<string>(StringComparer.Ordinal);
+        foreach (Match match in LatinToken.Matches(normalized))
+        {
+            if (match.Value.Length >= 2) tokens.Add(match.Value);
+        }
+
+        var cjk = normalized.Where(IsCjk).ToArray();
+        for (var index = 0; index + 1 < cjk.Length; index++)
+        {
+            tokens.Add(new string([cjk[index], cjk[index + 1]]));
+        }
+
+        return tokens;
+    }
+
+    private static int Overlap(HashSet<string> left, HashSet<string> right) =>
+        left.Count(right.Contains);
 
     private static bool IsCjk(char value) =>
         value is >= '\u4E00' and <= '\u9FFF' or >= '\u3400' and <= '\u4DBF';
