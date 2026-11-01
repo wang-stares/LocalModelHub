@@ -5,7 +5,7 @@
              x:DataType="vm:SkillsViewModel">
   <Grid Classes="page" RowDefinitions="Auto,*">
     <StackPanel Margin="32,12,32,14" Spacing="10">
-      <Border Classes="card" Padding="14" CornerRadius="18">
+      <Border Classes="card" Padding="14">
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="可复用技能" Classes="h3" VerticalAlignment="Center"/>
@@ -30,7 +30,7 @@
       <ItemsControl ItemsSource="{Binding Items}" Margin="32,4,14,24">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:SkillItemViewModel">
-            <Border Classes="card" CornerRadius="18" Padding="16,12" Margin="0,0,0,10">
+            <Border Classes="card" Padding="16,12" Margin="0,0,0,10">
               <StackPanel Spacing="6">
                 <Grid ColumnDefinitions="*,Auto,Auto">
                   <TextBlock Text="{Binding Name}"

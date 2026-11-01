@@ -16,7 +16,17 @@ public static class AppPaths
     public static string SettingsFile => Path.Combine(RootDirectory, "settings.json");
     public static string CustomModelsFile => Path.Combine(RootDirectory, "custom-models.json");
     public static string RemoteCatalogFile => Path.Combine(RootDirectory, "catalog-remote.json");
+    /// <summary>旧版单文件记忆；仅用于首次启动时迁移到两层目录结构。</summary>
     public static string MemoryFile => Path.Combine(RootDirectory, "memory.json");
+
+    /// <summary>两层记忆的根目录：全局记忆与各项目的项目记忆分开落盘。</summary>
+    public static string MemoryDirectory => Path.Combine(RootDirectory, "memory");
+
+    /// <summary>全局记忆文件：用户偏好、使用习惯等跨项目通用信息。</summary>
+    public static string GlobalMemoryFile => Path.Combine(MemoryDirectory, "global.json");
+
+    /// <summary>项目记忆目录：每个工作文件夹一个文件，文件名由工作区路径指纹生成。</summary>
+    public static string ProjectMemoryDirectory => Path.Combine(MemoryDirectory, "projects");
     public static string SessionsFile => Path.Combine(RootDirectory, "sessions.json");
     public static string KnowledgeFile => Path.Combine(RootDirectory, "knowledge.json");
     public static string SkillsFile => Path.Combine(RootDirectory, "skills.json");
@@ -32,6 +42,8 @@ public static class AppPaths
         Directory.CreateDirectory(RuntimeDirectory);
         Directory.CreateDirectory(DownloadsDirectory);
         Directory.CreateDirectory(LogsDirectory);
+        Directory.CreateDirectory(MemoryDirectory);
+        Directory.CreateDirectory(ProjectMemoryDirectory);
     }
 }
 
@@ -48,9 +60,13 @@ public sealed class AppSettings
     public bool SyncModelScope { get; set; } = true;
     public bool SyncOllama { get; set; } = true;
     public string ModelsDirectory { get; set; } = AppPaths.ModelsDirectory;
+    /// <summary>全盘搜索后原地引用的外部模型文件（不复制）；删除时只移除引用，不动磁盘文件。</summary>
+    public List<string> ExternalModelPaths { get; set; } = [];
     public string? RuntimePath { get; set; }
     public string RuntimeVariant { get; set; } = "auto"; // auto | cuda | vulkan | cpu
     public string Theme { get; set; } = "system"; // system | light | dark
+    /// <summary>界面主题：miuix（大圆角渐变）| win11 | win10 | win7（按年代还原形态与配色）。</summary>
+    public string ShellStyle { get; set; } = "miuix";
     /// <summary>左侧主导航是否折叠为图标栏。</summary>
     public bool NavCollapsed { get; set; }
     /// <summary>对话页的会话列表是否折叠，折叠后对话区占满宽度。</summary>
@@ -69,6 +85,8 @@ public sealed class AppSettings
     public bool KnowledgeHybridSearch { get; set; }
     /// <summary>从用户消息中自动提取偏好与事实写入长期记忆（规则版，不额外调用模型）。</summary>
     public bool AutoMemoryEnabled { get; set; } = true;
+    /// <summary>每轮对话 / 编辑结束后，让模型自主提炼用户偏好与项目事实并写入记忆（额外一次短调用）。</summary>
+    public bool MemoryAutoDistill { get; set; } = true;
     /// <summary>任务完成后自动把执行过程总结为技能。</summary>
     public bool AutoSkillEnabled { get; set; } = true;
     /// <summary>对话时把相关技能注入上下文。</summary>
@@ -127,6 +145,13 @@ public sealed class SettingsService
         WriteIndented = true
     };
 
+    private readonly string _filePath;
+
+    /// <param name="filePath">设置文件路径；为空时使用应用数据目录下的 settings.json（测试可传临时路径）。</param>
+    public SettingsService(string? filePath = null) => _filePath = filePath ?? AppPaths.SettingsFile;
+
+    public string FilePath => _filePath;
+
     public AppSettings Settings { get; private set; } = new();
 
     public AppSettings Load()
@@ -134,9 +159,9 @@ public sealed class SettingsService
         AppPaths.EnsureCreated();
         try
         {
-            if (File.Exists(AppPaths.SettingsFile))
+            if (File.Exists(_filePath))
             {
-                var json = File.ReadAllText(AppPaths.SettingsFile);
+                var json = File.ReadAllText(_filePath);
                 Settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
             }
         }
@@ -163,8 +188,8 @@ public sealed class SettingsService
     {
         AppPaths.EnsureCreated();
         Directory.CreateDirectory(Settings.ModelsDirectory);
-        var temp = AppPaths.SettingsFile + ".tmp";
+        var temp = _filePath + ".tmp";
         File.WriteAllText(temp, JsonSerializer.Serialize(Settings, JsonOptions));
-        File.Move(temp, AppPaths.SettingsFile, overwrite: true);
+        File.Move(temp, _filePath, overwrite: true);
     }
 }

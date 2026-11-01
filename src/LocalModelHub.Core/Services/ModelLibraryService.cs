@@ -58,8 +58,79 @@ public sealed class ModelLibraryService
                 }
             }
 
+            // 全盘搜索到的外部模型：不复制文件，原地引用；删除时只移除引用。
+            foreach (var external in _settings.Settings.ExternalModelPaths)
+            {
+                TryAddExternal(result, catalog, root, external);
+            }
+
             return result.OrderByDescending(m => m.AddedAt).ToList();
         }
+    }
+
+    private static void TryAddExternal(
+        List<DownloadedModel> result,
+        ModelCatalog catalog,
+        string root,
+        string externalPath)
+    {
+        var full = SafeFullPath(externalPath);
+        if (full is null) return;
+        if (IsUnder(root, full)) return; // 主模型目录已经扫描过
+        if (result.Any(model => model.PrimaryPath.Equals(full, StringComparison.OrdinalIgnoreCase))) return;
+
+        if (File.Exists(full))
+        {
+            var folder = Path.GetDirectoryName(full);
+            if (folder is null) return;
+
+            var files = SafeGgufFiles(folder);
+            if (files.Count > 0) TryAdd(result, catalog, folder, folder, files, full, external: true);
+            return;
+        }
+
+        if (!Directory.Exists(full)) return;
+
+        var rootFiles = SafeGgufFiles(full);
+        if (rootFiles.Count > 0) TryAdd(result, catalog, full, full, rootFiles, external: true);
+
+        foreach (var subDirectory in SafeDirectories(full))
+        {
+            var files = SafeGgufFiles(subDirectory);
+            if (files.Count > 0) TryAdd(result, catalog, full, subDirectory, files, external: true);
+        }
+    }
+
+    /// <summary>把全盘搜索到的模型原地加入库（不复制文件）；返回 false 表示已在库中。</summary>
+    public bool AddExternalModel(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            throw new FileNotFoundException("模型文件不存在", path);
+        }
+
+        if (!path.EndsWith(".gguf", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("只支持 .gguf 模型文件");
+        }
+
+        var full = SafeFullPath(path);
+        if (full is null) throw new InvalidOperationException("模型路径无效");
+
+        var root = SafeFullPath(_settings.Settings.ModelsDirectory);
+        if (root is not null && IsUnder(root, full)) return false; // 已在模型目录内
+
+        var settings = _settings.Settings;
+        if (settings.ExternalModelPaths.Any(item =>
+                string.Equals(SafeFullPath(item), full, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        settings.ExternalModelPaths.Add(full);
+        _settings.Save();
+        NotifyChanged();
+        return true;
     }
 
     private static void TryAdd(
@@ -67,7 +138,9 @@ public sealed class ModelLibraryService
         ModelCatalog catalog,
         string modelDirectory,
         string folder,
-        List<string> files)
+        List<string> files,
+        string? preferredPrimary = null,
+        bool external = false)
     {
         try
         {
@@ -86,6 +159,14 @@ public sealed class ModelLibraryService
             var owned = ResolveOwnedFiles(modelDirectory, folder, files, manifest, quantLabel!);
             // 主文件不能按文件名排序取第一个：mmproj / LoRA 会排在前面，分片也要从 00001 开始。
             var primary = SelectPrimary(owned, quantLabel!, out var selectionNote);
+            // 外部引用的文件就是用户指定的主文件，优先使用它。
+            if (preferredPrimary is not null &&
+                owned.Any(file => file.Equals(preferredPrimary, StringComparison.OrdinalIgnoreCase)))
+            {
+                primary = preferredPrimary;
+                selectionNote = null;
+            }
+
             var total = owned.Sum(SafeFileLength);
             var addedAt = manifest?.AddedAt ?? Directory.GetCreationTime(folder);
 
@@ -98,6 +179,7 @@ public sealed class ModelLibraryService
                 PrimaryPath = primary,
                 SelectionNote = selectionNote,
                 Files = owned,
+                IsExternal = external,
                 TotalBytes = total,
                 AddedAt = addedAt,
                 Developer = entry?.Developer ?? (manifest?.Imported == true ? "本地导入" : null),
@@ -220,9 +302,12 @@ public sealed class ModelLibraryService
                 return new ModelDeleteResult(false, "模型路径无效，未做任何删除");
             }
 
-            if (!IsUnder(root, target))
+            if (model.IsExternal || !IsUnder(root, target))
             {
-                return new ModelDeleteResult(false, "拒绝删除模型目录之外的路径");
+                // 外部引用的模型只移除引用，不删除用户磁盘上的文件。
+                return RemoveExternalReference(model)
+                    ? new ModelDeleteResult(true, null)
+                    : new ModelDeleteResult(false, "拒绝删除模型目录之外的路径");
             }
 
             var targets = ResolveDeleteTargets(model, target);
@@ -295,6 +380,21 @@ public sealed class ModelLibraryService
         {
             NotifyChanged();
         }
+    }
+
+    /// <summary>移除外部引用（不删文件）；返回是否真的移除了记录。</summary>
+    private bool RemoveExternalReference(DownloadedModel model)
+    {
+        var target = SafeFullPath(model.PrimaryPath);
+        if (target is null) return false;
+
+        var settings = _settings.Settings;
+        var removed = settings.ExternalModelPaths.RemoveAll(item =>
+            string.Equals(SafeFullPath(item), target, StringComparison.OrdinalIgnoreCase));
+        if (removed == 0) return false;
+
+        _settings.Save();
+        return true;
     }
 
     /// <summary>manifest 优先；没有清单时按量化标签匹配，匹配不到只取主文件，避免误删同目录其它量化。</summary>

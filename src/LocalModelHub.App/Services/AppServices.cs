@@ -25,7 +25,9 @@ public sealed class AppServices
     public RemoteApiService RemoteApi { get; } = new();
     public WorkspaceService Workspace { get; } = new();
     public UserModelStore CustomModels { get; } = new();
-    public MemoryService Memory { get; } = new();
+    /// <summary>两层长期记忆：全局层常驻，项目层随工作文件夹切换。</summary>
+    public MemoryManager Memory { get; } = new();
+
     public ChatSessionStore ChatSessions { get; } = new();
     public KnowledgeService Knowledge { get; } = new();
 
@@ -234,6 +236,13 @@ public sealed class AppServices
         Workspace.DefaultReadLines = tuning.ReadLines;
         Workspace.MaxReadWindow = tuning.MaxReadWindow;
         Memory.Load();
+        Memory.UseWorkspace(Workspace.Root);
+        // 启动时整理一次：清理过期，并把高度相似的历史条目合并，避免记忆越攒越散。
+        Memory.Consolidate();
+        // 挂机空闲时再整理一次，完成后再停止模型进入休眠；与启动整理逻辑相同，重复执行无副作用。
+        IdleSleep.BeforeSleep += () => Memory.Consolidate();
+        // 切换工作文件夹时自动切换项目记忆上下文；全局记忆不受影响。
+        Workspace.RootChanged += root => Memory.UseWorkspace(root);
         Skills.Load();
         ChatSessions.Load();
         Knowledge.Load();

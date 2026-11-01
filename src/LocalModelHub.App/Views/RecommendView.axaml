@@ -5,7 +5,7 @@
              x:Class="LocalModelHub.App.Views.RecommendView"
              x:DataType="vm:RecommendViewModel">
   <Grid Classes="page" RowDefinitions="Auto,*">
-    <Border Classes="card" Padding="12" CornerRadius="18" Margin="32,12,32,14">
+    <Border Classes="card" Padding="12" Margin="32,12,32,14">
       <StackPanel Spacing="9">
         <Grid ColumnDefinitions="Auto,*,Auto">
           <Border Classes="segmentHost">

@@ -76,6 +76,71 @@ public class UiSmokeTests
     }
 
     [AvaloniaFact]
+    public void Renders_windows_shell_theme()
+    {
+        AppServices.Current.Initialize();
+        var viewModel = new MainWindowViewModel();
+        var window = new LocalModelHub.App.MainWindow
+        {
+            DataContext = viewModel,
+            Width = 1024,
+            Height = 768
+        };
+
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        Assert.DoesNotContain("windows", window.Classes);
+
+        var output = Path.Combine(AppContext.BaseDirectory, "shots");
+        Directory.CreateDirectory(output);
+
+        void Render(string prefix, int[] pages, string? alias = null)
+        {
+            foreach (var (variant, tag) in new[] { (ThemeVariant.Light, "light"), (ThemeVariant.Dark, "dark") })
+            {
+                Application.Current!.RequestedThemeVariant = variant;
+                Dispatcher.UIThread.RunJobs();
+
+                foreach (var index in pages)
+                {
+                    viewModel.NavigateCommand.Execute(index.ToString());
+                    SettleAnimation();
+
+                    var frame = window.CaptureRenderedFrame();
+                    Assert.NotNull(frame);
+                    frame!.Save(Path.Combine(output, $"{prefix}-page{index}-{tag}.png"));
+                    if (alias is not null && index == 4)
+                    {
+                        frame.Save(Path.Combine(output, $"{alias}-{tag}.png"));
+                    }
+                }
+            }
+        }
+
+        window.SetShellStyle("windows");
+        SettleAnimation();
+        Assert.Contains("windows", window.Classes);
+        Render("win", [0, 1, 2, 3, 4], "theme-windows");
+
+        window.SetShellStyle("win10");
+        SettleAnimation();
+        Assert.Contains("win10", window.Classes);
+        Assert.DoesNotContain("win11", window.Classes);
+        Render("win10", [0, 4], "theme-win10");
+
+        window.SetShellStyle("win7");
+        SettleAnimation();
+        Assert.Contains("win7", window.Classes);
+        Render("win7", [0, 4], "theme-win7");
+
+        window.SetShellStyle("miuix");
+        SettleAnimation();
+        Assert.DoesNotContain("windows", window.Classes);
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void Renders_merged_knowledge_memory_tabs()
     {
         AppServices.Current.Initialize();
@@ -333,9 +398,10 @@ public class UiSmokeTests
         window.Close();
 
         services.Settings.ModelsDirectory = originalDirectory;
-        services.RefreshLibrary();
         services.Settings.WorkspaceDirectory = "";
         services.Settings.AgentMode = "chat";
+        services.SettingsService.Save();
+        services.RefreshLibrary();
         services.Workspace.SetRoot(null);
         try { Directory.Delete(root, recursive: true); } catch { }
         try { Directory.Delete(workspace, recursive: true); } catch { }

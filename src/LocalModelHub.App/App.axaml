@@ -393,6 +393,25 @@
       <Setter Property="StrokeJoin" Value="Round"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
+    <!-- 系统图标字体：导航使用 Segoe Fluent Icons 线性字形，与 Win11 原生图标同源 -->
+    <Style Selector="TextBlock.navGlyph">
+      <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+      <Setter Property="FontSize" Value="16"/>
+      <Setter Property="Width" Value="16"/>
+      <Setter Property="LineHeight" Value="16"/>
+      <Setter Property="TextAlignment" Value="Center"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.nav TextBlock.navGlyph">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+    </Style>
+    <Style Selector="Button.nav:pointerover TextBlock.navGlyph">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+    </Style>
+    <Style Selector="Button.nav.active TextBlock.navGlyph">
+      <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+    </Style>
     <Style Selector="Button.nav Path.icon">
       <Setter Property="Fill" Value="{DynamicResource TextSecondary}"/>
     </Style>
@@ -465,6 +484,31 @@
     <Style Selector="Border.hero">
       <Setter Property="BoxShadow" Value="0 2 4 0 #140B1220, 0 26 56 0 #241E4FA8"/>
       <Setter Property="CornerRadius" Value="22"/>
+    </Style>
+
+    <!-- 品牌标识、状态胶囊、模态卡片：默认沿用澎湃形态，Windows 主题下再压成直角 -->
+    <Style Selector="Border.brand">
+      <Setter Property="Background" Value="{StaticResource LogoGradient}"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="BoxShadow" Value="0 6 16 0 #333482FF"/>
+    </Style>
+    <Style Selector="Border.chip">
+      <Setter Property="CornerRadius" Value="9"/>
+    </Style>
+    <Style Selector="Border.dialogCard">
+      <Setter Property="CornerRadius" Value="22"/>
+      <Setter Property="BoxShadow" Value="0 2 6 0 #140B1220, 0 32 72 0 #330B1220"/>
+    </Style>
+
+    <!-- 对话气泡：默认沿用澎湃的渐变与浮起，Windows 主题下压成直角实色 -->
+    <Style Selector="Border.bubbleUser">
+      <Setter Property="Background" Value="{StaticResource PrimaryGradient}"/>
+      <Setter Property="CornerRadius" Value="16,16,6,16"/>
+      <Setter Property="BoxShadow" Value="0 4 14 0 #2A1E5BC0"/>
+    </Style>
+    <Style Selector="Border.bubbleAssistant">
+      <Setter Property="CornerRadius" Value="16,16,16,6"/>
+      <Setter Property="BoxShadow" Value="0 1 2 0 #0A0B1220, 0 8 20 0 #0B0B1220"/>
     </Style>
 
     <Style Selector="Border.badge">
@@ -570,6 +614,11 @@
       <Setter Property="Width" Value="36"/>
       <Setter Property="Height" Value="36"/>
       <Setter Property="CornerRadius" Value="12"/>
+    </Style>
+    <!-- 空状态图标底座：Miuix 用柔色圆角块，Windows 主题下退化为纯图标 -->
+    <Style Selector="Border.emptyIcon">
+      <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
+      <Setter Property="CornerRadius" Value="14"/>
     </Style>
     <Style Selector="Border.tile TextBlock">
       <Setter Property="FontSize" Value="10"/>
@@ -1048,6 +1097,800 @@
     <Style Selector="Separator.hairline">
       <Setter Property="Background" Value="{DynamicResource Stroke}"/>
       <Setter Property="Height" Value="1"/>
+    </Style>
+
+    <!-- ==================== Windows 11 主题 ====================
+         由窗口类 windows 启用：实色表面 + 1px 描边卡片（8px 圆角）、控件 4px 直角、
+         中性灰选中态 + 3px 强调条、Segoe UI 字号阶梯、纯色强调按钮。
+         只改形态与材质，不改页面结构；Miuix 的圆角、渐变与浮起阴影一律不参与。 -->
+    <Style Selector="Window.windows">
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI"/>
+    </Style>
+
+    <!-- 字号阶梯对齐 WinUI：Title 28 / Subtitle 20 / Body 14 / Caption 12，字距归零 -->
+    <Style Selector="Window.windows TextBlock.h1">
+      <Setter Property="FontSize" Value="28"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="LineHeight" Value="36"/>
+      <Setter Property="LetterSpacing" Value="0"/>
+    </Style>
+    <Style Selector="Window.windows TextBlock.display">
+      <Setter Property="FontSize" Value="28"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="LineHeight" Value="36"/>
+      <Setter Property="LetterSpacing" Value="0"/>
+    </Style>
+    <Style Selector="Window.windows TextBlock.h2">
+      <Setter Property="FontSize" Value="20"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="LineHeight" Value="28"/>
+      <Setter Property="LetterSpacing" Value="0"/>
+    </Style>
+    <Style Selector="Window.windows TextBlock.h3">
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Window.windows TextBlock.muted">
+      <Setter Property="FontSize" Value="14"/>
+    </Style>
+    <Style Selector="Window.windows TextBlock.caption">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="LineHeight" Value="17"/>
+    </Style>
+    <Style Selector="Window.windows TextBlock.eyebrow">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="LetterSpacing" Value="0"/>
+      <Setter Property="FontWeight" Value="Normal"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+    </Style>
+    <Style Selector="Window.windows TextBlock.metric">
+      <Setter Property="FontSize" Value="20"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Window.windows TextBlock.score">
+      <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+    </Style>
+
+    <!-- 表面：实色卡片 + 1px 描边，圆角取 WinUI ControlCornerRadius = 4，取消阴影与抬升 -->
+    <Style Selector="Window.windows Border.card">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Padding" Value="20"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.windows Border.card.flat">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Background" Value="{DynamicResource CardBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.windows Border.cardHover:pointerover">
+      <Setter Property="Background" Value="{DynamicResource CardHoverBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource StrokeStrong}"/>
+      <Setter Property="RenderTransform" Value="translate(0px,0px)"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.windows Border.hero">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.windows Border.glass">
+      <Setter Property="Background" Value="{DynamicResource CardBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.windows Border.composer">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.windows Border.bubbleUser">
+      <Setter Property="Background" Value="{DynamicResource Accent}"/>
+      <Setter Property="CornerRadius" Value="4,4,0,4"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.windows Border.bubbleAssistant">
+      <Setter Property="CornerRadius" Value="4,4,4,0"/>
+      <Setter Property="BoxShadow" Value="none"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
+    </Style>
+    <Style Selector="Window.windows Border.bubbleUser Button.ghost /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Window.windows Border.bubbleAssistant Button.ghost /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Window.windows Border.brand">
+      <Setter Property="Background" Value="{DynamicResource Accent}"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.windows Border.chip">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.windows Border.dialogCard">
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.windows Border.segmentHost">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Padding" Value="2"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.windows Border.badge">
+      <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="Window.windows Border.badge.pill">
+      <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <!-- 指标色块是 Miuix 的装饰元素，Win11 页面用纯文字标签 + 单色图标 -->
+    <Style Selector="Window.windows Border.tile">
+      <Setter Property="IsVisible" Value="False"/>
+    </Style>
+    <Style Selector="Window.windows Border.emptyIcon">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+
+    <!-- 导航：36 高、4px 直角；选中是中性灰底 + 3px 强调条，文字保持主色而不是变蓝 -->
+    <Style Selector="Window.windows Button.nav">
+      <Setter Property="Height" Value="36"/>
+      <Setter Property="Padding" Value="11,0"/>
+      <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="Window.windows Button.nav /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="Window.windows Button.nav Path.icon">
+      <Setter Property="Width" Value="16"/>
+      <Setter Property="Height" Value="16"/>
+    </Style>
+    <Style Selector="Window.windows Button.nav TextBlock">
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="Normal"/>
+    </Style>
+    <Style Selector="Window.windows Button.nav TextBlock.navGlyph">
+      <Setter Property="FontSize" Value="16"/>
+    </Style>
+    <Style Selector="Window.windows Button.nav.active TextBlock.navGlyph">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+    </Style>
+    <Style Selector="Window.windows Button.nav.active:pointerover TextBlock.navGlyph">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+    </Style>
+    <!-- Win11 设置页没有分组标题与分隔线，导航直接排布 -->
+    <Style Selector="Window.windows Border.navDivider">
+      <Setter Property="IsVisible" Value="False"/>
+    </Style>
+    <Style Selector="Window.windows Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InputBg}"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="Window.windows Button.nav.active /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource NavActiveBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="Window.windows Button.nav.active TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+      <Setter Property="FontWeight" Value="Normal"/>
+    </Style>
+    <Style Selector="Window.windows Button.nav.active Path.icon">
+      <Setter Property="Fill" Value="{DynamicResource TextPrimary}"/>
+    </Style>
+    <Style Selector="Window.windows Button.nav.active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource NavActiveBg}"/>
+    </Style>
+    <Style Selector="Window.windows Button.nav.active:pointerover TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+    </Style>
+    <Style Selector="Window.windows Button.nav.active:pointerover Path.icon">
+      <Setter Property="Fill" Value="{DynamicResource TextPrimary}"/>
+    </Style>
+
+    <!-- 分段控件：4px 直角，选中为白底（深色为浅灰底）+ 1px 描边，字重不跳 -->
+    <Style Selector="Window.windows ListBox.segments ListBoxItem">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="Padding" Value="13,5"/>
+      <Setter Property="Margin" Value="1,0"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="Window.windows ListBox.segments ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="Window.windows ListBox.segments ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InputBg}"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="Window.windows ListBox.segments ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SegSelectedBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource StrokeStrong}"/>
+    </Style>
+    <Style Selector="Window.windows ListBox.segments ListBoxItem:selected">
+      <Setter Property="FontWeight" Value="Normal"/>
+    </Style>
+    <Style Selector="Window.windows ListBox.segments ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SegSelectedBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource StrokeStrong}"/>
+    </Style>
+
+    <!-- 会话 / 分类列表：4px 直角，选中灰底而不是强调色胶囊 -->
+    <Style Selector="Window.windows ListBox.sessions ListBoxItem">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Padding" Value="10,7"/>
+    </Style>
+    <Style Selector="Window.windows ListBox.sessions ListBoxItem:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InputBg}"/>
+    </Style>
+    <Style Selector="Window.windows ListBox.sessions ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource NavActiveBg}"/>
+    </Style>
+
+    <!-- 按钮：Win11 主按钮是纯色强调色直角块，次要按钮是白底 1px 描边 -->
+    <Style Selector="Window.windows Button.primary">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="MinHeight" Value="32"/>
+      <Setter Property="Padding" Value="16,6"/>
+      <Setter Property="FontSize" Value="13.5"/>
+    </Style>
+    <Style Selector="Window.windows Button.primary /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource Accent}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="Window.windows Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AccentHover}"/>
+    </Style>
+    <Style Selector="Window.windows Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
+    </Style>
+    <Style Selector="Window.windows Button.ghost">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="MinHeight" Value="32"/>
+      <Setter Property="Padding" Value="14,6"/>
+      <Setter Property="FontSize" Value="13.5"/>
+    </Style>
+    <Style Selector="Window.windows Button.ghost /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource CardBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="Window.windows Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InputBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource StrokeStrong}"/>
+    </Style>
+    <Style Selector="Window.windows Button.soft">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="MinHeight" Value="32"/>
+      <Setter Property="Padding" Value="14,6"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="FontWeight" Value="Normal"/>
+    </Style>
+    <Style Selector="Window.windows Button.soft /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="Window.windows Button.soft:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InputBg}"/>
+    </Style>
+    <Style Selector="Window.windows Button.danger">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="MinHeight" Value="32"/>
+      <Setter Property="Padding" Value="14,6"/>
+      <Setter Property="FontSize" Value="13.5"/>
+    </Style>
+    <Style Selector="Window.windows Button.danger /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource CardBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource StrokeSubtle}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="Window.windows Button.icon">
+      <Setter Property="Width" Value="32"/>
+      <Setter Property="Height" Value="32"/>
+      <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="Window.windows Button.icon /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+
+    <!-- 输入控件：白底 + 1px 描边，聚焦只换强调色边框，不叠光晕 -->
+    <Style Selector="Window.windows TextBox">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="MinHeight" Value="32"/>
+      <Setter Property="Padding" Value="11,6"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Background" Value="{DynamicResource CardBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
+    </Style>
+    <Style Selector="Window.windows TextBox:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="{DynamicResource CardBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource StrokeStrong}"/>
+    </Style>
+    <Style Selector="Window.windows TextBox:focus /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="{DynamicResource CardBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.windows TextBox.chatInput /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.windows ComboBox">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="MinHeight" Value="32"/>
+      <Setter Property="Padding" Value="10,5"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Background" Value="{DynamicResource CardBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
+    </Style>
+    <Style Selector="Window.windows NumericUpDown">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="MinHeight" Value="32"/>
+      <Setter Property="Background" Value="{DynamicResource CardBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
+    </Style>
+
+    <Style Selector="Window.windows ProgressBar">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="Window.windows ToolTip">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Background" Value="{DynamicResource CardBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
+    </Style>
+
+    <!-- ========== Windows 10：2px 直角、扁平灰面、#0078D7 强调色 ========== -->
+    <Style Selector="Window.win10">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="FontFamily" Value="Segoe UI, Microsoft YaHei UI"/>
+    </Style>
+    <Style Selector="Window.win10 TextBlock.h1">
+      <Setter Property="FontSize" Value="24"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="LineHeight" Value="31"/>
+      <Setter Property="LetterSpacing" Value="0"/>
+    </Style>
+    <Style Selector="Window.win10 TextBlock.display">
+      <Setter Property="FontSize" Value="24"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="LineHeight" Value="31"/>
+      <Setter Property="LetterSpacing" Value="0"/>
+    </Style>
+    <Style Selector="Window.win10 TextBlock.h2">
+      <Setter Property="FontSize" Value="18"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="LineHeight" Value="24"/>
+    </Style>
+    <Style Selector="Window.win10 TextBlock.h3">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Window.win10 TextBlock.muted">
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="Window.win10 TextBlock.caption">
+      <Setter Property="FontSize" Value="11.5"/>
+    </Style>
+    <Style Selector="Window.win10 TextBlock.eyebrow">
+      <Setter Property="FontSize" Value="11.5"/>
+    </Style>
+
+    <Style Selector="Window.win10 Border.card">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="Padding" Value="18"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.win10 Border.card.flat">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.win10 Border.hero">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.win10 Border.glass">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.win10 Border.composer">
+      <Setter Property="CornerRadius" Value="2"/>
+    </Style>
+    <Style Selector="Window.win10 Border.brand">
+      <Setter Property="Background" Value="{DynamicResource Accent}"/>
+      <Setter Property="CornerRadius" Value="2"/>
+    </Style>
+    <Style Selector="Window.win10 Border.chip">
+      <Setter Property="CornerRadius" Value="2"/>
+    </Style>
+    <Style Selector="Window.win10 Border.dialogCard">
+      <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="Window.win10 Border.segmentHost">
+      <Setter Property="CornerRadius" Value="2"/>
+    </Style>
+    <Style Selector="Window.win10 Border.badge">
+      <Setter Property="CornerRadius" Value="2"/>
+    </Style>
+    <Style Selector="Window.win10 Border.badge.pill">
+      <Setter Property="CornerRadius" Value="2"/>
+    </Style>
+    <Style Selector="Window.win10 Border.bubbleUser">
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Window.win10 Border.bubbleAssistant">
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+
+    <Style Selector="Window.win10 Button.nav">
+      <Setter Property="Height" Value="34"/>
+      <Setter Property="Padding" Value="11,0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Window.win10 Button.nav /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Window.win10 Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource NavHoverBg}"/>
+    </Style>
+    <Style Selector="Window.win10 Button.nav.active /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SelectionBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+      <Setter Property="BorderThickness" Value="2,0,0,0"/>
+    </Style>
+    <Style Selector="Window.win10 Button.nav.active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SelectionBg}"/>
+    </Style>
+
+    <Style Selector="Window.win10 ListBox.segments ListBoxItem">
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="12,4"/>
+      <Setter Property="FontSize" Value="12.5"/>
+    </Style>
+    <Style Selector="Window.win10 ListBox.segments ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Window.win10 ListBox.segments ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SegSelectedBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="Window.win10 ListBox.segments ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SegSelectedBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="Window.win10 ListBox.sessions ListBoxItem">
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Window.win10 ListBox.sessions ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SelectionBg}"/>
+    </Style>
+
+    <Style Selector="Window.win10 Button.primary">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="Padding" Value="15,5"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="Window.win10 Button.primary /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="2"/>
+    </Style>
+    <Style Selector="Window.win10 Button.ghost">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="Padding" Value="13,5"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="Window.win10 Button.ghost /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ButtonFace}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorder}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="2"/>
+    </Style>
+    <Style Selector="Window.win10 Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ButtonFaceHover}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="Window.win10 Button.soft">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="Window.win10 Button.soft /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="2"/>
+    </Style>
+    <Style Selector="Window.win10 Button.danger">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="Window.win10 Button.danger /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="2"/>
+    </Style>
+    <Style Selector="Window.win10 Button.icon">
+      <Setter Property="Width" Value="28"/>
+      <Setter Property="Height" Value="28"/>
+      <Setter Property="CornerRadius" Value="2"/>
+    </Style>
+    <Style Selector="Window.win10 Button.icon /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="2"/>
+    </Style>
+
+    <Style Selector="Window.win10 TextBox">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="Padding" Value="9,5"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="Window.win10 TextBox.chatInput /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.win10 ComboBox">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="Window.win10 NumericUpDown">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="MinHeight" Value="30"/>
+    </Style>
+    <Style Selector="Window.win10 ProgressBar">
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Foreground" Value="{DynamicResource Success}"/>
+    </Style>
+    <Style Selector="Window.win10 ToolTip">
+      <Setter Property="CornerRadius" Value="2"/>
+    </Style>
+
+    <!-- ========== Windows 7：Aero 渐变面板、浅蓝选中、圆角按钮 ========== -->
+    <Style Selector="Window.win7">
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="FontFamily" Value="Segoe UI, Microsoft YaHei UI"/>
+    </Style>
+    <Style Selector="Window.win7 TextBlock.h1">
+      <Setter Property="FontSize" Value="22"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="LineHeight" Value="28"/>
+      <Setter Property="LetterSpacing" Value="0"/>
+    </Style>
+    <Style Selector="Window.win7 TextBlock.display">
+      <Setter Property="FontSize" Value="22"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="LineHeight" Value="28"/>
+      <Setter Property="LetterSpacing" Value="0"/>
+    </Style>
+    <Style Selector="Window.win7 TextBlock.h2">
+      <Setter Property="FontSize" Value="15"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="LineHeight" Value="21"/>
+    </Style>
+    <Style Selector="Window.win7 TextBlock.h3">
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Window.win7 TextBlock.muted">
+      <Setter Property="FontSize" Value="12.5"/>
+    </Style>
+    <Style Selector="Window.win7 TextBlock.caption">
+      <Setter Property="FontSize" Value="11"/>
+    </Style>
+    <Style Selector="Window.win7 TextBlock.eyebrow">
+      <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <Style Selector="Window.win7 Border.card">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Padding" Value="16"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.win7 Border.card.flat">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.win7 Border.hero">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.win7 Border.glass">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.win7 Border.composer">
+      <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="Window.win7 Border.brand">
+      <Setter Property="Background" Value="{DynamicResource Accent}"/>
+      <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+    <Style Selector="Window.win7 Border.chip">
+      <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+    <Style Selector="Window.win7 Border.dialogCard">
+      <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="Window.win7 Border.segmentHost">
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="Padding" Value="2"/>
+    </Style>
+    <Style Selector="Window.win7 Border.badge">
+      <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+    <Style Selector="Window.win7 Border.badge.pill">
+      <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+    <Style Selector="Window.win7 Border.bubbleUser">
+      <Setter Property="Background" Value="{DynamicResource Accent}"/>
+      <Setter Property="CornerRadius" Value="4,4,0,4"/>
+    </Style>
+    <Style Selector="Window.win7 Border.bubbleAssistant">
+      <Setter Property="CornerRadius" Value="4,4,4,0"/>
+    </Style>
+
+    <Style Selector="Window.win7 Button.nav">
+      <Setter Property="Height" Value="30"/>
+      <Setter Property="Padding" Value="10,0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Window.win7 Button.nav TextBlock">
+      <Setter Property="FontSize" Value="12.5"/>
+    </Style>
+    <Style Selector="Window.win7 Button.nav /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Window.win7 Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource NavHoverBg}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Window.win7 Button.nav.active /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SelectionBg}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Window.win7 Button.nav.active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SelectionBg}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Window.win7 Button.nav.active TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+      <Setter Property="FontWeight" Value="Normal"/>
+    </Style>
+
+    <Style Selector="Window.win7 ListBox.segments ListBoxItem">
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="Padding" Value="11,3"/>
+      <Setter Property="FontSize" Value="12"/>
+    </Style>
+    <Style Selector="Window.win7 ListBox.segments ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+    <Style Selector="Window.win7 ListBox.segments ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SegSelectedBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource StrokeStrong}"/>
+    </Style>
+    <Style Selector="Window.win7 ListBox.segments ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SegSelectedBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource StrokeStrong}"/>
+    </Style>
+    <Style Selector="Window.win7 ListBox.sessions ListBoxItem">
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="9,6"/>
+    </Style>
+    <Style Selector="Window.win7 ListBox.sessions ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SelectionBg}"/>
+    </Style>
+
+    <Style Selector="Window.win7 Button.primary">
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="MinHeight" Value="27"/>
+      <Setter Property="Padding" Value="14,4"/>
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="Window.win7 Button.primary /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource PrimaryFace}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentPressed}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+    <Style Selector="Window.win7 Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AccentHover}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="Window.win7 Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AccentPressed}"/>
+    </Style>
+    <Style Selector="Window.win7 Button.ghost">
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="MinHeight" Value="27"/>
+      <Setter Property="Padding" Value="12,4"/>
+      <Setter Property="FontSize" Value="12.5"/>
+    </Style>
+    <Style Selector="Window.win7 Button.ghost /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ButtonFace}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorder}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+    <Style Selector="Window.win7 Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ButtonFaceHover}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="Window.win7 Button.ghost:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ButtonFacePressed}"/>
+    </Style>
+    <Style Selector="Window.win7 Button.soft">
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="MinHeight" Value="27"/>
+      <Setter Property="FontSize" Value="12.5"/>
+    </Style>
+    <Style Selector="Window.win7 Button.soft /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+    <Style Selector="Window.win7 Button.danger">
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="MinHeight" Value="27"/>
+      <Setter Property="FontSize" Value="12.5"/>
+    </Style>
+    <Style Selector="Window.win7 Button.danger /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ButtonFace}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorder}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+    <Style Selector="Window.win7 Button.icon">
+      <Setter Property="Width" Value="24"/>
+      <Setter Property="Height" Value="24"/>
+      <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+    <Style Selector="Window.win7 Button.icon /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+
+    <Style Selector="Window.win7 TextBox">
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="MinHeight" Value="27"/>
+      <Setter Property="Padding" Value="8,4"/>
+      <Setter Property="FontSize" Value="12.5"/>
+    </Style>
+    <Style Selector="Window.win7 TextBox:focus /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="{DynamicResource CardBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.win7 TextBox.chatInput /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="BoxShadow" Value="none"/>
+    </Style>
+    <Style Selector="Window.win7 ComboBox">
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="MinHeight" Value="27"/>
+      <Setter Property="FontSize" Value="12.5"/>
+    </Style>
+    <Style Selector="Window.win7 NumericUpDown">
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="MinHeight" Value="27"/>
+    </Style>
+    <Style Selector="Window.win7 ProgressBar">
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="Foreground" Value="{DynamicResource Success}"/>
+    </Style>
+    <Style Selector="Window.win7 ToolTip">
+      <Setter Property="CornerRadius" Value="3"/>
     </Style>
   </Application.Styles>
 </Application>

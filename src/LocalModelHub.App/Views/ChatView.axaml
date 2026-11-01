@@ -15,7 +15,6 @@
     <Border Grid.Column="0"
             IsVisible="{Binding !IsSessionsCollapsed}"
             Classes="glass"
-            CornerRadius="16"
             Padding="12,14">
       <Grid RowDefinitions="Auto,*,Auto">
         <Grid ColumnDefinitions="*,Auto,Auto">
@@ -122,12 +121,10 @@
               <Grid Margin="0,7">
                 <!-- 用户气泡：渐变强调色 -->
                 <Border IsVisible="{Binding IsUser}"
+                        Classes="bubbleUser"
                         HorizontalAlignment="Right"
                         MaxWidth="500"
-                        Background="{StaticResource PrimaryGradient}"
-                        CornerRadius="16,16,6,16"
-                        Padding="16,11"
-                        BoxShadow="0 4 14 0 #2A1E5BC0">
+                        Padding="16,11">
                   <StackPanel Spacing="4">
                     <Grid ColumnDefinitions="Auto,*,Auto">
                       <Button Grid.Column="0"
@@ -138,12 +135,12 @@
                               FontSize="10.5"
                               Padding="6,2"
                               MinHeight="0"
-                              Foreground="#FFFFFF"
+                              Foreground="{DynamicResource OnAccent}"
                               Background="Transparent"/>
                       <TextBlock Grid.Column="2"
                                  Text="{Binding RoleLabel}"
                                  FontSize="10.5"
-                                 Foreground="#FFFFFF"
+                                 Foreground="{DynamicResource OnAccent}"
                                  Opacity="0.75"
                                  HorizontalAlignment="Right"
                                  VerticalAlignment="Center"/>
@@ -151,20 +148,19 @@
                     <TextBlock Text="{Binding DisplayText}"
                                TextWrapping="Wrap"
                                LineHeight="21"
-                               Foreground="#FFFFFF"/>
+                               Foreground="{DynamicResource OnAccent}"/>
                   </StackPanel>
                 </Border>
 
                 <!-- 助手气泡：卡片材质 -->
                 <Border IsVisible="{Binding IsAssistant}"
+                        Classes="bubbleAssistant"
                         HorizontalAlignment="Left"
                         MaxWidth="620"
                         Background="{DynamicResource CardBg}"
                         BorderBrush="{DynamicResource StrokeSubtle}"
                         BorderThickness="1"
-                        CornerRadius="16,16,16,6"
-                        Padding="16,11"
-                        BoxShadow="0 1 2 0 #0A0B1220, 0 8 20 0 #0B0B1220">
+                        Padding="16,11">
                   <StackPanel Spacing="4">
                     <Grid ColumnDefinitions="*,Auto">
                       <TextBlock Text="{Binding RoleLabel}" Classes="eyebrow" VerticalAlignment="Center"/>
@@ -237,11 +233,10 @@
                   HorizontalAlignment="Center"
                   VerticalAlignment="Center"
                   Spacing="9">
-        <Border Width="48" Height="48" CornerRadius="14" Background="{DynamicResource AccentSoft}"
-                HorizontalAlignment="Center">
-          <Path Data="{StaticResource IconChat}" Width="20" Height="20"
-                HorizontalAlignment="Center" VerticalAlignment="Center"
-                Fill="{DynamicResource AccentInk}"/>
+        <Border Classes="emptyIcon" Width="48" Height="48" HorizontalAlignment="Center">
+          <TextBlock Classes="navGlyph" Text="&#xE8BD;" FontSize="24" Width="24" LineHeight="24"
+                     Foreground="{DynamicResource TextSecondary}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
         <TextBlock Text="和本地模型聊聊吧" Classes="h2" HorizontalAlignment="Center"/>
         <TextBlock Text="先在“我的模型”里启动一个模型，然后输入问题。"
@@ -251,7 +246,6 @@
 
       <Border Grid.Row="2"
               Classes="card flat"
-              CornerRadius="12"
               Margin="0,12,0,0"
               Padding="13,9">
         <StackPanel Spacing="6">

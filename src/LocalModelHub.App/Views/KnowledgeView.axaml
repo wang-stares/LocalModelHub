@@ -6,7 +6,7 @@
   <ScrollViewer Classes="page" VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="32,12,32,32" Spacing="16" MaxWidth="1120" HorizontalAlignment="Center">
 
-      <Border Classes="card" CornerRadius="18" Padding="20">
+      <Border Classes="card" Padding="20">
         <StackPanel Spacing="14">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Spacing="2">
@@ -49,7 +49,7 @@
       <ItemsControl ItemsSource="{Binding Documents}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:KnowledgeDocumentItemViewModel">
-            <Border Classes="card cardHover" Padding="16" Margin="0,0,0,10" CornerRadius="18">
+            <Border Classes="card cardHover" Padding="16" Margin="0,0,0,10">
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Spacing="4">
                   <TextBlock Text="{Binding Title}" Classes="h3"/>
@@ -70,7 +70,7 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
-      <Border Classes="card" Padding="36" CornerRadius="18" IsVisible="{Binding IsEmpty}">
+      <Border Classes="card" Padding="36" IsVisible="{Binding IsEmpty}">
         <StackPanel Spacing="7" HorizontalAlignment="Center">
           <TextBlock Text="还没有知识库文档" Classes="h3" HorizontalAlignment="Center"/>
           <TextBlock Text="导入项目 README、设计文档或代码文件后，对话会自动检索相关片段并标注来源。"
@@ -81,7 +81,7 @@
         </StackPanel>
       </Border>
 
-      <Border Classes="card" CornerRadius="18" Padding="20">
+      <Border Classes="card" Padding="20">
         <StackPanel Spacing="12">
           <StackPanel Spacing="2">
             <TextBlock Text="检索测试" Classes="h3"/>

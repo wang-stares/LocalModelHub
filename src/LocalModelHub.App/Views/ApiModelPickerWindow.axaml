@@ -19,7 +19,7 @@
 
     <TextBox Grid.Row="1" x:Name="SearchBox" Watermark="搜索模型 ID"/>
 
-    <Border Grid.Row="2" Classes="card" CornerRadius="16" Padding="8">
+    <Border Grid.Row="2" Classes="card" Padding="8">
       <ListBox x:Name="ModelList" Background="Transparent">
         <ListBox.ItemTemplate>
           <DataTemplate>

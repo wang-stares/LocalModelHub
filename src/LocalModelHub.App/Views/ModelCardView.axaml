@@ -3,7 +3,7 @@
              xmlns:vm="using:LocalModelHub.App.ViewModels"
              x:Class="LocalModelHub.App.Views.ModelCardView"
              x:DataType="vm:ModelCardViewModel">
-  <Border Classes="card cardHover" Padding="16" CornerRadius="18">
+  <Border Classes="card cardHover" Padding="16">
     <StackPanel Spacing="11">
       <Grid ColumnDefinitions="Auto,*">
         <Border Width="38" Height="38" CornerRadius="10" Background="{DynamicResource AvatarBg}"

@@ -64,6 +64,50 @@ public sealed class ProjectRulesTests : IDisposable
         Assert.Contains("提交前必须运行测试", system);
     }
 
+    [Fact]
+    public void Reads_parent_directories_before_the_current_directory()
+    {
+        var repo = Path.Combine(_root, "repo");
+        var app = Path.Combine(repo, "src", "app");
+        Directory.CreateDirectory(app);
+        File.WriteAllText(Path.Combine(repo, "AGENTS.md"), "仓库级：提交前跑 make check");
+        File.WriteAllText(Path.Combine(app, "CLAUDE.md"), "子目录：只修改 src/app 下的文件");
+
+        var rules = ProjectRules.Build(app);
+
+        Assert.Contains("仓库级", rules);
+        Assert.Contains("子目录", rules);
+        Assert.True(rules.IndexOf("仓库级", StringComparison.Ordinal) <
+                    rules.IndexOf("子目录", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Agents_override_replaces_agents_in_the_same_directory()
+    {
+        File.WriteAllText(Path.Combine(_root, "AGENTS.md"), "旧规则：依赖使用 npm 安装");
+        File.WriteAllText(Path.Combine(_root, "AGENTS.override.md"), "本地覆盖：依赖使用 pnpm 安装");
+
+        var rules = ProjectRules.Build(_root);
+
+        Assert.Contains("使用 pnpm", rules);
+        Assert.DoesNotContain("使用 npm", rules);
+    }
+
+    [Fact]
+    public void Reads_rules_directories_and_strips_maintainer_comments()
+    {
+        var rulesDirectory = Path.Combine(_root, ".claude", "rules");
+        Directory.CreateDirectory(rulesDirectory);
+        File.WriteAllText(
+            Path.Combine(rulesDirectory, "style.md"),
+            "<!-- 维护者备注，不该进入上下文 -->\n缩进使用 4 空格。");
+
+        var rules = ProjectRules.Build(_root);
+
+        Assert.Contains("4 空格", rules);
+        Assert.DoesNotContain("维护者备注", rules);
+    }
+
     public void Dispose()
     {
         try

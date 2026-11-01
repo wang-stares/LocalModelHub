@@ -9,7 +9,7 @@ public sealed class AgentModeTests
     [Fact]
     public void Plan_mode_has_read_only_tools()
     {
-        Assert.Equal(["list_files", "search_code", "find_symbols", "read_file", "remember"],
+        Assert.Equal(["list_files", "search_code", "find_symbols", "read_file", "remember", "recall_memory"],
             WorkspaceAgent.ToolNames(AgentMode.Plan));
     }
 
@@ -29,7 +29,7 @@ public sealed class AgentModeTests
     public void Goal_mode_has_full_tool_set_and_chat_has_none()
     {
         Assert.Equal(
-            ["list_files", "search_code", "find_symbols", "read_file", "write_file", "replace_in_file", "apply_patch", "remember"],
+            ["list_files", "search_code", "find_symbols", "read_file", "write_file", "replace_in_file", "apply_patch", "remember", "recall_memory"],
             WorkspaceAgent.ToolNames(AgentMode.Goal));
         Assert.Empty(WorkspaceAgent.ToolNames(AgentMode.Chat));
     }
@@ -53,5 +53,6 @@ public sealed class AgentModeTests
     public void Memory_tools_can_be_disabled()
     {
         Assert.DoesNotContain("remember", WorkspaceAgent.ToolNames(AgentMode.Goal, allowMemory: false));
+        Assert.DoesNotContain("recall_memory", WorkspaceAgent.ToolNames(AgentMode.Goal, allowMemory: false));
     }
 }

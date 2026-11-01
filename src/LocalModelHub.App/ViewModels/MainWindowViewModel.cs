@@ -103,6 +103,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         });
         _services.CatalogChanged += ReloadCards;
 
+        // 切换工作文件夹后，记忆页要立即展示新项目的记忆（全局层不变）。
+        _services.Workspace.RootChanged += _ => Dispatcher.UIThread.Post(MemoryPage.Refresh);
+
         PageIndex = 0;
         CurrentPage = Dashboard;
         SyncRoute();

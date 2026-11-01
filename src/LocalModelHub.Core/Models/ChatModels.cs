@@ -92,6 +92,9 @@ public sealed class DownloadedModel
     /// <summary>本模型实际占用的文件绝对路径清单，删除时只动这些文件。</summary>
     public IReadOnlyList<string> Files { get; init; } = [];
 
+    /// <summary>全盘搜索后原地引用的外部模型：删除时只移除引用，不删除磁盘文件。</summary>
+    public bool IsExternal { get; init; }
+
     /// <summary>主文件无法按量化 / 分片唯一判定时的说明，例如「自动选择，可手动切换」。</summary>
     public string? SelectionNote { get; init; }
 

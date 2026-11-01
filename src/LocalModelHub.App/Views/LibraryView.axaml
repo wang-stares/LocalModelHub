@@ -50,11 +50,15 @@
         <Button Grid.Column="1" Classes="ghost" Content="刷新"
                 Command="{Binding RefreshModelsCommand}" Margin="0,0,8,0"
                 VerticalAlignment="Center"/>
-        <Button Grid.Column="2" Classes="ghost" Content="打开目录"
+        <Button Grid.Column="2" Classes="ghost" Content="全盘搜索"
+                Command="{Binding FindModelsCommand}" Margin="0,0,8,0"
+                VerticalAlignment="Center"
+                ToolTip.Tip="在所有固定磁盘中查找已下载的 GGUF 模型"/>
+        <Button Grid.Column="3" Classes="ghost" Content="打开目录"
                 Command="{Binding OpenModelsFolderCommand}" VerticalAlignment="Center"/>
       </Grid>
 
-      <Border Classes="glass" CornerRadius="12" Padding="14,12" IsVisible="{Binding IsServerRunning}">
+      <Border Classes="glass" Padding="14,12" IsVisible="{Binding IsServerRunning}">
         <Grid ColumnDefinitions="Auto,*,Auto">
           <Border Width="18" Height="18" CornerRadius="9" Background="{DynamicResource SuccessSoft}"
                   VerticalAlignment="Center">
@@ -73,7 +77,7 @@
       <ItemsControl ItemsSource="{Binding Items}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:LibraryItemViewModel">
-            <Border Classes="card cardHover" Padding="16" Margin="0,0,0,10" CornerRadius="18">
+            <Border Classes="card cardHover" Padding="16" Margin="0,0,0,10">
               <Grid ColumnDefinitions="Auto,*,Auto">
                 <Border Width="42" Height="42" CornerRadius="12" Background="{DynamicResource AvatarBg}"
                         BorderBrush="{DynamicResource AccentSoftHover}" BorderThickness="1">
@@ -96,6 +100,9 @@
                     </Border>
                     <Border Classes="badge fitPerfect" IsVisible="{Binding IsRunning}">
                       <TextBlock Text="运行中"/>
+                    </Border>
+                    <Border Classes="badge" IsVisible="{Binding IsExternal}">
+                      <TextBlock Text="外部引用"/>
                     </Border>
                   </StackPanel>
                   <TextBlock Text="{Binding StatusText}" Classes="muted" FontSize="11.5"/>
@@ -132,7 +139,7 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
-      <Border Classes="card" Padding="40,36" CornerRadius="18" IsVisible="{Binding IsEmpty}">
+      <Border Classes="card" Padding="40,36" IsVisible="{Binding IsEmpty}">
         <StackPanel Spacing="10" HorizontalAlignment="Center">
           <Border Width="46" Height="46" CornerRadius="13" Background="{DynamicResource CardSunkenBg}"
                   HorizontalAlignment="Center">

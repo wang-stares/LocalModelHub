@@ -1,0 +1,80 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LocalModelHub.App.ViewModels"
+        x:Class="LocalModelHub.App.Views.ModelFinderWindow"
+        x:DataType="vm:ModelFinderViewModel"
+        Title="全盘搜索本地模型"
+        Width="860"
+        Height="620"
+        MinWidth="680"
+        MinHeight="460"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBg}"
+        ShowInTaskbar="False">
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="24,20,24,18">
+    <StackPanel Spacing="4">
+      <TextBlock Text="全盘搜索本地模型" Classes="h2"/>
+      <TextBlock Text="在所有固定磁盘中查找已下载的 GGUF 模型。只读扫描，不会修改、移动或删除任何文件；加入库后仍是原地引用。"
+                 Classes="caption"
+                 TextWrapping="Wrap"/>
+    </StackPanel>
+
+    <Border Grid.Row="1" Classes="card" Padding="14,10" Margin="0,14,0,10">
+      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
+        <StackPanel Spacing="7">
+          <TextBlock Text="{Binding StatusText}" Classes="muted" FontSize="12" TextWrapping="Wrap"/>
+          <ProgressBar IsIndeterminate="True" Height="4" IsVisible="{Binding IsScanning}"/>
+        </StackPanel>
+        <TextBlock Grid.Column="1" Text="{Binding CountText}" Classes="caption"
+                   VerticalAlignment="Center" Margin="8,0,0,0"/>
+        <Button Grid.Column="2" Classes="ghost" Content="取消"
+                Command="{Binding CancelCommand}"
+                IsEnabled="{Binding IsScanning}"
+                VerticalAlignment="Center"/>
+      </Grid>
+    </Border>
+
+    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+      <ItemsControl ItemsSource="{Binding Items}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ModelFinderItem">
+            <Border Classes="card" Padding="14,12" Margin="0,0,0,8">
+              <Grid ColumnDefinitions="*,Auto,Auto">
+                <StackPanel Spacing="4">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{Binding Name}" Classes="h3"
+                               TextTrimming="CharacterEllipsis" MaxWidth="420"/>
+                    <TextBlock Text="{Binding Detail}" Classes="caption" VerticalAlignment="Center"/>
+                  </StackPanel>
+                  <TextBlock Text="{Binding PathText}" Classes="caption"
+                             TextTrimming="CharacterEllipsis" MaxWidth="540"
+                             ToolTip.Tip="{Binding PathText}"/>
+                </StackPanel>
+                <Button Grid.Column="1" Classes="ghost" Content="打开位置"
+                        Command="{Binding RevealCommand}"
+                        VerticalAlignment="Center" Margin="10,0,0,0"/>
+                <Button Grid.Column="2" Classes="primary" Content="{Binding AddText}"
+                        Command="{Binding AddCommand}"
+                        IsEnabled="{Binding !Added}"
+                        MinWidth="118"
+                        VerticalAlignment="Center"
+                        Margin="8,0,0,0"/>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+    <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" Margin="0,12,0,0">
+      <TextBlock Text="扫描只读取文件头，不会占用大量磁盘 IO；可随时取消。"
+                 Classes="caption" VerticalAlignment="Center"/>
+      <Button Grid.Column="1" Classes="ghost" Content="重新扫描"
+              Command="{Binding ScanCommand}"
+              IsEnabled="{Binding !IsScanning}"
+              Margin="0,0,8,0"/>
+      <Button Grid.Column="2" Classes="primary" Content="关闭"
+              Click="OnClose" MinWidth="88"/>
+    </Grid>
+  </Grid>
+</Window>

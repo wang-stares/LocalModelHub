@@ -65,7 +65,7 @@ public sealed class BackupService
             ["appVersion"] = appVersion,
             ["settings"] = ReadNode(SettingsFile),
             ["customModels"] = ReadNode(CustomModelsFile),
-            ["memory"] = ReadNode(MemoryFile),
+            ["memory"] = ReadMemoryNode(),
             ["sessions"] = ReadNode(SessionsFile),
             ["knowledge"] = ReadNode(KnowledgeFile)
         };
@@ -212,6 +212,14 @@ public sealed class BackupService
         Reset(settings.ModelsDirectory, defaults.ModelsDirectory, value => settings.ModelsDirectory = value);
         Reset(settings.WorkspaceDirectory, defaults.WorkspaceDirectory, value => settings.WorkspaceDirectory = value);
         Reset(settings.LastModelPath, defaults.LastModelPath, value => settings.LastModelPath = value);
+
+        // 外部引用是另一台机器上的绝对路径，导入后基本都失效，直接清空。
+        if (settings.ExternalModelPaths.Count > 0)
+        {
+            settings.ExternalModelPaths.Clear();
+            reset++;
+        }
+
         return reset;
     }
 
@@ -296,6 +304,47 @@ public sealed class BackupService
         catch (JsonException)
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// 导出记忆快照：合并全局记忆与所有项目记忆；尚未迁移到两层目录时回退到旧版 memory.json。
+    /// 备份格式保持不变，导入仍写入旧版单文件，下次启动由 MemoryManager 自动拆分到两层。
+    /// </summary>
+    private JsonNode? ReadMemoryNode()
+    {
+        var entries = new List<MemoryEntry>();
+        var memoryDirectory = Path.Combine(_root, "memory");
+        var globalFile = Path.Combine(memoryDirectory, "global.json");
+        entries.AddRange(ReadEntries(globalFile));
+
+        var projectDirectory = Path.Combine(memoryDirectory, "projects");
+        if (Directory.Exists(projectDirectory))
+        {
+            foreach (var file in Directory.EnumerateFiles(projectDirectory, "*.json"))
+            {
+                entries.AddRange(ReadEntries(file));
+            }
+        }
+
+        if (entries.Count == 0)
+        {
+            return ReadNode(MemoryFile);
+        }
+
+        return JsonNode.Parse(JsonSerializer.Serialize(entries, JsonOptions));
+    }
+
+    private static List<MemoryEntry> ReadEntries(string path)
+    {
+        try
+        {
+            if (!File.Exists(path)) return [];
+            return JsonSerializer.Deserialize<List<MemoryEntry>>(File.ReadAllText(path), JsonOptions) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
         }
     }
 

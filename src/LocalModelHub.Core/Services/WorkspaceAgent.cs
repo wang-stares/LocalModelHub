@@ -49,8 +49,12 @@ public sealed class WorkspaceAgent
         Schema("""{"type":"object","properties":{"patch":{"type":"string","description":"统一 diff 文本，包含 --- a/...、+++ b/... 与 @@ -1,3 +1,3 @@ 头"}},"required":["patch"]}"""));
 
     private static readonly ToolDefinition RememberTool = new(
-        "remember", "把用户偏好或重要事实写入本机长期记忆，之后的对话可以参考。",
-        Schema("""{"type":"object","properties":{"text":{"type":"string","description":"要记住的事实或偏好，尽量简洁"}},"required":["text"]}"""));
+        "remember", "把用户偏好或项目事实写入本机长期记忆，之后的对话与编辑都会参考；了解到了就主动记录，不要等用户要求。",
+        Schema("""{"type":"object","properties":{"text":{"type":"string","description":"要记住的信息，简洁陈述句"},"kind":{"type":"string","enum":["user","project"],"description":"user=用户偏好 / 背景，project=当前工作文件夹的事实与约定"}},"required":["text"]}"""));
+
+    private static readonly ToolDefinition RecallMemoryTool = new(
+        "recall_memory", "按关键词查询本机长期记忆（全局偏好 + 当前项目事实）；不确定历史约定、构建命令或用户偏好时先查，避免凭猜测。",
+        Schema("""{"type":"object","properties":{"query":{"type":"string","description":"关键词或问题片段"},"tier":{"type":"string","enum":["all","user","project"],"description":"默认 all；user=全局偏好，project=当前工作文件夹"}},"required":["query"]}"""));
 
     private static readonly ToolDefinition RunCommandTool = new(
         "run_command", "运行白名单内的构建 / 测试命令（dotnet test、npm test、pytest、go test、cargo test 等），工作目录为工作文件夹。",
@@ -132,7 +136,10 @@ public sealed class WorkspaceAgent
 
         if (_allowMemoryWrites && _mode != AgentMode.Chat)
         {
-            systemPrompt += "\n如果用户表达了长期偏好或重要事实，可调用 remember 工具保存到长期记忆。";
+            systemPrompt += "\n\n记忆：读取和修改文件时了解到的稳定信息——用户偏好、项目技术栈、构建 / 测试命令、目录与代码约定——" +
+                            "主动用 remember 工具保存（用户偏好 kind=user，项目事实 kind=project），不要等用户要求；" +
+                            "不确定历史约定或之前的决策时，先用 recall_memory 按关键词查询，不要凭猜测补全；" +
+                            "只记可长期复用的事实，不要记录一次性任务细节。";
         }
 
         // 项目规约放在系统提示末尾（紧邻对话，注意力更高），总长不超过 800 token。
@@ -479,7 +486,12 @@ public sealed class WorkspaceAgent
         };
 
         var tools = new List<ToolDefinition>(baseTools);
-        if (allowMemory && mode != AgentMode.Chat) tools.Add(RememberTool);
+        if (allowMemory && mode != AgentMode.Chat)
+        {
+            tools.Add(RememberTool);
+            tools.Add(RecallMemoryTool);
+        }
+
         if (allowCommands && mode == AgentMode.Goal) tools.Add(RunCommandTool);
         return tools;
     }
@@ -529,9 +541,16 @@ public sealed class WorkspaceAgent
                     return ("错误：记忆写入已在设置中关闭。", "长期记忆 · 已关闭", false);
                 }
 
-                var remembered = Remember(GetString(root, "text"));
+                var remembered = Remember(GetString(root, "text"), GetString(root, "kind"));
                 return (remembered.Success ? remembered.Text : $"错误：{remembered.Text}",
                     $"长期记忆 · {FirstLine(remembered.Text)}", remembered.Success);
+            }
+
+            if (call.Name == "recall_memory")
+            {
+                var recalled = Recall(GetString(root, "query"), GetString(root, "tier"));
+                return (recalled.Success ? recalled.Text : $"错误：{recalled.Text}",
+                    $"记忆查询 · {FirstLine(recalled.Text, 80)}", recalled.Success);
             }
 
             if (call.Name == "run_command")
@@ -716,18 +735,53 @@ public sealed class WorkspaceAgent
         return $"{common}\n\n{body}";
     }
 
-    private WorkspaceResult Remember(string? text)
+    private WorkspaceResult Remember(string? text, string? kind)
     {
         if (string.IsNullOrWhiteSpace(text)) return new(false, "记忆内容不能为空");
 
         try
         {
-            var entry = _memory.Add(text, "model");
-            return new(true, $"已写入长期记忆：{entry.Text}");
+            var isProject = (kind ?? "").Trim().ToLowerInvariant() is "project" or "项目" or "项目事实";
+            var entry = _memory.Upsert(
+                text,
+                "model",
+                isProject ? MemoryEntry.KindProject : MemoryEntry.KindUser,
+                isProject ? _workspace.Root ?? "" : "").Entry;
+            return new(true, $"已写入长期记忆（{(isProject ? "项目" : "用户")}）：{entry.Text}");
         }
         catch (Exception ex)
         {
             return new(false, $"写入记忆失败：{ex.Message}");
+        }
+    }
+
+    /// <summary>按关键词召回记忆；可选只看全局偏好或当前项目事实。只读，不写任何内容。</summary>
+    private WorkspaceResult Recall(string? query, string? tier)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return new(false, "查询内容不能为空");
+
+        try
+        {
+            var entries = _memory.Search(query.Trim(), 6, scope: _workspace.Root ?? "");
+            var filter = (tier ?? "").Trim().ToLowerInvariant();
+            MemoryTier? target = filter is "user" or "global" or "偏好"
+                ? MemoryTier.Global
+                : filter is "project" or "项目"
+                    ? MemoryTier.Project
+                    : null;
+
+            var hits = target is null
+                ? entries
+                : entries.Where(entry => entry.Tier == target.Value).ToArray();
+            if (hits.Count == 0) return new(true, "没有找到相关记忆。");
+
+            var text = string.Join('\n', hits.Select(entry =>
+                $"- [{(entry.IsProject ? "项目" : "全局")}] {entry.Text}"));
+            return new(true, $"相关记忆（{hits.Count} 条）：\n{text}");
+        }
+        catch (Exception ex)
+        {
+            return new(false, $"查询记忆失败：{ex.Message}");
         }
     }
 

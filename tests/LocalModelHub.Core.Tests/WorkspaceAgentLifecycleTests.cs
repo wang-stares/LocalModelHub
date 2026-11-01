@@ -343,12 +343,44 @@ public sealed class WorkspaceAgentLifecycleTests : IDisposable
                 [ChatMessage.User("取消测试")], null, null, cancellation.Token));
     }
 
+    [Fact]
+    public async Task Recall_memory_reads_entries_without_writing()
+    {
+        _memory.Upsert("项目使用 dotnet build 构建桌面界面", "model", MemoryEntry.KindProject, _root);
+        _memory.Upsert("回答优先使用中文", "manual");
+
+        var act = 0;
+        _chat.Handler = call =>
+        {
+            if (call.MaxTokens == 512) return Text("1. 查询记忆\n2. 回答");
+            if (call.MaxTokens == 700) return Text("""{"pass": true, "summary": "完成"}""");
+            return act++ switch
+            {
+                0 => Tool("recall_memory", """{"query":"构建"}"""),
+                _ => Text("构建命令是 dotnet build")
+            };
+        };
+
+        var result = await Agent(AgentMode.Goal, allowMemoryWrites: true).RunAsync(
+            [ChatMessage.User("这个项目怎么构建？")], null, null, CancellationToken.None);
+
+        Assert.Contains(result.Activities, activity => activity.Name == "recall_memory");
+        var observation = _chat.Calls
+            .SelectMany(call => call.Messages)
+            .Last(message => message.Role == "tool");
+        Assert.Contains("dotnet build", observation.Content);
+
+        // 只读查询不写入任何记忆。
+        Assert.Equal(2, _memory.Entries.Count);
+    }
+
     private WorkspaceAgent Agent(
         AgentMode mode,
         bool allowCommands = false,
-        ICommandRunner? commands = null) =>
+        ICommandRunner? commands = null,
+        bool allowMemoryWrites = false) =>
         new(_chat, _workspace, _memory, mode,
-            allowMemoryWrites: false, allowCommands: allowCommands, commands: commands);
+            allowMemoryWrites: allowMemoryWrites, allowCommands: allowCommands, commands: commands);
 
     private static ChatTurn Text(string content) => new() { Content = content };
 

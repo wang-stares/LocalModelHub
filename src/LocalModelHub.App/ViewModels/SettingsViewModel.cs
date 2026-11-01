@@ -43,8 +43,24 @@ public sealed partial class SettingsViewModel : ObservableObject
     public string[] DownloadModes { get; } = ["自动（多源）", "手动选择"];
     public string[] Variants { get; } = ["自动（按显卡选择）", "CUDA（NVIDIA）", "Vulkan（AMD / Intel）", "CPU"];
     public string[] ThemeOptions { get; } = ["跟随系统", "浅色", "深色"];
+    public string[] ShellStyleOptions { get; } = ["Miuix", "Windows 11", "Windows 10", "Windows 7"];
+
+    /// <summary>界面主题的持久化取值，与 ShellStyleOptions 顺序一一对应。</summary>
+    private static readonly string[] ShellStyleKeys = ["miuix", "win11", "win10", "win7"];
+
+    public static int ShellStyleIndexOf(string? value) => value switch
+    {
+        "windows" or "win11" => 1,
+        "win10" or "windows10" => 2,
+        "win7" or "windows7" => 3,
+        _ => 0
+    };
+
+    public static string ShellStyleKeyOf(int index) =>
+        index >= 0 && index < ShellStyleKeys.Length ? ShellStyleKeys[index] : "miuix";
 
     [ObservableProperty] private int _themeIndex;
+    [ObservableProperty] private int _shellStyleIndex;
     [ObservableProperty] private int _downloadModeIndex;
     [ObservableProperty] private bool? _downloadModelScope;
     [ObservableProperty] private bool? _downloadHuggingFace;
@@ -108,6 +124,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     private static readonly IReadOnlyList<ReleaseNote> Releases = ReleaseNotes.Load();
 
     public string VersionText => $"星坞 {AppInfo.Version}";
+    public string KernelVersionText =>
+        $"当前版本 v{AppInfo.Version} · 内核 llama.cpp / Vulkan，支持 NVIDIA、AMD、Intel 显卡。";
     public string LatestReleaseText => Releases.Count == 0 ? "" : $"{Releases[0].Version} · {Releases[0].Date}";
     public IReadOnlyList<ReleaseLine> LatestReleaseLines { get; } =
         Releases.Count == 0 ? [] : Releases[0].Flatten().ToList();
@@ -659,6 +677,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         _ => "system"
     });
 
+    partial void OnShellStyleIndexChanged(int value) => App.ApplyShellStyle(ShellStyleKeyOf(value));
+
     [RelayCommand]
     private async Task BrowseModelsAsync()
     {
@@ -757,6 +777,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             2 => "dark",
             _ => "system"
         };
+        settings.ShellStyle = ShellStyleKeyOf(ShellStyleIndex);
         settings.DownloadAuto = DownloadModeIndex == 0;
         settings.AutoSwitchSource = AutoSwitchSource != false;
         var providers = new List<string>();
@@ -882,6 +903,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             "dark" => 2,
             _ => 0
         };
+        ShellStyleIndex = ShellStyleIndexOf(settings.ShellStyle);
         DownloadModeIndex = settings.DownloadAuto ? 0 : 1;
         DownloadModelScope = settings.DownloadProviders.Count == 0 ||
                              settings.DownloadProviders.Contains("ModelScope");

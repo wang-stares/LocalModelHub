@@ -16,7 +16,7 @@
                  TextWrapping="Wrap"/>
     </StackPanel>
 
-    <Border Classes="card" CornerRadius="18" Padding="18">
+    <Border Classes="card" Padding="18">
       <Grid ColumnDefinitions="120,*"
             RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
             ColumnSpacing="12"

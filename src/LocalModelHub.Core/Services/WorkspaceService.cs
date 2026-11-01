@@ -60,6 +60,9 @@ public sealed class WorkspaceService : IWorkspace
 
     public bool IsConfigured => _root is not null && Directory.Exists(_root);
 
+    /// <summary>工作文件夹变化（切换目录或清空）：记忆层据此切换项目记忆上下文。</summary>
+    public event Action<string?>? RootChanged;
+
     public void SetRoot(string? path)
     {
         _root = null;
@@ -82,6 +85,8 @@ public sealed class WorkspaceService : IWorkspace
             _indexBytes = 0;
             _indexRoot = null;
         }
+
+        RootChanged?.Invoke(_root);
     }
 
     public WorkspaceResult ListFiles(string? relativePath)

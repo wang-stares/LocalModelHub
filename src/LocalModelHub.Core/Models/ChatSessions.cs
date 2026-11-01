@@ -8,6 +8,8 @@ public sealed class ChatSession
     public string ModelName { get; set; } = "";
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    /// <summary>最近一次闲时记忆整理的时间；有更新的会话（UpdatedAt 更晚）会被重新挑选。</summary>
+    public DateTime? MemoryDigestedAt { get; set; }
     public List<StoredChatMessage> Messages { get; set; } = [];
 }
 

@@ -19,7 +19,7 @@ ManifestSupportedOS all
 !define APP_NAME      "星坞"
 !define APP_NAME_CN   "星坞 · 本地模型启动器"
 !define APP_EXE       "LocalModelHub.exe"
-!define APP_VERSION   "0.35.0"
+!define APP_VERSION   "0.36.0"
 !define APP_PUBLISHER "星坞"
 !define APP_ID        "LocalModelHub"
 !define UNINST_KEY    "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
@@ -28,7 +28,7 @@ ManifestSupportedOS all
 
 ; ---------------------------- 基本信息 ----------------------------
 Name "${APP_NAME} ${APP_VERSION}"
-OutFile "../../LocalModelHub-Setup-${APP_VERSION}.exe"
+OutFile "..\dist\LocalModelHub-Setup-${APP_VERSION}.exe"
 InstallDir "$LOCALAPPDATA\Programs\${APP_ID}"
 InstallDirRegKey HKCU "Software\${APP_ID}" "InstallDir"
 ; 以当前用户可获得的最高权限运行：管理员账户下自动提权，确保安装前能关闭正在运行的星坞

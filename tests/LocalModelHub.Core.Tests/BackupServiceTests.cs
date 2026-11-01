@@ -187,6 +187,76 @@ public sealed class BackupServiceTests
         }
     }
 
+    [Fact]
+    public void Cross_machine_import_drops_external_model_references()
+    {
+        var root = TempDirectory();
+        try
+        {
+            var service = new BackupService(root);
+            var backup = Path.Combine(root, "from-other-pc.json");
+            File.WriteAllText(backup, $$"""
+                {
+                  "format": "LocalModelHub.Backup",
+                  "version": {{BackupService.FormatVersion}},
+                  "machineFingerprint": "OTHER-PC",
+                  "settings": {
+                    "ServerPort": 9099,
+                    "ExternalModelPaths": [ "D:\\models\\Qwen3-8B-Q4_K_M.gguf" ]
+                  }
+                }
+                """);
+
+            var result = service.Import(backup, "THIS-PC");
+
+            Assert.True(result.MachineBoundReset);
+            var settings = ReloadSettings(service);
+            Assert.Empty(settings.ExternalModelPaths);
+            Assert.Equal(8090, settings.ServerPort);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Same_machine_import_keeps_external_model_references()
+    {
+        var root = TempDirectory();
+        try
+        {
+            var service = new BackupService(root);
+            var backup = Path.Combine(root, "same-pc.json");
+            File.WriteAllText(backup, $$"""
+                {
+                  "format": "LocalModelHub.Backup",
+                  "version": {{BackupService.FormatVersion}},
+                  "machineFingerprint": "THIS-PC",
+                  "settings": {
+                    "ExternalModelPaths": [ "D:\\models\\Qwen3-8B-Q4_K_M.gguf" ]
+                  }
+                }
+                """);
+
+            var result = service.Import(backup, "THIS-PC");
+
+            Assert.False(result.MachineBoundReset);
+            Assert.Equal(
+                new[] { "D:\\models\\Qwen3-8B-Q4_K_M.gguf" },
+                ReloadSettings(service).ExternalModelPaths);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static AppSettings ReloadSettings(BackupService service) =>
+        JsonSerializer.Deserialize<AppSettings>(
+            File.ReadAllText(service.SettingsFile),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+
     private static string TempDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), "lmh-backup-" + Guid.NewGuid().ToString("N"));

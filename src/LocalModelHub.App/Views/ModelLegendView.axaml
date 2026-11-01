@@ -8,7 +8,7 @@
                  FontWeight="SemiBold"/>
     </Expander.Header>
 
-    <Border Classes="card" Padding="16,14" CornerRadius="14" Margin="0,8,0,0">
+    <Border Classes="card" Padding="16,14" Margin="0,8,0,0">
       <StackPanel Spacing="7">
         <Grid ColumnDefinitions="92,*" Margin="0,0,0,2">
           <TextBlock Text="来源" FontWeight="SemiBold" FontSize="12"/>

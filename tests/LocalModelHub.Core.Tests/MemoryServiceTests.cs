@@ -1,3 +1,5 @@
+using System.Text.Json;
+using LocalModelHub.Core.Models;
 using LocalModelHub.Core.Services;
 using Xunit;
 
@@ -150,6 +152,114 @@ public sealed class MemoryServiceTests
             Assert.True(memory.UpdateText(entry.Id, "新内容"));
             Assert.Equal("新内容", memory.Entries[0].Text);
             Assert.False(memory.UpdateText(entry.Id, "  "));
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Manual_entries_never_expire_and_manual_wins_over_automatic_rewrites()
+    {
+        var path = TempPath();
+        try
+        {
+            var memory = new MemoryService(path, ttlDays: 30);
+            var manual = memory.Upsert("用户偏好：回答使用中文", "manual", MemoryEntry.KindUser, "").Entry;
+            var auto = memory.Upsert("项目约定：先跑测试再提交", "model", MemoryEntry.KindProject, @"C:\a").Entry;
+
+            Assert.Null(manual.ExpiresAt);
+            Assert.NotNull(auto.ExpiresAt);
+
+            // 自动写入命中用户手写条目：只刷新时间，保留原话与永久属性。
+            var rewrite = memory.Upsert("用户偏好：回答使用中文。", "model", MemoryEntry.KindUser, "");
+            Assert.False(rewrite.IsNew);
+            Assert.Equal(manual.Id, rewrite.Entry.Id);
+            Assert.Equal(MemoryService.ManualSource, rewrite.Entry.Source);
+            Assert.Equal("用户偏好：回答使用中文", rewrite.Entry.Text);
+            Assert.Null(rewrite.Entry.ExpiresAt);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Capacity_eviction_removes_automatic_entries_before_manual_ones()
+    {
+        var path = TempPath();
+        try
+        {
+            var memory = new MemoryService(path, maxEntries: 3);
+            memory.Add("回答优先使用中文");
+            memory.Add("代码注释一律使用英文");
+            memory.Add("项目使用 dotnet build 构建", "model");
+            memory.Add("提交前运行 dotnet test 验证", "model");
+
+            Assert.Equal(3, memory.Entries.Count);
+            Assert.Contains(memory.Entries, entry => entry.Text == "回答优先使用中文");
+            Assert.Contains(memory.Entries, entry => entry.Text == "代码注释一律使用英文");
+            Assert.Contains(memory.Entries, entry => entry.Text == "提交前运行 dotnet test 验证");
+            Assert.DoesNotContain(memory.Entries, entry => entry.Text == "项目使用 dotnet build 构建");
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Consolidate_merges_similar_automatic_entries_and_keeps_manual_ones()
+    {
+        var path = TempPath();
+        try
+        {
+            var now = DateTime.Now;
+            var entries = new[]
+            {
+                new MemoryEntry
+                {
+                    Id = "older",
+                    Text = "项目使用 dotnet build 构建桌面界面",
+                    Source = "model",
+                    Kind = MemoryEntry.KindProject,
+                    Scope = @"C:\a",
+                    CreatedAt = now.AddDays(-2),
+                    UpdatedAt = now.AddDays(-2)
+                },
+                new MemoryEntry
+                {
+                    Id = "newer",
+                    Text = "项目使用 dotnet build 构建桌面界面。",
+                    Source = "model",
+                    Kind = MemoryEntry.KindProject,
+                    Scope = @"C:\a",
+                    CreatedAt = now.AddDays(-1),
+                    UpdatedAt = now.AddDays(-1)
+                },
+                new MemoryEntry
+                {
+                    Id = "manual",
+                    Text = "回答优先使用中文",
+                    Source = "manual",
+                    Kind = MemoryEntry.KindUser,
+                    CreatedAt = now.AddDays(-3),
+                    UpdatedAt = now.AddDays(-3)
+                }
+            };
+            File.WriteAllText(path, JsonSerializer.Serialize(entries));
+
+            var memory = new MemoryService(path);
+            memory.Load();
+            var removed = memory.Consolidate();
+
+            Assert.Equal(1, removed);
+            Assert.Equal(2, memory.Entries.Count);
+            Assert.Contains(memory.Entries, entry => entry.Id == "newer");
+            Assert.DoesNotContain(memory.Entries, entry => entry.Id == "older");
+            Assert.Contains(memory.Entries, entry => entry.Id == "manual");
         }
         finally
         {

@@ -170,6 +170,11 @@ public sealed partial class ChatViewModel : ObservableObject
     private CancellationTokenSource? _cancellation;
     private bool _suppressSessionChange;
     private bool _isWaking;
+    private MemoryDistiller? _memoryDistiller;
+    /// <summary>距上一次模型蒸馏过去的轮数：用于节流，避免每轮回答后都多一次模型调用。</summary>
+    private int _turnsSinceDistill;
+    /// <summary>闲时记忆整理正在跑时的取消源：用户回来发消息就取消，避免和会话请求抢同一个模型。</summary>
+    private CancellationTokenSource? _idleDigestCts;
     /// <summary>隐式授权只对当前消息生效：记录已确认授权的用户消息下标（-1 表示没有）。</summary>
     private int _implicitGrantMessageIndex = -1;
 
@@ -469,11 +474,13 @@ public sealed partial class ChatViewModel : ObservableObject
         }
     }
 
-    /// <summary>空闲休眠触发：停止 llama-server，输入时再唤醒。</summary>
+    /// <summary>空闲休眠触发：先翻阅历史会话补齐记忆，再停止 llama-server，输入时再唤醒。</summary>
     private void OnIdleSlept()
     {
         Dispatcher.UIThread.Post(async () =>
         {
+            await DigestIdleMemoryAsync();
+
             try
             {
                 if (_services.Server.IsRunning) await _services.Server.StopAsync();
@@ -485,6 +492,65 @@ public sealed partial class ChatViewModel : ObservableObject
 
             RefreshServerState();
         });
+    }
+
+    /// <summary>
+    /// 闲时自动记忆：翻阅尚未整理的历史会话，把跨会话仍有用的用户偏好写入全局记忆，
+    /// 然后整理一次（合并重复、清理过期）。模型不可用时只用规则提取；失败不阻断休眠。
+    /// </summary>
+    private async Task DigestIdleMemoryAsync()
+    {
+        if (!CanAutoDistill) return;
+
+        var pending = IdleMemoryDigest.SelectPending(_services.ChatSessions.Sessions);
+        if (pending.Count == 0) return;
+
+        var cancellation = new CancellationTokenSource();
+        _idleDigestCts = cancellation;
+        try
+        {
+            var complete = _services.RemoteApi.IsActive || _services.Server.IsRunning
+                ? (Func<IReadOnlyList<ChatMessage>, int, CancellationToken, Task<string>>?)CompleteForMemoryAsync
+                : null;
+            var digest = new IdleMemoryDigest(_services.Memory, complete);
+            var result = await digest.DigestAsync(pending, cancellation.Token);
+
+            foreach (var session in pending)
+            {
+                session.MemoryDigestedAt = DateTime.Now;
+            }
+
+            _services.ChatSessions.Save();
+            _services.Memory.Consolidate();
+
+            if (result.HasChanges) KnowledgeStatus = result.StatusText;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            // 用户回来发消息：放弃本轮整理，会话不标记，下次闲时重试。
+        }
+        catch
+        {
+            // 闲时整理失败不影响休眠
+        }
+        finally
+        {
+            _idleDigestCts = null;
+            cancellation.Dispose();
+        }
+    }
+
+    /// <summary>取消正在进行的闲时整理；独立请求被中止，不影响会话历史。</summary>
+    private void CancelIdleDigest()
+    {
+        try
+        {
+            _idleDigestCts?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 整理刚好结束并释放，忽略
+        }
     }
 
     /// <summary>用最近一次启动的模型重新拉起推理服务。</summary>
@@ -537,8 +603,16 @@ public sealed partial class ChatViewModel : ObservableObject
     private async Task<(string Text, int KnowledgeHits, IReadOnlyList<string> SkillIds)> BuildContextAdditionsAsync(
         string query)
     {
+        // 项目自带的 AGENTS.md / CLAUDE.md / 规则目录：只读参考，随工作文件夹切换。
+        var rulesContext = _services.Workspace.IsConfigured
+            ? ProjectRules.Build(_services.Workspace.Root)
+            : "";
         var memoryContext = _services.Settings.MemoryEnabled
-            ? _services.Memory.BuildContext(query)
+            ? _services.Memory.BuildContext(
+                query,
+                scope: _services.Workspace.IsConfigured ? _services.Workspace.Root : "",
+                // Agent 模式才有 recall_memory 工具；普通对话不提示，避免模型调用不存在的工具。
+                exposeRecallHint: ModeIndex > 0 && _services.Settings.MemoryAllowModelWrites)
             : "";
         var knowledgeContext = _services.Settings.KnowledgeEnabled
             ? await _services.Knowledge.BuildContextAsync(
@@ -550,7 +624,7 @@ public sealed partial class ChatViewModel : ObservableObject
             ? _services.Skills.SelectContext(query)
             : SkillContext.Empty;
         var customPrompt = _services.Settings.SystemPrompt.Trim();
-        var text = string.Join("\n\n", new[] { customPrompt, memoryContext, skillContext.Text, knowledgeContext.Text }
+        var text = string.Join("\n\n", new[] { customPrompt, rulesContext, memoryContext, skillContext.Text, knowledgeContext.Text }
             .Where(part => !string.IsNullOrWhiteSpace(part)));
         return (text, knowledgeContext.Hits.Count, skillContext.SkillIds);
     }
@@ -560,6 +634,8 @@ public sealed partial class ChatViewModel : ObservableObject
     {
         var text = Input.Trim();
         if (text.Length == 0 || IsStreaming) return;
+
+        CancelIdleDigest();
 
         var wantsFiles = FileRequestDetector.Matches(text);
         if (ModeIndex == 0 && !HasWorkspace && wantsFiles)
@@ -695,6 +771,105 @@ public sealed partial class ChatViewModel : ObservableObject
         return (count, conflicts.DistinctBy(entry => entry.Id).ToArray());
     }
 
+    /// <summary>模型自主记忆：回答结束后再让模型总结这轮了解到的用户 / 项目信息，不需要用户说「记住」。</summary>
+    private bool CanAutoDistill =>
+        _services.Settings.AutoMemoryEnabled &&
+        _services.Settings.MemoryAutoDistill &&
+        _services.Settings.MemoryAllowModelWrites;
+
+    private MemoryDistiller Distiller =>
+        _memoryDistiller ??= new MemoryDistiller(_services.Memory, CompleteForMemoryAsync);
+
+    /// <summary>记忆蒸馏用的短调用：本地模型走约束 JSON，外部 API 走流式拼接。</summary>
+    private async Task<string> CompleteForMemoryAsync(
+        IReadOnlyList<ChatMessage> messages,
+        int maxTokens,
+        CancellationToken cancellationToken)
+    {
+        if (_services.RemoteApi.IsActive)
+        {
+            var builder = new StringBuilder();
+            await foreach (var chunk in _services.RemoteApi.ChatStreamAsync(
+                               messages,
+                               new ChatOptions(0.2, 0.9, maxTokens),
+                               cancellationToken))
+            {
+                if (!string.IsNullOrEmpty(chunk.Content)) builder.Append(chunk.Content);
+            }
+
+            return builder.ToString();
+        }
+
+        var turn = await _services.Server.ChatAsync(
+            messages,
+            null,
+            maxTokens,
+            new ChatRequestOptions(
+                JsonMode: true,
+                JsonSchema: MemoryDistiller.JsonSchema,
+                Temperature: 0.2),
+            cancellationToken);
+        return turn.Content;
+    }
+
+    /// <summary>
+    /// 蒸馏节流：本轮有文件动作（最可能产生项目事实）、用户明确给出偏好信号，或连续 3 轮未提炼时才跑一次模型；
+    /// 用户说「记住 / 以后」这类明确要求时，发送阶段已由规则提取即时写入，不依赖这里。
+    /// </summary>
+    private bool ShouldDistill(string userText, IReadOnlyList<string> activities)
+    {
+        _turnsSinceDistill++;
+        var signal = activities.Count > 0 ||
+                     userText.Length >= 80 ||
+                     userText.Contains("记住", StringComparison.Ordinal) ||
+                     userText.Contains("以后", StringComparison.Ordinal) ||
+                     userText.Contains("每次", StringComparison.Ordinal);
+        if (!signal && _turnsSinceDistill < 3) return false;
+
+        _turnsSinceDistill = 0;
+        return true;
+    }
+
+    private async Task DistillMemoryAsync(
+        string userText,
+        string assistantText,
+        IReadOnlyList<string> activities,
+        CancellationToken cancellationToken)
+    {
+        if (!CanAutoDistill) return;
+        if (!ShouldDistill(userText, activities)) return;
+        if (!_services.RemoteApi.IsActive && !_services.Server.IsRunning) return;
+
+        try
+        {
+            var request = new MemoryDistillRequest(
+                userText,
+                assistantText,
+                activities,
+                _services.Workspace.IsConfigured ? _services.Workspace.Root : null);
+            var result = await Distiller.DistillAsync(request, cancellationToken);
+            if (result.HasChanges)
+            {
+                KnowledgeStatus = KnowledgeStatus.Length > 0
+                    ? $"{result.StatusText} · {KnowledgeStatus}"
+                    : result.StatusText;
+            }
+
+            if (result.Conflicts.Count > 0)
+            {
+                KnowledgeStatus += $" · 检测到 {result.Conflicts.Count} 条可能冲突的记忆，请在「记忆」页确认";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 用户退出 / 超时：跳过本轮记忆，不影响回答。
+        }
+        catch (Exception ex)
+        {
+            AppLog.Info("memory", $"自动记忆跳过：{ex.Message}");
+        }
+    }
+
     /// <summary>把生命周期阶段的内部名称换成用户能看懂的标签。</summary>
     private static string ActivityLabel(string name) => name switch
     {
@@ -739,6 +914,7 @@ public sealed partial class ChatViewModel : ObservableObject
         IsStreaming = true;
         _cancellation = new CancellationTokenSource();
         var started = System.Diagnostics.Stopwatch.StartNew();
+        var toolSummaries = new List<string>();
         try
         {
             if (agentMode is not null)
@@ -816,6 +992,9 @@ public sealed partial class ChatViewModel : ObservableObject
                 }
 
                 assistant.SetText(string.IsNullOrWhiteSpace(resultText) ? "（模型没有返回内容）" : resultText);
+                toolSummaries.AddRange(resultActivities
+                    .Where(item => item.Name != "remember")
+                    .Select(item => $"{item.Name}：{item.Summary}"));
                 MaybeSaveSkill(request, resultActivities.Select(item => (item.Name, item.Summary)), assistantIndex);
 
                 // 轨迹落盘（P1-6）：请求、工具序列、验收结论、过程分、最终回答哈希与耗时。
@@ -873,6 +1052,13 @@ public sealed partial class ChatViewModel : ObservableObject
             if (_services.Server.IsRunning) _services.IdleSleep.Poke();
             ScrollRequested?.Invoke();
         }
+
+        // 模型自主记忆：本轮结束后再让模型自己总结用户 / 项目信息，失败或停止生成不记录。
+        if (assistant.CanSaveToMemory &&
+            !assistant.Text.StartsWith("生成失败", StringComparison.Ordinal))
+        {
+            await DistillMemoryAsync(request, assistant.Text, toolSummaries, CancellationToken.None);
+        }
     }
 
     private async void RegenerateMessage(ChatMessageViewModel message) => await RegenerateAsync(message);
@@ -880,6 +1066,8 @@ public sealed partial class ChatViewModel : ObservableObject
     private async Task RegenerateAsync(ChatMessageViewModel message)
     {
         if (IsStreaming || !message.IsAssistant) return;
+
+        CancelIdleDigest();
 
         var index = Messages.IndexOf(message);
         if (index <= 0) return;

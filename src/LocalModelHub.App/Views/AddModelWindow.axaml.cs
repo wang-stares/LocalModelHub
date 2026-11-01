@@ -15,6 +15,7 @@ public partial class AddModelWindow : Window
     public AddModelWindow()
     {
         InitializeComponent();
+        MainWindow.ApplyShellStyle(this);
 
         CountryBox.ItemsSource = new[] { "国内", "海外" };
         CountryBox.SelectedIndex = 0;

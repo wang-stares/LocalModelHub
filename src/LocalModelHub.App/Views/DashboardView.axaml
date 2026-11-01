@@ -7,7 +7,7 @@
     <StackPanel Margin="32,10,32,36" Spacing="0">
 
       <!-- 结论带：整行只回答一个问题——这台电脑能跑多大的模型 -->
-      <Border Classes="card hero" Padding="26,22" CornerRadius="22">
+      <Border Classes="card hero" Padding="26,22">
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Spacing="9" Margin="0,0,24,0">
             <Grid ColumnDefinitions="Auto,*">

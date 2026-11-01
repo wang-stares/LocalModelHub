@@ -11,6 +11,7 @@ public partial class ApiModelPickerWindow : Window
     public ApiModelPickerWindow(IReadOnlyList<string> models)
     {
         InitializeComponent();
+        MainWindow.ApplyShellStyle(this);
         _models = models;
         ApplyFilter("");
         SearchBox.TextChanged += (_, _) => ApplyFilter(SearchBox.Text ?? "");

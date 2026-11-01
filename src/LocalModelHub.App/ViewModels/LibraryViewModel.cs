@@ -3,6 +3,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LocalModelHub.App.Services;
+using LocalModelHub.App.Views;
 using LocalModelHub.Core.Models;
 using LocalModelHub.Core.Services;
 
@@ -38,6 +39,7 @@ public sealed partial class LibraryItemViewModel : ObservableObject
     public string OriginText => Model.Entry?.CountryLabel ?? "本地";
     public bool IsChinese => Model.Entry?.IsChinese ?? false;
     public bool IsLocal => Model.Entry is null;
+    public bool IsExternal => Model.IsExternal;
 
     [ObservableProperty] private bool _isRunning;
 
@@ -111,6 +113,15 @@ public sealed partial class LibraryViewModel : ObservableObject
 
     [RelayCommand]
     private void OpenModelsFolder() => ModelLauncher.OpenFolder(_services.Settings.ModelsDirectory);
+
+    /// <summary>全盘搜索已下载的 GGUF：用户可能换过文件夹，忘了模型放在哪。</summary>
+    [RelayCommand]
+    private async Task FindModelsAsync()
+    {
+        if (App.MainWindow is not { } owner) return;
+        var dialog = new ModelFinderWindow();
+        await dialog.ShowDialog(owner);
+    }
 
     [RelayCommand]
     private async Task StopServerAsync()
@@ -199,6 +210,19 @@ public sealed partial class LibraryViewModel : ObservableObject
 
     private async Task DeleteAsync(LibraryItemViewModel item)
     {
+        if (item.Model.IsExternal)
+        {
+            var confirmed = await DialogService.ConfirmAsync(
+                "移除外部模型",
+                $"将从列表移除「{item.Title}」的引用，磁盘文件保持不动：\n{item.Model.PrimaryPath}",
+                "移除引用");
+            if (!confirmed) return;
+
+            _services.Library.Delete(item.Model);
+            Refresh();
+            return;
+        }
+
         var plan = _services.Library.PlanDelete(item.Model);
         if (plan.Files.Count == 0)
         {

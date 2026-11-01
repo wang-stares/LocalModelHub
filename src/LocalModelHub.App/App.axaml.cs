@@ -26,6 +26,15 @@ public partial class App : Application
         };
     }
 
+    /// <summary>miuix / windows → 窗口主题：控制直角化、扁平化与系统强调色。</summary>
+    public static void ApplyShellStyle(string? style)
+    {
+        if (MainWindow is MainWindow window)
+        {
+            window.SetShellStyle(style);
+        }
+    }
+
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -38,6 +47,7 @@ public partial class App : Application
 
             MainWindow = window;
             desktop.MainWindow = window;
+            window.SetShellStyle(AppServices.Current.Settings.ShellStyle);
 
             desktop.ShutdownRequested += (_, _) =>
             {
